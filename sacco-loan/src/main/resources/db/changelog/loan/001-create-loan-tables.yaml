@@ -1,0 +1,374 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-loan-applications
+      author: innercircle
+      changes:
+        - createTable:
+            tableName: loan_applications
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: member_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: principal_amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: interest_rate
+                  type: decimal(5,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: term_months
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: interest_method
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: purpose
+                  type: varchar(500)
+              - column:
+                  name: approved_by
+                  type: uuid
+              - column:
+                  name: approved_at
+                  type: timestamp
+              - column:
+                  name: disbursed_at
+                  type: timestamp
+              - column:
+                  name: total_repaid
+                  type: decimal(19,2)
+                  defaultValue: "0.00"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: outstanding_balance
+                  type: decimal(19,2)
+                  defaultValue: "0.00"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+        - createIndex:
+            tableName: loan_applications
+            indexName: idx_loan_member_id
+            columns:
+              - column:
+                  name: member_id
+        - createIndex:
+            tableName: loan_applications
+            indexName: idx_loan_status
+            columns:
+              - column:
+                  name: status
+
+  - changeSet:
+      id: 002-create-repayment-schedules
+      author: innercircle
+      changes:
+        - createTable:
+            tableName: repayment_schedules
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: loan_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: installment_number
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: due_date
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: principal_amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: interest_amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total_amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: paid
+                  type: boolean
+                  defaultValue: "false"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+        - createIndex:
+            tableName: repayment_schedules
+            indexName: idx_schedule_loan_id
+            columns:
+              - column:
+                  name: loan_id
+        - createIndex:
+            tableName: repayment_schedules
+            indexName: idx_schedule_due_date
+            columns:
+              - column:
+                  name: due_date
+
+  - changeSet:
+      id: 003-create-loan-repayments
+      author: innercircle
+      changes:
+        - createTable:
+            tableName: loan_repayments
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: loan_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: member_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: principal_portion
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: interest_portion
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: repayment_date
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reference_number
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+        - createIndex:
+            tableName: loan_repayments
+            indexName: idx_repayment_loan_id
+            columns:
+              - column:
+                  name: loan_id
+        - createIndex:
+            tableName: loan_repayments
+            indexName: idx_repayment_member_id
+            columns:
+              - column:
+                  name: member_id
+
+  - changeSet:
+      id: 004-create-loan-guarantors
+      author: innercircle
+      changes:
+        - createTable:
+            tableName: loan_guarantors
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: loan_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: guarantor_member_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: guaranteed_amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+        - createIndex:
+            tableName: loan_guarantors
+            indexName: idx_guarantor_loan_id
+            columns:
+              - column:
+                  name: loan_id
+        - createIndex:
+            tableName: loan_guarantors
+            indexName: idx_guarantor_member_id
+            columns:
+              - column:
+                  name: guarantor_member_id
+
+  - changeSet:
+      id: 005-create-loan-penalties
+      author: innercircle
+      changes:
+        - createTable:
+            tableName: loan_penalties
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: loan_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: member_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reason
+                  type: varchar(500)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: applied
+                  type: boolean
+                  defaultValue: "false"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: applied_at
+                  type: timestamp
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+        - createIndex:
+            tableName: loan_penalties
+            indexName: idx_penalty_loan_id
+            columns:
+              - column:
+                  name: loan_id
+        - createIndex:
+            tableName: loan_penalties
+            indexName: idx_penalty_member_id
+            columns:
+              - column:
+                  name: member_id

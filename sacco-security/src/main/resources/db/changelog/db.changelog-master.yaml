@@ -1,0 +1,7 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/security/001-create-user-tables.yaml
+  - include:
+      file: db/changelog/security/002-seed-roles.yaml
+  - include:
+      file: db/changelog/security/003-create-oauth2-tables.yaml

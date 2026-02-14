@@ -1,0 +1,93 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-audit-events-table
+      author: system
+      changes:
+        - createTable:
+            tableName: audit_events
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: actor
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: actor_name
+                  type: VARCHAR(200)
+                  constraints:
+                    nullable: true
+              - column:
+                  name: action
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: entity_type
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: entity_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: before_snapshot
+                  type: TEXT
+                  constraints:
+                    nullable: true
+              - column:
+                  name: after_snapshot
+                  type: TEXT
+                  constraints:
+                    nullable: true
+              - column:
+                  name: ip_address
+                  type: VARCHAR(45)
+                  constraints:
+                    nullable: true
+              - column:
+                  name: timestamp
+                  type: TIMESTAMP WITH TIME ZONE
+                  constraints:
+                    nullable: false
+
+        - createIndex:
+            indexName: idx_audit_entity_type_id
+            tableName: audit_events
+            columns:
+              - column:
+                  name: entity_type
+              - column:
+                  name: entity_id
+
+        - createIndex:
+            indexName: idx_audit_actor
+            tableName: audit_events
+            columns:
+              - column:
+                  name: actor
+
+        - createIndex:
+            indexName: idx_audit_action
+            tableName: audit_events
+            columns:
+              - column:
+                  name: action
+
+        - createIndex:
+            indexName: idx_audit_timestamp
+            tableName: audit_events
+            columns:
+              - column:
+                  name: timestamp
+
+      rollback:
+        - dropTable:
+            tableName: audit_events

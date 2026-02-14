@@ -3,3 +3,43 @@ databaseChangeLog:
   # Example:
   # - include:
   #     file: db/changelog/security/001-create-user-tables.yaml
+
+  # Security module
+  - include:
+      file: db/changelog/security/001-create-user-tables.yaml
+  - include:
+      file: db/changelog/security/002-seed-roles.yaml
+  - include:
+      file: db/changelog/security/003-create-oauth2-tables.yaml
+
+  # Member module
+  - include:
+      file: db/changelog/member/001-create-members-table.yaml
+
+  # Config module
+  - include:
+      file: db/changelog/config/001-create-config-tables.yaml
+  - include:
+      file: db/changelog/config/002-seed-default-config.yaml
+
+  # Contribution module
+  - include:
+      file: db/changelog/contribution/001-create-contributions-table.yaml
+
+  # Audit module
+  - include:
+      file: db/changelog/audit/001-create-audit-events-table.yaml
+
+  # Ledger module
+  - include:
+      file: db/changelog/ledger/001-create-ledger-tables.yaml
+  - include:
+      file: db/changelog/ledger/002-seed-chart-of-accounts.yaml
+
+  # Loan module
+  - include:
+      file: db/changelog/loan/001-create-loan-tables.yaml
+
+  # Payout module
+  - include:
+      file: db/changelog/payout/001-create-payout-tables.yaml

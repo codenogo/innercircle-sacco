@@ -1,0 +1,85 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-seed-roles
+      author: system
+      changes:
+        - insert:
+            tableName: roles
+            columns:
+              - column:
+                  name: id
+                  value: "01940000-0000-7000-8000-000000000001"
+              - column:
+                  name: name
+                  value: "ADMIN"
+              - column:
+                  name: description
+                  value: "Administrator with full system access"
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+
+        - insert:
+            tableName: roles
+            columns:
+              - column:
+                  name: id
+                  value: "01940000-0000-7000-8000-000000000002"
+              - column:
+                  name: name
+                  value: "TREASURER"
+              - column:
+                  name: description
+                  value: "Treasurer with financial management permissions"
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+
+        - insert:
+            tableName: roles
+            columns:
+              - column:
+                  name: id
+                  value: "01940000-0000-7000-8000-000000000003"
+              - column:
+                  name: name
+                  value: "SECRETARY"
+              - column:
+                  name: description
+                  value: "Secretary with record-keeping permissions"
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+
+        - insert:
+            tableName: roles
+            columns:
+              - column:
+                  name: id
+                  value: "01940000-0000-7000-8000-000000000004"
+              - column:
+                  name: name
+                  value: "MEMBER"
+              - column:
+                  name: description
+                  value: "Regular member with basic access"
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+
+      rollback:
+        - delete:
+            tableName: roles
+            where: name IN ('ADMIN', 'TREASURER', 'SECRETARY', 'MEMBER')

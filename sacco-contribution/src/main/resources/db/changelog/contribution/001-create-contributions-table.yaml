@@ -1,0 +1,180 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-contributions-table
+      author: system
+      changes:
+        - createTable:
+            tableName: contributions
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: member_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: type
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: contribution_date
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reference_number
+                  type: varchar(100)
+              - column:
+                  name: notes
+                  type: varchar(500)
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+
+        - addUniqueConstraint:
+            tableName: contributions
+            columnNames: reference_number
+            constraintName: uk_contributions_reference_number
+
+        - createIndex:
+            tableName: contributions
+            indexName: idx_contributions_member_id
+            columns:
+              - column:
+                  name: member_id
+
+        - createIndex:
+            tableName: contributions
+            indexName: idx_contributions_status
+            columns:
+              - column:
+                  name: status
+
+        - createIndex:
+            tableName: contributions
+            indexName: idx_contributions_date
+            columns:
+              - column:
+                  name: contribution_date
+
+        - createIndex:
+            tableName: contributions
+            indexName: idx_contributions_member_status
+            columns:
+              - column:
+                  name: member_id
+              - column:
+                  name: status
+
+  - changeSet:
+      id: 002-create-contribution-penalties-table
+      author: system
+      changes:
+        - createTable:
+            tableName: contribution_penalties
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: member_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: contribution_id
+                  type: uuid
+              - column:
+                  name: amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reason
+                  type: varchar(500)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: waived
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: waived_by
+                  type: varchar(255)
+              - column:
+                  name: waived_at
+                  type: timestamp
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+
+        - createIndex:
+            tableName: contribution_penalties
+            indexName: idx_penalties_member_id
+            columns:
+              - column:
+                  name: member_id
+
+        - createIndex:
+            tableName: contribution_penalties
+            indexName: idx_penalties_contribution_id
+            columns:
+              - column:
+                  name: contribution_id
+
+        - createIndex:
+            tableName: contribution_penalties
+            indexName: idx_penalties_waived
+            columns:
+              - column:
+                  name: waived
+
+        - createIndex:
+            tableName: contribution_penalties
+            indexName: idx_penalties_member_waived
+            columns:
+              - column:
+                  name: member_id
+              - column:
+                  name: waived

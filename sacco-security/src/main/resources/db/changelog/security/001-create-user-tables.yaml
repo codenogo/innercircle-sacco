@@ -1,0 +1,152 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-user-accounts-table
+      author: system
+      changes:
+        - createTable:
+            tableName: user_accounts
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: username
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: password
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: email
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: enabled
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: account_non_locked
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+
+        - createIndex:
+            indexName: idx_user_accounts_username
+            tableName: user_accounts
+            columns:
+              - column:
+                  name: username
+
+        - createIndex:
+            indexName: idx_user_accounts_email
+            tableName: user_accounts
+            columns:
+              - column:
+                  name: email
+
+  - changeSet:
+      id: 001-create-roles-table
+      author: system
+      changes:
+        - createTable:
+            tableName: roles
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: description
+                  type: varchar(255)
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+
+        - createIndex:
+            indexName: idx_roles_name
+            tableName: roles
+            columns:
+              - column:
+                  name: name
+
+  - changeSet:
+      id: 001-create-user-account-roles-table
+      author: system
+      changes:
+        - createTable:
+            tableName: user_account_roles
+            columns:
+              - column:
+                  name: user_account_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+
+        - addPrimaryKey:
+            tableName: user_account_roles
+            columnNames: user_account_id, role_id
+            constraintName: pk_user_account_roles
+
+        - addForeignKeyConstraint:
+            baseTableName: user_account_roles
+            baseColumnNames: user_account_id
+            constraintName: fk_user_account_roles_user_account
+            referencedTableName: user_accounts
+            referencedColumnNames: id
+            onDelete: CASCADE
+
+        - addForeignKeyConstraint:
+            baseTableName: user_account_roles
+            baseColumnNames: role_id
+            constraintName: fk_user_account_roles_role
+            referencedTableName: roles
+            referencedColumnNames: id
+            onDelete: CASCADE

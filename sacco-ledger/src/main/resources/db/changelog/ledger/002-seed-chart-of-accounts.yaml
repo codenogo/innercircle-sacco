@@ -1,0 +1,350 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-seed-chart-of-accounts
+      author: claude
+      changes:
+        # ASSETS
+        - insert:
+            tableName: accounts
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: account_code
+                  value: "1001"
+              - column:
+                  name: account_name
+                  value: "Cash"
+              - column:
+                  name: account_type
+                  value: "ASSET"
+              - column:
+                  name: balance
+                  value: "0.00"
+              - column:
+                  name: description
+                  value: "Cash and cash equivalents"
+              - column:
+                  name: active
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+
+        - insert:
+            tableName: accounts
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: account_code
+                  value: "1002"
+              - column:
+                  name: account_name
+                  value: "Loan Receivable"
+              - column:
+                  name: account_type
+                  value: "ASSET"
+              - column:
+                  name: balance
+                  value: "0.00"
+              - column:
+                  name: description
+                  value: "Outstanding loans to members"
+              - column:
+                  name: active
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+
+        # LIABILITIES
+        - insert:
+            tableName: accounts
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: account_code
+                  value: "2001"
+              - column:
+                  name: account_name
+                  value: "Member Shares"
+              - column:
+                  name: account_type
+                  value: "LIABILITY"
+              - column:
+                  name: balance
+                  value: "0.00"
+              - column:
+                  name: description
+                  value: "Member share capital and contributions"
+              - column:
+                  name: active
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+
+        - insert:
+            tableName: accounts
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: account_code
+                  value: "2002"
+              - column:
+                  name: account_name
+                  value: "Member Account"
+              - column:
+                  name: account_type
+                  value: "LIABILITY"
+              - column:
+                  name: balance
+                  value: "0.00"
+              - column:
+                  name: description
+                  value: "Member account balances"
+              - column:
+                  name: active
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+
+        # EQUITY
+        - insert:
+            tableName: accounts
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: account_code
+                  value: "3001"
+              - column:
+                  name: account_name
+                  value: "Share Capital"
+              - column:
+                  name: account_type
+                  value: "EQUITY"
+              - column:
+                  name: balance
+                  value: "0.00"
+              - column:
+                  name: description
+                  value: "Initial share capital"
+              - column:
+                  name: active
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+
+        - insert:
+            tableName: accounts
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: account_code
+                  value: "3002"
+              - column:
+                  name: account_name
+                  value: "Retained Earnings"
+              - column:
+                  name: account_type
+                  value: "EQUITY"
+              - column:
+                  name: balance
+                  value: "0.00"
+              - column:
+                  name: description
+                  value: "Accumulated retained earnings"
+              - column:
+                  name: active
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+
+        # REVENUE
+        - insert:
+            tableName: accounts
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: account_code
+                  value: "4001"
+              - column:
+                  name: account_name
+                  value: "Interest Income"
+              - column:
+                  name: account_type
+                  value: "REVENUE"
+              - column:
+                  name: balance
+                  value: "0.00"
+              - column:
+                  name: description
+                  value: "Interest income from loans"
+              - column:
+                  name: active
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+
+        - insert:
+            tableName: accounts
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: account_code
+                  value: "4002"
+              - column:
+                  name: account_name
+                  value: "Contribution Income"
+              - column:
+                  name: account_type
+                  value: "REVENUE"
+              - column:
+                  name: balance
+                  value: "0.00"
+              - column:
+                  name: description
+                  value: "Income from member contributions"
+              - column:
+                  name: active
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+
+        - insert:
+            tableName: accounts
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: account_code
+                  value: "4003"
+              - column:
+                  name: account_name
+                  value: "Penalty Income"
+              - column:
+                  name: account_type
+                  value: "REVENUE"
+              - column:
+                  name: balance
+                  value: "0.00"
+              - column:
+                  name: description
+                  value: "Income from penalties and late fees"
+              - column:
+                  name: active
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+
+        # EXPENSES
+        - insert:
+            tableName: accounts
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: account_code
+                  value: "5001"
+              - column:
+                  name: account_name
+                  value: "Operating Expenses"
+              - column:
+                  name: account_type
+                  value: "EXPENSE"
+              - column:
+                  name: balance
+                  value: "0.00"
+              - column:
+                  name: description
+                  value: "General operating expenses"
+              - column:
+                  name: active
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+
+        - insert:
+            tableName: accounts
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: account_code
+                  value: "5002"
+              - column:
+                  name: account_name
+                  value: "Administrative Expenses"
+              - column:
+                  name: account_type
+                  value: "EXPENSE"
+              - column:
+                  name: balance
+                  value: "0.00"
+              - column:
+                  name: description
+                  value: "Administrative and overhead expenses"
+              - column:
+                  name: active
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
