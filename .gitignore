@@ -1,3 +1,17 @@
+# Maven build output
+target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+
+# Environment
+.env
+
 # Memory engine runtime (SQLite binary — not diffable)
 .cnogo/memory.db
 .cnogo/memory.db-wal
