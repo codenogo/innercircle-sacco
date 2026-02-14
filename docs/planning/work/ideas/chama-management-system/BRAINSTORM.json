@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "topic": "Kenyan Chama Management System",
+  "slug": "chama-management-system",
+  "timestamp": "2026-02-14T00:00:00Z",
+  "questionsAsked": [
+    "What type of SACCO is this for? → Chama (informal savings group)",
+    "Is this multi-tenant or single-chama? → Single chama instance",
+    "What OAuth2 provider? → Spring Authorization Server",
+    "What database? → PostgreSQL",
+    "Frontend or API-only? → Full stack (API + Web + Mobile-ready)"
+  ],
+  "constraints": [
+    "Single-chama deployment (not multi-tenant)",
+    "Java 17+ / Spring Boot 3.x / Maven multi-module",
+    "PostgreSQL 15+",
+    "Spring Authorization Server for OAuth2/OIDC",
+    "REST APIs serving web + future mobile",
+    "Financial accuracy: double-entry ledger",
+    "Immutable audit trail on all mutations"
+  ],
+  "features": [
+    "Contribution Management",
+    "Withdrawal Management (Share Withdrawals)",
+    "Loan Management",
+    "Loan Penalties",
+    "Loan Benefits / Member Earnings",
+    "Payout Management",
+    "Ledger / Accounting",
+    "Bank Withdrawals",
+    "Cash Disbursements",
+    "Dashboard & Reporting",
+    "Audit Trail",
+    "Configuration",
+    "OAuth2 / Security"
+  ],
+  "candidates": [
+    {
+      "name": "Option A: Modular Monolith",
+      "summary": "Single Spring Boot app with Maven modules per domain. Shared PostgreSQL. Simple deployment. Clean module boundaries via Maven dependency rules.",
+      "risks": [
+        "Module coupling over time — mitigate with strict Maven dependency rules",
+        "Ledger accuracy — mitigate with double-entry balance assertions",
+        "Spring Authorization Server learning curve"
+      ],
+      "mvp": [
+        "Phase 1: sacco-common + sacco-security + sacco-member (auth + members)",
+        "Phase 2: sacco-contribution + sacco-ledger + sacco-audit (money in + accounting)",
+        "Phase 3: sacco-loan (money out + repayments + penalties)",
+        "Phase 4: sacco-payout + sacco-reporting + sacco-config (operations + visibility)"
+      ]
+    },
+    {
+      "name": "Option B: Microservices",
+      "summary": "Each domain as independent Spring Boot service with API Gateway, service discovery, and message broker. Maximum separation but massive operational overhead.",
+      "risks": [
+        "Over-engineered for single-chama scale",
+        "Distributed transactions across financial domains",
+        "10+ services to deploy and monitor"
+      ],
+      "mvp": [
+        "Same feature phases but each is a standalone service"
+      ]
+    },
+    {
+      "name": "Option C: Modular Monolith with Event-Driven Internals",
+      "summary": "Like Option A but modules communicate via Spring Application Events. Clear extraction path to microservices later. Ledger and audit auto-react to domain events.",
+      "risks": [
+        "Event ordering and consistency",
+        "Debugging event chains",
+        "Slightly more abstract than direct calls"
+      ],
+      "mvp": [
+        "Same as Option A with events added incrementally"
+      ]
+    }
+  ],
+  "recommendation": {
+    "primary": "Option A: Modular Monolith",
+    "backup": "Option C: Modular Monolith with Event-Driven Internals"
+  },
+  "research": []
+}
