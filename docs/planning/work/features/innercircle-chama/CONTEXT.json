@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama",
+  "displayName": "InnerCircle Chama — Modular Monolith",
+  "memoryEpicId": "cn-1d8nhtm",
+  "decisions": [
+    { "area": "architecture", "decision": "Modular monolith (single Spring Boot app, Maven modules)", "rationale": "Right complexity for single-chama. Simple deploy, test, debug." },
+    { "area": "module-deps", "decision": "Strict: modules only depend on sacco-common", "rationale": "Maximum isolation. Shared interfaces/DTOs in common module." },
+    { "area": "ledger-integration", "decision": "Spring Application Events", "rationale": "Decoupled write path. Modules publish events, ledger auto-creates journal entries." },
+    { "area": "api-format", "decision": "Custom ApiResponse<T> wrapper", "rationale": "Standardized {data, message, timestamp, path} across all endpoints." },
+    { "area": "pagination", "decision": "Cursor-based (keyset)", "rationale": "Better for mobile clients and concurrent writes." },
+    { "area": "oauth2-flows", "decision": "Authorization Code (PKCE) + Client Credentials", "rationale": "Auth code for users, client credentials for batch jobs." },
+    { "area": "rbac", "decision": "Role-based, 4 fixed roles (ADMIN, TREASURER, SECRETARY, MEMBER)", "rationale": "Simple, covers chama organizational structures." },
+    { "area": "audit", "decision": "Custom audit event table", "rationale": "AuditEvent entity with actor, action, before/after JSON. Queryable and exportable." },
+    { "area": "config-storage", "decision": "Database-backed (config tables)", "rationale": "Runtime-changeable via admin API." },
+    { "area": "interest-calc", "decision": "Configurable: reducing balance + flat rate per loan product", "rationale": "Maximum flexibility for different chama loan products." },
+    { "area": "loan-approval", "decision": "Single approver (Treasurer/Admin)", "rationale": "Simple workflow: PENDING → APPROVED/REJECTED → DISBURSED." },
+    { "area": "migrations", "decision": "Liquibase", "rationale": "XML/YAML changelog with rollback support." },
+    { "area": "java-version", "decision": "Java 21 (LTS)", "rationale": "Virtual threads, pattern matching, record patterns. Latest LTS." },
+    { "area": "database", "decision": "PostgreSQL 15+", "rationale": "ACID for financial data, JSON support." },
+    { "area": "ids", "decision": "UUID v7 (time-ordered)", "rationale": "Sortable, globally unique, no sequence contention." },
+    { "area": "money", "decision": "BigDecimal, NUMERIC(19,2) in PostgreSQL", "rationale": "No floating point errors for financial amounts." }
+  ],
+  "constraints": [
+    "Single-chama deployment (not multi-tenant)",
+    "Financial accuracy non-negotiable: every ledger entry must balance to zero",
+    "All money operations within database transactions",
+    "Audit trail is append-only",
+    "Configuration changes must be audited"
+  ],
+  "outOfScope": [
+    "M-Pesa / Daraja API integration",
+    "Native mobile app",
+    "Multi-tenancy",
+    "SMS/email notifications",
+    "File attachments"
+  ],
+  "openQuestions": [
+    "Chart of accounts: predefined template or fully configurable?",
+    "Which financial reports are must-have for MVP?",
+    "Merry-go-round scheduling: fixed rotation or configurable rules?"
+  ],
+  "modules": [
+    "sacco-common",
+    "sacco-security",
+    "sacco-member",
+    "sacco-contribution",
+    "sacco-loan",
+    "sacco-payout",
+    "sacco-ledger",
+    "sacco-reporting",
+    "sacco-audit",
+    "sacco-config",
+    "sacco-app"
+  ],
+  "roles": ["ADMIN", "TREASURER", "SECRETARY", "MEMBER"],
+  "techStack": {
+    "language": "Java 21",
+    "framework": "Spring Boot 3.x",
+    "build": "Maven (multi-module)",
+    "auth": "Spring Authorization Server + OAuth2 Resource Server",
+    "database": "PostgreSQL 15+",
+    "migrations": "Liquibase",
+    "orm": "Spring Data JPA / Hibernate",
+    "api": "REST (JSON), OpenAPI 3.0 (springdoc)",
+    "testing": "JUnit 5, Mockito, Testcontainers",
+    "apiDocs": "springdoc-openapi"
+  },
+  "relatedCode": [],
+  "research": [],
+  "timestamp": "2026-02-14T00:00:00Z"
+}
