@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: sacco-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-sacco_db}
+      POSTGRES_USER: ${DB_USERNAME:-sacco}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-sacco}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - sacco-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-sacco}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  sacco-pgdata:

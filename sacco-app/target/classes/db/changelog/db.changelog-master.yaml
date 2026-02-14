@@ -1,0 +1,5 @@
+databaseChangeLog:
+  # Module changelogs will be included here as plans are implemented
+  # Example:
+  # - include:
+  #     file: db/changelog/security/001-create-user-tables.yaml
