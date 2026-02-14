@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama",
+  "planNumber": "10",
+  "outcome": "complete",
+  "changes": [
+    { "file": "sacco-reporting/pom.xml", "change": "Added PDFBox dependency" },
+    { "file": "sacco-reporting/.../MemberStatementServiceImpl.java", "change": "Statement generation via JDBC" },
+    { "file": "sacco-reporting/.../FinancialReportServiceImpl.java", "change": "Dashboards and summary" },
+    { "file": "sacco-reporting/.../ExportServiceImpl.java", "change": "PDF and CSV export" },
+    { "file": "sacco-reporting/.../DashboardController.java", "change": "Dashboard endpoints" },
+    { "file": "sacco-reporting/.../ReportController.java", "change": "Report endpoints" },
+    { "file": "sacco-reporting/.../ExportController.java", "change": "Export endpoints" }
+  ],
+  "verification": [
+    { "task": 1, "result": "pass", "details": "mvn compile -pl sacco-reporting -q succeeded" },
+    { "task": 2, "result": "pass", "details": "mvn compile -pl sacco-reporting -q succeeded" },
+    { "task": 3, "result": "pass", "details": "mvn compile -pl sacco-reporting -q succeeded" }
+  ],
+  "commit": { "hash": "ae113e6", "message": "feat(reporting): implement dashboards, reports, and PDF/CSV export" },
+  "timestamp": "2026-02-14T00:00:00Z"
+}
