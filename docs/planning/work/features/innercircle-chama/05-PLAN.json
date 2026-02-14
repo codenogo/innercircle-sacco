@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama",
+  "planNumber": "05",
+  "goal": "Implement immutable, append-only audit trail with event listeners, query API, and CSV export",
+  "parallelizable": true,
+  "tasks": [
+    {
+      "name": "AuditEvent Entity + Repository",
+      "memoryId": "cn-1d8nhtm.13",
+      "files": [
+        "sacco-audit/src/main/java/com/innercircle/sacco/audit/entity/AuditEvent.java",
+        "sacco-audit/src/main/java/com/innercircle/sacco/audit/entity/AuditAction.java",
+        "sacco-audit/src/main/java/com/innercircle/sacco/audit/repository/AuditEventRepository.java"
+      ],
+      "action": "Create immutable AuditEvent entity (actor, action, entityType, entityId, before/after JSON, timestamp). AuditAction enum. Repository with cursor pagination and filters.",
+      "verify": ["mvn compile -pl sacco-audit -q"]
+    },
+    {
+      "name": "Audit Event Listener + Service",
+      "memoryId": "cn-1d8nhtm.14",
+      "files": [
+        "sacco-audit/src/main/java/com/innercircle/sacco/audit/service/AuditService.java",
+        "sacco-audit/src/main/java/com/innercircle/sacco/audit/service/AuditServiceImpl.java",
+        "sacco-audit/src/main/java/com/innercircle/sacco/audit/listener/AuditEventListener.java"
+      ],
+      "action": "AuditService for logging and querying. AuditEventListener with @TransactionalEventListener for all AuditableEvent subtypes. JSON serialization of snapshots.",
+      "verify": ["mvn compile -pl sacco-audit -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Audit REST API + Liquibase",
+      "memoryId": "cn-1d8nhtm.15",
+      "files": [
+        "sacco-audit/src/main/java/com/innercircle/sacco/audit/controller/AuditController.java",
+        "sacco-audit/src/main/java/com/innercircle/sacco/audit/dto/AuditEventResponse.java",
+        "sacco-audit/src/main/java/com/innercircle/sacco/audit/dto/AuditQueryRequest.java",
+        "sacco-audit/src/main/resources/db/changelog/audit/001-create-audit-events-table.yaml"
+      ],
+      "action": "AuditController at /api/v1/audit (ADMIN/TREASURER). Cursor-paginated list, entity trail, CSV export. Liquibase for audit_events table with indexes.",
+      "verify": ["mvn compile -pl sacco-audit -q"],
+      "blockedBy": [0]
+    }
+  ],
+  "planVerify": ["mvn compile -pl sacco-audit -q"],
+  "memoryEpicId": "cn-1d8nhtm",
+  "commitMessage": "feat(audit): implement immutable audit trail with event listeners and query API",
+  "timestamp": "2026-02-14T00:00:00Z"
+}

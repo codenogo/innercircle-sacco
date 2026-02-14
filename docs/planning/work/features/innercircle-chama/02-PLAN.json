@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama",
+  "planNumber": "02",
+  "goal": "Implement OAuth2 security with Spring Authorization Server, JWT tokens, and 4-role RBAC",
+  "parallelizable": true,
+  "tasks": [
+    {
+      "name": "Spring Authorization Server Setup",
+      "memoryId": "cn-1d8nhtm.4",
+      "files": [
+        "sacco-security/src/main/java/com/innercircle/sacco/security/config/AuthorizationServerConfig.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/config/SecurityConfig.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/entity/UserAccount.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/entity/Role.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/repository/UserAccountRepository.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/repository/RoleRepository.java"
+      ],
+      "action": "Configure Authorization Server (auth code + PKCE, client credentials). Create UserAccount/Role JPA entities and repositories. SecurityConfig with JWT resource server.",
+      "verify": ["mvn compile -pl sacco-security -q"]
+    },
+    {
+      "name": "UserDetailsService + JWT Customization",
+      "memoryId": "cn-1d8nhtm.5",
+      "files": [
+        "sacco-security/src/main/java/com/innercircle/sacco/security/service/SaccoUserDetailsService.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/config/JwtTokenCustomizer.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/dto/RegisterRequest.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/dto/UserResponse.java"
+      ],
+      "action": "Implement UserDetailsService loading from DB. JWT customizer adding userId, roles, memberId to claims. Registration and response DTOs.",
+      "verify": ["mvn compile -pl sacco-security -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Liquibase Changelogs + Role Seed Data",
+      "memoryId": "cn-1d8nhtm.6",
+      "files": [
+        "sacco-security/src/main/resources/db/changelog/security/001-create-user-tables.yaml",
+        "sacco-security/src/main/resources/db/changelog/security/002-seed-roles.yaml",
+        "sacco-security/src/main/resources/db/changelog/security/003-create-oauth2-tables.yaml"
+      ],
+      "action": "Create Liquibase changelogs for user_accounts, roles, user_roles tables. Seed 4 roles + default admin. OAuth2 registered client tables.",
+      "verify": ["mvn compile -pl sacco-security -q"],
+      "blockedBy": [0]
+    }
+  ],
+  "planVerify": ["mvn compile -pl sacco-security -q"],
+  "memoryEpicId": "cn-1d8nhtm",
+  "commitMessage": "feat(security): implement OAuth2 with Spring Authorization Server and RBAC",
+  "timestamp": "2026-02-14T00:00:00Z"
+}

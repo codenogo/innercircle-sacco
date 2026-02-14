@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama",
+  "planNumber": "04",
+  "goal": "Implement database-backed configuration for loan products, contribution schedules, penalty rules, and system settings",
+  "parallelizable": true,
+  "tasks": [
+    {
+      "name": "Configuration Entities + Repository",
+      "memoryId": "cn-1d8nhtm.10",
+      "files": [
+        "sacco-config/src/main/java/com/innercircle/sacco/config/entity/SystemConfig.java",
+        "sacco-config/src/main/java/com/innercircle/sacco/config/entity/LoanProductConfig.java",
+        "sacco-config/src/main/java/com/innercircle/sacco/config/entity/ContributionScheduleConfig.java",
+        "sacco-config/src/main/java/com/innercircle/sacco/config/entity/PenaltyRule.java",
+        "sacco-config/src/main/java/com/innercircle/sacco/config/entity/InterestMethod.java",
+        "sacco-config/src/main/java/com/innercircle/sacco/config/repository/SystemConfigRepository.java",
+        "sacco-config/src/main/java/com/innercircle/sacco/config/repository/LoanProductConfigRepository.java",
+        "sacco-config/src/main/java/com/innercircle/sacco/config/repository/ContributionScheduleConfigRepository.java",
+        "sacco-config/src/main/java/com/innercircle/sacco/config/repository/PenaltyRuleRepository.java"
+      ],
+      "action": "Create SystemConfig (key-value), LoanProductConfig (interest method, rates, terms), ContributionScheduleConfig (frequency, amount, penalties), PenaltyRule (type, rate, calculation method). All extend BaseEntity.",
+      "verify": ["mvn compile -pl sacco-config -q"]
+    },
+    {
+      "name": "Configuration Service + Admin API",
+      "memoryId": "cn-1d8nhtm.11",
+      "files": [
+        "sacco-config/src/main/java/com/innercircle/sacco/config/service/ConfigService.java",
+        "sacco-config/src/main/java/com/innercircle/sacco/config/service/ConfigServiceImpl.java",
+        "sacco-config/src/main/java/com/innercircle/sacco/config/controller/ConfigController.java",
+        "sacco-config/src/main/java/com/innercircle/sacco/config/dto/LoanProductRequest.java",
+        "sacco-config/src/main/java/com/innercircle/sacco/config/dto/ContributionScheduleRequest.java",
+        "sacco-config/src/main/java/com/innercircle/sacco/config/dto/PenaltyRuleRequest.java",
+        "sacco-config/src/main/java/com/innercircle/sacco/config/dto/ConfigResponse.java"
+      ],
+      "action": "ConfigService with CRUD for all config types. ConfigController at /api/v1/config (ADMIN only) with endpoints for loan products, contribution schedules, penalty rules, system config.",
+      "verify": ["mvn compile -pl sacco-config -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Liquibase Changelogs + Seed Data",
+      "memoryId": "cn-1d8nhtm.12",
+      "files": [
+        "sacco-config/src/main/resources/db/changelog/config/001-create-config-tables.yaml",
+        "sacco-config/src/main/resources/db/changelog/config/002-seed-default-config.yaml"
+      ],
+      "action": "Create tables for all config entities. Seed defaults: Monthly KES 1000 contribution, 12% reducing balance loan product, 5%/3% penalty rules, system config (chama name, currency=KES).",
+      "verify": ["mvn compile -pl sacco-config -q"],
+      "blockedBy": [0]
+    }
+  ],
+  "planVerify": ["mvn compile -pl sacco-config -q"],
+  "memoryEpicId": "cn-1d8nhtm",
+  "commitMessage": "feat(config): implement database-backed configuration with seed defaults",
+  "timestamp": "2026-02-14T00:00:00Z"
+}

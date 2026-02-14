@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama",
+  "planNumber": "03",
+  "goal": "Implement member registration, profiles, CRUD with cursor-paginated listing",
+  "parallelizable": true,
+  "tasks": [
+    {
+      "name": "Member Entity + Repository + Service",
+      "memoryId": "cn-1d8nhtm.7",
+      "files": [
+        "sacco-member/src/main/java/com/innercircle/sacco/member/entity/Member.java",
+        "sacco-member/src/main/java/com/innercircle/sacco/member/entity/MemberStatus.java",
+        "sacco-member/src/main/java/com/innercircle/sacco/member/repository/MemberRepository.java",
+        "sacco-member/src/main/java/com/innercircle/sacco/member/service/MemberService.java",
+        "sacco-member/src/main/java/com/innercircle/sacco/member/service/MemberServiceImpl.java"
+      ],
+      "action": "Create Member entity (BaseEntity, memberNumber, name, email, phone, nationalId, status, shareBalance BigDecimal). MemberRepository with cursor pagination. MemberService with CRUD + suspend/reactivate.",
+      "verify": ["mvn compile -pl sacco-member -q"]
+    },
+    {
+      "name": "Member REST API",
+      "memoryId": "cn-1d8nhtm.8",
+      "files": [
+        "sacco-member/src/main/java/com/innercircle/sacco/member/controller/MemberController.java",
+        "sacco-member/src/main/java/com/innercircle/sacco/member/dto/CreateMemberRequest.java",
+        "sacco-member/src/main/java/com/innercircle/sacco/member/dto/UpdateMemberRequest.java",
+        "sacco-member/src/main/java/com/innercircle/sacco/member/dto/MemberResponse.java",
+        "sacco-member/src/main/java/com/innercircle/sacco/member/mapper/MemberMapper.java"
+      ],
+      "action": "REST controller at /api/v1/members with POST, GET (list+detail), PUT, PATCH (suspend/reactivate). ApiResponse<T> wrapping. Validated DTOs. MemberMapper for entity-DTO conversion.",
+      "verify": ["mvn compile -pl sacco-member -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Liquibase Changelogs",
+      "memoryId": "cn-1d8nhtm.9",
+      "files": [
+        "sacco-member/src/main/resources/db/changelog/member/001-create-members-table.yaml"
+      ],
+      "action": "Create members table with all columns, indexes on member_number, email, national_id, status. Update sacco-app changelog-master.",
+      "verify": ["mvn compile -pl sacco-member -q"],
+      "blockedBy": [0]
+    }
+  ],
+  "planVerify": ["mvn compile -pl sacco-member -q"],
+  "memoryEpicId": "cn-1d8nhtm",
+  "commitMessage": "feat(member): implement member management with CRUD and cursor pagination",
+  "timestamp": "2026-02-14T00:00:00Z"
+}

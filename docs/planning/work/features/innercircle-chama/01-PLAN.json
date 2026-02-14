@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama",
+  "planNumber": "01",
+  "goal": "Create multi-module Maven scaffold with sacco-common (shared types, events, ApiResponse) and sacco-app (Spring Boot main, Liquibase, Docker Compose)",
+  "parallelizable": false,
+  "tasks": [
+    {
+      "name": "Parent POM + Module POM Stubs",
+      "memoryId": "cn-1d8nhtm.1",
+      "files": [
+        "pom.xml",
+        "sacco-common/pom.xml",
+        "sacco-security/pom.xml",
+        "sacco-member/pom.xml",
+        "sacco-contribution/pom.xml",
+        "sacco-loan/pom.xml",
+        "sacco-payout/pom.xml",
+        "sacco-ledger/pom.xml",
+        "sacco-reporting/pom.xml",
+        "sacco-audit/pom.xml",
+        "sacco-config/pom.xml",
+        "sacco-app/pom.xml"
+      ],
+      "action": "Create parent POM (spring-boot-starter-parent 3.4.x, Java 21) with all 11 module declarations. Each module POM depends on sacco-common. sacco-app depends on all modules.",
+      "verify": ["mvn validate -q"]
+    },
+    {
+      "name": "sacco-common Shared Types",
+      "memoryId": "cn-1d8nhtm.2",
+      "files": [
+        "sacco-common/src/main/java/com/innercircle/sacco/common/model/BaseEntity.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/dto/ApiResponse.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/dto/CursorPage.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/exception/BusinessException.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/exception/ResourceNotFoundException.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/exception/GlobalExceptionHandler.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/event/AuditableEvent.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/event/ContributionReceivedEvent.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/event/LoanDisbursedEvent.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/event/LoanRepaymentEvent.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/event/PayoutProcessedEvent.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/event/PenaltyAppliedEvent.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/util/UuidGenerator.java"
+      ],
+      "action": "Create BaseEntity (UUID v7, timestamps), ApiResponse<T> wrapper, CursorPage<T>, domain event records, exceptions with GlobalExceptionHandler, UuidGenerator utility.",
+      "verify": ["mvn compile -pl sacco-common -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "sacco-app + Infrastructure",
+      "memoryId": "cn-1d8nhtm.3",
+      "files": [
+        "sacco-app/src/main/java/com/innercircle/sacco/SaccoApplication.java",
+        "sacco-app/src/main/resources/application.yml",
+        "sacco-app/src/main/resources/application-dev.yml",
+        "sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml",
+        "docker-compose.yml",
+        ".env.example"
+      ],
+      "action": "Create Spring Boot main class, application.yml (PostgreSQL, JPA, Liquibase, springdoc), Docker Compose for PostgreSQL, .env.example template.",
+      "verify": ["mvn compile -q"],
+      "blockedBy": [0, 1]
+    }
+  ],
+  "planVerify": ["mvn compile -q"],
+  "memoryEpicId": "cn-1d8nhtm",
+  "commitMessage": "feat(innercircle-chama): scaffold Maven multi-module project with common types and app bootstrap",
+  "timestamp": "2026-02-14T00:00:00Z"
+}

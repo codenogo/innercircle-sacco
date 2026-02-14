@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama",
+  "planNumber": "09",
+  "goal": "Implement payout processing, bank withdrawals, cash disbursements, and share withdrawals with approval workflows",
+  "parallelizable": true,
+  "tasks": [
+    {
+      "name": "Payout Entities + Repository",
+      "memoryId": "cn-1d8nhtm.25",
+      "files": [
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/entity/Payout.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/entity/PayoutType.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/entity/PayoutStatus.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/entity/BankWithdrawal.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/entity/WithdrawalStatus.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/entity/CashDisbursement.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/entity/ShareWithdrawal.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/repository/PayoutRepository.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/repository/BankWithdrawalRepository.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/repository/CashDisbursementRepository.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/repository/ShareWithdrawalRepository.java"
+      ],
+      "action": "Create Payout (merry-go-round/ad-hoc/dividend), BankWithdrawal (with reconciliation), CashDisbursement (receipt/signoff), ShareWithdrawal (partial/full) entities. Repositories with cursor pagination.",
+      "verify": ["mvn compile -pl sacco-payout -q"]
+    },
+    {
+      "name": "Payout Service + Events",
+      "memoryId": "cn-1d8nhtm.26",
+      "files": [
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/PayoutService.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/PayoutServiceImpl.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/BankWithdrawalService.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/BankWithdrawalServiceImpl.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/CashDisbursementService.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/CashDisbursementServiceImpl.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/ShareWithdrawalService.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/ShareWithdrawalServiceImpl.java"
+      ],
+      "action": "PayoutService with create/approve/process (publishes PayoutProcessedEvent). BankWithdrawalService with reconciliation. CashDisbursementService with receipt/signoff. ShareWithdrawalService with balance validation.",
+      "verify": ["mvn compile -pl sacco-payout -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Payout REST API + Liquibase",
+      "memoryId": "cn-1d8nhtm.27",
+      "files": [
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/controller/PayoutController.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/controller/BankWithdrawalController.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/controller/CashDisbursementController.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/controller/ShareWithdrawalController.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/dto/PayoutRequest.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/dto/PayoutResponse.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/dto/BankWithdrawalRequest.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/dto/CashDisbursementRequest.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/dto/ShareWithdrawalRequest.java",
+        "sacco-payout/src/main/resources/db/changelog/payout/001-create-payout-tables.yaml"
+      ],
+      "action": "Controllers at /api/v1/payouts, /bank-withdrawals, /cash-disbursements, /share-withdrawals. Full CRUD + approval + processing. Liquibase for all payout tables.",
+      "verify": ["mvn compile -pl sacco-payout -q"],
+      "blockedBy": [0, 1]
+    }
+  ],
+  "planVerify": ["mvn compile -pl sacco-payout -q"],
+  "memoryEpicId": "cn-1d8nhtm",
+  "commitMessage": "feat(payout): implement payouts, bank withdrawals, cash disbursements, share withdrawals",
+  "timestamp": "2026-02-14T00:00:00Z"
+}

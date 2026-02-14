@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama",
+  "planNumber": "08",
+  "goal": "Implement loan management with configurable interest calculation, approval workflow, repayment schedules, and penalties",
+  "parallelizable": true,
+  "tasks": [
+    {
+      "name": "Loan Entities + Repository",
+      "memoryId": "cn-1d8nhtm.22",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/LoanApplication.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/LoanStatus.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/LoanRepayment.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/RepaymentStatus.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/LoanGuarantor.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/LoanPenalty.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/RepaymentSchedule.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/repository/LoanApplicationRepository.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/repository/LoanRepaymentRepository.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/repository/LoanGuarantorRepository.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/repository/LoanPenaltyRepository.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/repository/RepaymentScheduleRepository.java"
+      ],
+      "action": "Create LoanApplication, RepaymentSchedule, LoanRepayment, LoanGuarantor, LoanPenalty entities. Status enums. Repositories with cursor pagination and member/status filters.",
+      "verify": ["mvn compile -pl sacco-loan -q"]
+    },
+    {
+      "name": "Loan Service + Interest Calculation + Events",
+      "memoryId": "cn-1d8nhtm.23",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanService.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/InterestCalculator.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/RepaymentScheduleGenerator.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanPenaltyService.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanPenaltyServiceImpl.java"
+      ],
+      "action": "LoanService with full lifecycle (apply, approve, reject, disburse, repay, close). InterestCalculator for reducing/flat. RepaymentScheduleGenerator. LoanPenaltyService. Events: LoanDisbursed, LoanRepayment, PenaltyApplied.",
+      "verify": ["mvn compile -pl sacco-loan -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Loan REST API + Liquibase",
+      "memoryId": "cn-1d8nhtm.24",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/controller/LoanController.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/LoanApplicationRequest.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/LoanResponse.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/RepaymentRequest.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/RepaymentScheduleResponse.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/LoanSummaryResponse.java",
+        "sacco-loan/src/main/resources/db/changelog/loan/001-create-loan-tables.yaml"
+      ],
+      "action": "LoanController at /api/v1/loans with application, approval, disbursement, repayment, schedule, summary endpoints. Liquibase for all loan-related tables.",
+      "verify": ["mvn compile -pl sacco-loan -q"],
+      "blockedBy": [0, 1]
+    }
+  ],
+  "planVerify": ["mvn compile -pl sacco-loan -q"],
+  "memoryEpicId": "cn-1d8nhtm",
+  "commitMessage": "feat(loan): implement loan management with interest calculation and approval workflow",
+  "timestamp": "2026-02-14T00:00:00Z"
+}

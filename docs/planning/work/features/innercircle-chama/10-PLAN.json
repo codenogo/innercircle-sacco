@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama",
+  "planNumber": "10",
+  "goal": "Implement dashboards, financial reports, member statements, and PDF/CSV export",
+  "parallelizable": true,
+  "tasks": [
+    {
+      "name": "Report Services",
+      "memoryId": "cn-1d8nhtm.28",
+      "files": [
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/service/MemberStatementService.java",
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/service/MemberStatementServiceImpl.java",
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/service/FinancialReportService.java",
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/service/FinancialReportServiceImpl.java",
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/dto/MemberStatementEntry.java",
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/dto/MemberStatementResponse.java",
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/dto/FinancialSummaryResponse.java"
+      ],
+      "action": "MemberStatementService: chronological statement combining all financial activities with running balance. FinancialReportService: overall summary with totals.",
+      "verify": ["mvn compile -pl sacco-reporting -q"]
+    },
+    {
+      "name": "Dashboard Endpoints",
+      "memoryId": "cn-1d8nhtm.29",
+      "files": [
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/controller/DashboardController.java",
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/controller/ReportController.java",
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/dto/MemberDashboardResponse.java",
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/dto/TreasurerDashboardResponse.java",
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/dto/AdminDashboardResponse.java"
+      ],
+      "action": "DashboardController at /api/v1/dashboard with member, treasurer, admin views. ReportController at /api/v1/reports with member-statement, financial-summary, loan-portfolio, contribution-summary.",
+      "verify": ["mvn compile -pl sacco-reporting -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "PDF/CSV Export",
+      "memoryId": "cn-1d8nhtm.30",
+      "files": [
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/service/ExportService.java",
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/service/ExportServiceImpl.java",
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/controller/ExportController.java"
+      ],
+      "action": "ExportService for CSV (OpenCSV/manual) and PDF (PDFBox). ExportController at /api/v1/export with member-statement, financial-summary, trial-balance exports.",
+      "verify": ["mvn compile -pl sacco-reporting -q"],
+      "blockedBy": [0, 1]
+    }
+  ],
+  "planVerify": ["mvn compile -pl sacco-reporting -q"],
+  "memoryEpicId": "cn-1d8nhtm",
+  "commitMessage": "feat(reporting): implement dashboards, reports, and PDF/CSV export",
+  "timestamp": "2026-02-14T00:00:00Z"
+}

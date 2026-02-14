@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama",
+  "planNumber": "06",
+  "goal": "Implement contribution management with schedules, arrears tracking, penalties, and domain events",
+  "parallelizable": true,
+  "tasks": [
+    {
+      "name": "Contribution Entities + Repository",
+      "memoryId": "cn-1d8nhtm.16",
+      "files": [
+        "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/entity/Contribution.java",
+        "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/entity/ContributionType.java",
+        "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/entity/ContributionStatus.java",
+        "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/entity/ContributionPenalty.java",
+        "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/repository/ContributionRepository.java",
+        "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/repository/ContributionPenaltyRepository.java"
+      ],
+      "action": "Create Contribution entity (memberId, amount BigDecimal, type, status, date, reference). ContributionPenalty entity. Repositories with cursor pagination and member filters.",
+      "verify": ["mvn compile -pl sacco-contribution -q"]
+    },
+    {
+      "name": "Contribution Service + Events",
+      "memoryId": "cn-1d8nhtm.17",
+      "files": [
+        "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/service/ContributionService.java",
+        "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/service/ContributionServiceImpl.java",
+        "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/service/ContributionPenaltyService.java",
+        "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/service/ContributionPenaltyServiceImpl.java"
+      ],
+      "action": "ContributionService: record, confirm (publishes ContributionReceivedEvent), reverse. ContributionPenaltyService: calculate, apply, waive penalties.",
+      "verify": ["mvn compile -pl sacco-contribution -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Contribution REST API + Liquibase",
+      "memoryId": "cn-1d8nhtm.18",
+      "files": [
+        "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/controller/ContributionController.java",
+        "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/dto/RecordContributionRequest.java",
+        "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/dto/ContributionResponse.java",
+        "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/dto/ContributionSummaryResponse.java",
+        "sacco-contribution/src/main/resources/db/changelog/contribution/001-create-contributions-table.yaml"
+      ],
+      "action": "REST controller at /api/v1/contributions with CRUD, confirm/reverse, member summary, arrears listing. Liquibase for contributions + contribution_penalties tables.",
+      "verify": ["mvn compile -pl sacco-contribution -q"],
+      "blockedBy": [0]
+    }
+  ],
+  "planVerify": ["mvn compile -pl sacco-contribution -q"],
+  "memoryEpicId": "cn-1d8nhtm",
+  "commitMessage": "feat(contribution): implement contribution management with arrears and penalties",
+  "timestamp": "2026-02-14T00:00:00Z"
+}

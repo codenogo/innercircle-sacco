@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama",
+  "planNumber": "07",
+  "goal": "Implement double-entry general ledger with event-driven posting and financial statements",
+  "parallelizable": true,
+  "tasks": [
+    {
+      "name": "Ledger Entities + Chart of Accounts",
+      "memoryId": "cn-1d8nhtm.19",
+      "files": [
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/entity/Account.java",
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/entity/AccountType.java",
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/entity/JournalEntry.java",
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/entity/JournalLine.java",
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/entity/TransactionType.java",
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/repository/AccountRepository.java",
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/repository/JournalEntryRepository.java",
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/repository/JournalLineRepository.java"
+      ],
+      "action": "Create Account (code, name, type, balance), JournalEntry (entryNumber, date, description, posted), JournalLine (debit/credit BigDecimal). Balance validation constraint: debits == credits per entry.",
+      "verify": ["mvn compile -pl sacco-ledger -q"]
+    },
+    {
+      "name": "Ledger Service + Event Listeners",
+      "memoryId": "cn-1d8nhtm.20",
+      "files": [
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/service/LedgerService.java",
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/service/LedgerServiceImpl.java",
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/listener/FinancialEventListener.java"
+      ],
+      "action": "LedgerService for journal entry creation with balance validation. FinancialEventListener handles ContributionReceived, LoanDisbursed, LoanRepayment, PayoutProcessed, PenaltyApplied events.",
+      "verify": ["mvn compile -pl sacco-ledger -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Financial Statements + REST API + Liquibase",
+      "memoryId": "cn-1d8nhtm.21",
+      "files": [
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/service/FinancialStatementService.java",
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/service/FinancialStatementServiceImpl.java",
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/controller/LedgerController.java",
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/dto/JournalEntryResponse.java",
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/dto/TrialBalanceResponse.java",
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/dto/BalanceSheetResponse.java",
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/dto/IncomeStatementResponse.java",
+        "sacco-ledger/src/main/resources/db/changelog/ledger/001-create-ledger-tables.yaml",
+        "sacco-ledger/src/main/resources/db/changelog/ledger/002-seed-chart-of-accounts.yaml"
+      ],
+      "action": "FinancialStatementService for trial balance, P&L, balance sheet. LedgerController at /api/v1/ledger. Liquibase for accounts, journal tables. Seed predefined chart of accounts.",
+      "verify": ["mvn compile -pl sacco-ledger -q"],
+      "blockedBy": [0, 1]
+    }
+  ],
+  "planVerify": ["mvn compile -pl sacco-ledger -q"],
+  "memoryEpicId": "cn-1d8nhtm",
+  "commitMessage": "feat(ledger): implement double-entry accounting with event-driven posting and financial statements",
+  "timestamp": "2026-02-14T00:00:00Z"
+}
