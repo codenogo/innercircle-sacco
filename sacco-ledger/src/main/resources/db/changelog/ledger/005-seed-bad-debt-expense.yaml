@@ -1,0 +1,35 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-seed-bad-debt-expense
+      author: claude
+      changes:
+        - insert:
+            tableName: accounts
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: account_code
+                  value: "5003"
+              - column:
+                  name: account_name
+                  value: "Bad Debt Expense"
+              - column:
+                  name: account_type
+                  value: "EXPENSE"
+              - column:
+                  name: balance
+                  value: "0.00"
+              - column:
+                  name: description
+                  value: "Write-off expense for waived penalties"
+              - column:
+                  name: active
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"

@@ -3,23 +3,17 @@ package com.innercircle.sacco.common.event;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-public record LoanReversalEvent(
-        UUID reversalId,
-        String reversalType,
-        UUID originalTransactionId,
-        UUID loanId,
+public record PenaltyWaivedEvent(
+        UUID penaltyId,
         UUID memberId,
         BigDecimal amount,
-        BigDecimal principalPortion,
-        BigDecimal interestPortion,
-        BigDecimal penaltyPortion,
         String reason,
         String actor
 ) implements AuditableEvent {
 
     @Override
     public String getEventType() {
-        return "LOAN_REVERSAL";
+        return "PENALTY_WAIVED";
     }
 
     @Override

@@ -112,6 +112,7 @@ public class LoanReversalServiceImpl implements LoanReversalService {
                 repayment.getAmount(),
                 repayment.getPrincipalPortion(),
                 repayment.getInterestPortion(),
+                repayment.getPenaltyPortion(),
                 reason,
                 actor
         ));
