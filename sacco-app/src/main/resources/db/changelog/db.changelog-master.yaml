@@ -41,6 +41,8 @@ databaseChangeLog:
   # Loan module
   - include:
       file: db/changelog/loan/001-create-loan-tables.yaml
+  - include:
+      file: db/changelog/loan/002-add-amount-paid-column.yaml
 
   # Payout module
   - include:

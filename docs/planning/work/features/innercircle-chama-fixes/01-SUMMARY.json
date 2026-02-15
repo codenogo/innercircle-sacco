@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama-fixes",
+  "planNumber": "01",
+  "outcome": "complete",
+  "changes": [
+    { "file": "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/entity/AccountType.java", "change": "Added isNormalDebit() method" },
+    { "file": "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/service/LedgerServiceImpl.java", "change": "Branched balance update by account type; updated generateEntryNumber() to use DB sequence" },
+    { "file": "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/repository/JournalEntryRepository.java", "change": "Added getNextEntryNumber() native query" },
+    { "file": "sacco-ledger/src/main/resources/db/changelog/ledger/003-create-journal-entry-seq.yaml", "change": "New Liquibase changeset for journal_entry_number_seq" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/RepaymentScheduleGenerator.java", "change": "Recalculate interest for final installment on actual remaining principal" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java", "change": "Removed double save in disburseLoan(), set REPAYING directly" },
+    { "file": "sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml", "change": "Added include for 003-create-journal-entry-seq.yaml" }
+  ],
+  "verification": [
+    { "task": 1, "result": "pass", "details": "mvn compile -pl sacco-ledger -q" },
+    { "task": 2, "result": "pass", "details": "mvn compile -pl sacco-loan -q" },
+    { "task": 3, "result": "pass", "details": "mvn compile -pl sacco-ledger -q" },
+    { "task": 0, "result": "pass", "details": "mvn compile -q (full project)" }
+  ],
+  "commit": { "hash": "a6363ee", "message": "fix(ledger,loan): fix balance logic, interest calc, disbursement race, entry number atomicity" },
+  "timestamp": "2026-02-15T00:00:00Z"
+}

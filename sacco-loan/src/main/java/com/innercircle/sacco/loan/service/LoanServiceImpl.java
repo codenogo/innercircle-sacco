@@ -180,7 +180,7 @@ public class LoanServiceImpl implements LoanService {
                 break;
             }
 
-            BigDecimal scheduleOutstanding = schedule.getTotalAmount();
+            BigDecimal scheduleOutstanding = schedule.getTotalAmount().subtract(schedule.getAmountPaid());
             BigDecimal paymentForSchedule = remainingAmount.min(scheduleOutstanding);
 
             // Proportionally allocate to interest and principal
@@ -193,11 +193,12 @@ public class LoanServiceImpl implements LoanService {
             totalInterestPaid = totalInterestPaid.add(interestPortion);
             totalPrincipalPaid = totalPrincipalPaid.add(principalPortion);
 
-            // Mark schedule as paid if fully paid
-            if (paymentForSchedule.compareTo(scheduleOutstanding) >= 0) {
+            // Accumulate partial payment
+            schedule.setAmountPaid(schedule.getAmountPaid().add(paymentForSchedule));
+            if (schedule.getAmountPaid().compareTo(schedule.getTotalAmount()) >= 0) {
                 schedule.setPaid(true);
-                scheduleRepository.save(schedule);
             }
+            scheduleRepository.save(schedule);
 
             remainingAmount = remainingAmount.subtract(paymentForSchedule);
         }

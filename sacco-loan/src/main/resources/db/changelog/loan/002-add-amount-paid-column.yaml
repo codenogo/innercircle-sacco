@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: loan-002-add-amount-paid
+      author: claude
+      changes:
+        - addColumn:
+            tableName: repayment_schedules
+            columns:
+              - column:
+                  name: amount_paid
+                  type: DECIMAL(19,2)
+                  defaultValueNumeric: 0.00
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropColumn:
+            tableName: repayment_schedules
+            columnName: amount_paid

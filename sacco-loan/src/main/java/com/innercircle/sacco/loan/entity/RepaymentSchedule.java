@@ -39,6 +39,9 @@ public class RepaymentSchedule extends BaseEntity {
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal totalAmount;
 
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal amountPaid = BigDecimal.ZERO;
+
     @Column(nullable = false)
     private Boolean paid = false;
 }
