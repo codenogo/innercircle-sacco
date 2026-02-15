@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "feature": "custom-auth-api",
+  "planNumber": "04",
+  "parallelizable": false,
+  "memoryEpicId": "cn-1vdd3q6",
+  "goal": "Add the current-user endpoint (GET /api/v1/me) and admin-only user creation (POST /api/v1/admin/users) with password-reset trigger.",
+  "tasks": [
+    {
+      "name": "Create MeController with GET /api/v1/me",
+      "memoryId": "cn-1vdd3q6.10",
+      "cwd": "sacco-security",
+      "files": [
+        "sacco-security/src/main/java/com/innercircle/sacco/security/dto/MeResponse.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/dto/MemberSummary.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/controller/MeController.java",
+        "sacco-security/pom.xml"
+      ],
+      "action": "Create MemberSummary and MeResponse record DTOs. Create MeController @RestController with GET /api/v1/me that loads current user from JWT principal, optionally loads linked Member via MemberRepository, returns ApiResponse<MeResponse>. Add sacco-member dependency to sacco-security pom.xml.",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn -pl sacco-security -am compile -q"]
+    },
+    {
+      "name": "Create CreateUserRequest DTO and extend UserManagementService",
+      "memoryId": "cn-1vdd3q6.11",
+      "cwd": "sacco-security",
+      "files": [
+        "sacco-security/src/main/java/com/innercircle/sacco/security/dto/CreateUserRequest.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/service/UserManagementService.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/service/UserManagementServiceImpl.java"
+      ],
+      "action": "Create CreateUserRequest with username, email, roleNames, optional memberId, sendPasswordResetEmail (default true). Add createUser(CreateUserRequest) to UserManagementService interface. Implement: validate uniqueness, resolve roles, create UserAccount with random temp password, link memberId, trigger password reset email if requested.",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn -pl sacco-security -am compile -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Create UserAdminController with admin user creation and password reset trigger",
+      "memoryId": "cn-1vdd3q6.12",
+      "cwd": "sacco-security",
+      "files": [
+        "sacco-security/src/main/java/com/innercircle/sacco/security/controller/UserAdminController.java"
+      ],
+      "action": "Create UserAdminController @RestController at /api/v1/admin/users with @PreAuthorize hasRole ADMIN. POST /api/v1/admin/users delegates to createUser. POST /api/v1/admin/users/{id}/password-reset triggers password reset for user by ID.",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn -pl sacco-security -am compile -q && mvn -pl sacco-security test -q"],
+      "blockedBy": [1]
+    }
+  ],
+  "planVerify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn -pl sacco-security -am compile -q && mvn -pl sacco-security test -q"],
+  "commitMessage": "feat(custom-auth-api): add /api/v1/me endpoint and admin user creation",
+  "timestamp": "2026-02-15T23:00:00Z"
+}

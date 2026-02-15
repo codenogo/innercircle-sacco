@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "feature": "custom-auth-api",
+  "planNumber": "01",
+  "outcome": "complete",
+  "changes": [
+    { "file": "sacco-security/src/main/resources/db/changelog/security/005-seed-admin-user.yaml", "change": "Seed admin user with BCrypt password and ADMIN role" },
+    { "file": "sacco-security/src/main/resources/db/changelog/security/006-add-member-id-to-users.yaml", "change": "Add nullable member_id FK column to user_accounts" },
+    { "file": "sacco-security/src/main/resources/db/changelog/security/007-create-refresh-tokens.yaml", "change": "Create refresh_tokens table" },
+    { "file": "sacco-security/src/main/java/com/innercircle/sacco/security/entity/RefreshToken.java", "change": "RefreshToken entity" },
+    { "file": "sacco-security/src/main/java/com/innercircle/sacco/security/repository/RefreshTokenRepository.java", "change": "RefreshToken repository" },
+    { "file": "sacco-security/src/main/java/com/innercircle/sacco/security/entity/UserAccount.java", "change": "Added memberId field" }
+  ],
+  "verification": [
+    { "task": 1, "result": "pass", "details": "Compile passed" },
+    { "task": 2, "result": "pass", "details": "Compile passed" },
+    { "task": 3, "result": "pass", "details": "Compile + tests passed" }
+  ],
+  "timestamp": "2026-02-15T21:55:00Z"
+}

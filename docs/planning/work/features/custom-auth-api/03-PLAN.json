@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "feature": "custom-auth-api",
+  "planNumber": "03",
+  "parallelizable": false,
+  "memoryEpicId": "cn-1vdd3q6",
+  "goal": "Implement the login and token refresh flow — AuthService for credential validation and token management, DTOs, and REST endpoints on AuthController.",
+  "tasks": [
+    {
+      "name": "Create auth DTOs (LoginRequest, LoginResponse, RefreshTokenRequest)",
+      "memoryId": "cn-1vdd3q6.7",
+      "cwd": "sacco-security",
+      "files": [
+        "sacco-security/src/main/java/com/innercircle/sacco/security/dto/LoginRequest.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/dto/LoginResponse.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/dto/RefreshTokenRequest.java"
+      ],
+      "action": "Create 3 Java record DTOs: LoginRequest(username, password) with @NotBlank, LoginResponse(accessToken, refreshToken, tokenType, expiresIn), RefreshTokenRequest(refreshToken) with @NotBlank.",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn -pl sacco-security -am compile -q"]
+    },
+    {
+      "name": "Create AuthService with authenticate and refreshAccessToken",
+      "memoryId": "cn-1vdd3q6.8",
+      "cwd": "sacco-security",
+      "files": [
+        "sacco-security/src/main/java/com/innercircle/sacco/security/service/AuthService.java"
+      ],
+      "action": "Create AuthService @Service: authenticate() validates credentials via SaccoUserDetailsService + PasswordEncoder, generates JWT via JwtService, persists RefreshToken (7d expiry). refreshAccessToken() validates refresh token, rotates (revoke old + create new), returns new LoginResponse.",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn -pl sacco-security -am compile -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Extend AuthController with login and refresh endpoints",
+      "memoryId": "cn-1vdd3q6.9",
+      "cwd": "sacco-security",
+      "files": [
+        "sacco-security/src/main/java/com/innercircle/sacco/security/controller/AuthController.java"
+      ],
+      "action": "Add POST /api/auth/login and POST /api/auth/refresh to existing AuthController. Handle BadCredentialsException (401), DisabledException/LockedException (403). Use ApiResponse wrapper.",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn -pl sacco-security -am compile -q && mvn -pl sacco-security test -q"],
+      "blockedBy": [1]
+    }
+  ],
+  "planVerify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn -pl sacco-security -am compile -q && mvn -pl sacco-security test -q"],
+  "commitMessage": "feat(custom-auth-api): add AuthService with login and token refresh endpoints",
+  "timestamp": "2026-02-15T23:00:00Z"
+}

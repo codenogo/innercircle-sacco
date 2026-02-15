@@ -1,12 +1,15 @@
 package com.innercircle.sacco.security.service;
 
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.security.dto.CreateUserRequest;
 import com.innercircle.sacco.security.dto.UserResponse;
 
 import java.util.Set;
 import java.util.UUID;
 
 public interface UserManagementService {
+
+    UserResponse createUser(CreateUserRequest request);
 
     UserResponse activateUser(UUID userId);
 

@@ -1,0 +1,37 @@
+databaseChangeLog:
+  - changeSet:
+      id: 006-add-member-id-to-users
+      author: system
+      changes:
+        - addColumn:
+            tableName: user_accounts
+            columns:
+              - column:
+                  name: member_id
+                  type: uuid
+
+        - addForeignKeyConstraint:
+            baseTableName: user_accounts
+            baseColumnNames: member_id
+            constraintName: fk_user_accounts_member
+            referencedTableName: members
+            referencedColumnNames: id
+            onDelete: SET NULL
+
+        - createIndex:
+            indexName: idx_user_accounts_member_id
+            tableName: user_accounts
+            columns:
+              - column:
+                  name: member_id
+
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: user_accounts
+            constraintName: fk_user_accounts_member
+        - dropIndex:
+            indexName: idx_user_accounts_member_id
+            tableName: user_accounts
+        - dropColumn:
+            tableName: user_accounts
+            columnName: member_id

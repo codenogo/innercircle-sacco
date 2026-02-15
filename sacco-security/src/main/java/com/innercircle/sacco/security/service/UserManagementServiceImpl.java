@@ -3,6 +3,8 @@ package com.innercircle.sacco.security.service;
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.exception.BusinessException;
 import com.innercircle.sacco.common.exception.ResourceNotFoundException;
+import com.innercircle.sacco.member.repository.MemberRepository;
+import com.innercircle.sacco.security.dto.CreateUserRequest;
 import com.innercircle.sacco.security.dto.UserResponse;
 import com.innercircle.sacco.security.entity.Role;
 import com.innercircle.sacco.security.entity.UserAccount;
@@ -12,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +30,59 @@ public class UserManagementServiceImpl implements UserManagementService {
 
     private final UserAccountRepository userAccountRepository;
     private final RoleRepository roleRepository;
+    private final MemberRepository memberRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final PasswordResetService passwordResetService;
+
+    @Override
+    @Transactional
+    public UserResponse createUser(CreateUserRequest request) {
+        // Validate username uniqueness
+        if (userAccountRepository.findByUsername(request.getUsername()).isPresent()) {
+            throw new BusinessException("Username already exists: " + request.getUsername());
+        }
+
+        // Validate email uniqueness
+        if (userAccountRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new BusinessException("Email already exists: " + request.getEmail());
+        }
+
+        // Validate roleNames against existing roles
+        Set<Role> roles = new HashSet<>();
+        for (String roleName : request.getRoleNames()) {
+            Role role = roleRepository.findByName(roleName)
+                    .orElseThrow(() -> new ResourceNotFoundException("Role", roleName));
+            roles.add(role);
+        }
+
+        // If memberId provided, validate it exists
+        if (request.getMemberId() != null) {
+            if (!memberRepository.existsById(request.getMemberId())) {
+                throw new ResourceNotFoundException("Member", request.getMemberId());
+            }
+        }
+
+        // Create UserAccount with random temporary password
+        String tempPassword = passwordEncoder.encode(UUID.randomUUID().toString());
+        UserAccount user = UserAccount.builder()
+                .username(request.getUsername())
+                .email(request.getEmail())
+                .password(tempPassword)
+                .enabled(true)
+                .accountNonLocked(true)
+                .roles(roles)
+                .memberId(request.getMemberId())
+                .build();
+
+        UserAccount savedUser = userAccountRepository.save(user);
+
+        // If sendPasswordResetEmail is true (default), trigger reset email
+        if (Boolean.TRUE.equals(request.getSendPasswordResetEmail())) {
+            passwordResetService.requestPasswordReset(request.getEmail());
+        }
+
+        return mapToUserResponse(savedUser);
+    }
 
     @Override
     @Transactional
