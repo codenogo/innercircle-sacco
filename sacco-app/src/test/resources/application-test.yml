@@ -1,0 +1,59 @@
+server:
+  port: 0
+
+spring:
+  application:
+    name: innercircle-sacco-test
+
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.H2Dialect
+        jdbc:
+          time_zone: UTC
+
+  liquibase:
+    enabled: false
+
+  mail:
+    host: localhost
+    port: 25
+    username: test
+    password: test
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+oauth2:
+  client:
+    web-app:
+      secret: test-secret
+    batch-client:
+      secret: test-batch-secret
+
+cors:
+  allowed-origins: http://localhost:3000
+
+sacco:
+  mail:
+    from: test@innercircle-sacco.com
+    password-reset-url: http://localhost:3000/reset-password
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

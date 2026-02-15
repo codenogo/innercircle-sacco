@@ -11,6 +11,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -33,9 +35,16 @@ public class Contribution extends BaseEntity {
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
 
+    @ManyToOne
+    @JoinColumn(name = "category_id", nullable = false)
+    private ContributionCategory category;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private ContributionType type;
+    private PaymentMode paymentMode;
+
+    @Column(nullable = false)
+    private LocalDate contributionMonth;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -50,11 +59,14 @@ public class Contribution extends BaseEntity {
     @Column(length = 500)
     private String notes;
 
-    public Contribution(UUID memberId, BigDecimal amount, ContributionType type,
+    public Contribution(UUID memberId, BigDecimal amount, ContributionCategory category,
+                        PaymentMode paymentMode, LocalDate contributionMonth,
                         LocalDate contributionDate, String referenceNumber, String notes) {
         this.memberId = memberId;
         this.amount = amount;
-        this.type = type;
+        this.category = category;
+        this.paymentMode = paymentMode;
+        this.contributionMonth = contributionMonth;
         this.status = ContributionStatus.PENDING;
         this.contributionDate = contributionDate;
         this.referenceNumber = referenceNumber;

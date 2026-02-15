@@ -4,19 +4,27 @@ import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.event.ContributionReceivedEvent;
 import com.innercircle.sacco.common.exception.BusinessException;
 import com.innercircle.sacco.common.exception.ResourceNotFoundException;
+import com.innercircle.sacco.contribution.dto.BulkContributionItemRequest;
+import com.innercircle.sacco.contribution.dto.BulkContributionRequest;
 import com.innercircle.sacco.contribution.dto.ContributionSummaryResponse;
+import com.innercircle.sacco.contribution.dto.RecordContributionRequest;
 import com.innercircle.sacco.contribution.entity.Contribution;
+import com.innercircle.sacco.contribution.entity.ContributionCategory;
 import com.innercircle.sacco.contribution.entity.ContributionStatus;
+import com.innercircle.sacco.contribution.repository.ContributionCategoryRepository;
 import com.innercircle.sacco.contribution.repository.ContributionPenaltyRepository;
 import com.innercircle.sacco.contribution.repository.ContributionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,21 +37,62 @@ public class ContributionServiceImpl implements ContributionService {
 
     private final ContributionRepository contributionRepository;
     private final ContributionPenaltyRepository penaltyRepository;
+    private final ContributionCategoryRepository categoryRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
-    public Contribution recordContribution(Contribution contribution) {
+    public Contribution recordContribution(RecordContributionRequest request) {
         // Validate reference number uniqueness if provided
-        if (contribution.getReferenceNumber() != null
-                && contributionRepository.existsByReferenceNumber(contribution.getReferenceNumber())) {
-            throw new BusinessException("Reference number already exists: " + contribution.getReferenceNumber());
+        if (request.getReferenceNumber() != null
+                && contributionRepository.existsByReferenceNumber(request.getReferenceNumber())) {
+            throw new BusinessException("Reference number already exists: " + request.getReferenceNumber());
         }
 
-        // Ensure status is PENDING for new contributions
-        contribution.setStatus(ContributionStatus.PENDING);
+        // Resolve and validate category
+        ContributionCategory category = resolveCategory(request.getCategoryId());
+
+        Contribution contribution = new Contribution(
+                request.getMemberId(),
+                request.getAmount(),
+                category,
+                request.getPaymentMode(),
+                request.getContributionMonth(),
+                request.getContributionDate(),
+                request.getReferenceNumber(),
+                request.getNotes()
+        );
 
         return contributionRepository.save(contribution);
+    }
+
+    @Override
+    @Transactional
+    public List<Contribution> recordBulk(BulkContributionRequest request) {
+        ContributionCategory category = resolveCategory(request.getCategoryId());
+
+        List<Contribution> contributions = new ArrayList<>();
+        for (BulkContributionItemRequest req : request.getContributions()) {
+            if (req.getReferenceNumber() != null &&
+                    contributionRepository.existsByReferenceNumber(req.getReferenceNumber())) {
+                throw new BusinessException("Reference number already exists: " + req.getReferenceNumber());
+            }
+
+            Contribution c = new Contribution(
+                    req.getMemberId(),
+                    req.getAmount(),
+                    category,
+                    req.getPaymentMode() != null ? req.getPaymentMode() : request.getPaymentMode(),
+                    req.getContributionMonth() != null ? req.getContributionMonth() : request.getContributionMonth(),
+                    req.getContributionDate() != null ? req.getContributionDate() : request.getContributionDate(),
+                    req.getReferenceNumber(),
+                    req.getNotes() != null ? req.getNotes() : "Bulk entry: " + request.getBatchReference()
+            );
+
+            contributions.add(c);
+        }
+
+        return contributionRepository.saveAll(contributions);
     }
 
     @Override
@@ -54,7 +103,6 @@ public class ContributionServiceImpl implements ContributionService {
         if (contribution.getStatus() == ContributionStatus.CONFIRMED) {
             throw new BusinessException("Contribution is already confirmed");
         }
-
         if (contribution.getStatus() == ContributionStatus.REVERSED) {
             throw new BusinessException("Cannot confirm a reversed contribution");
         }
@@ -62,7 +110,6 @@ public class ContributionServiceImpl implements ContributionService {
         contribution.setStatus(ContributionStatus.CONFIRMED);
         Contribution confirmed = contributionRepository.save(contribution);
 
-        // Publish ContributionReceivedEvent for ledger integration
         eventPublisher.publishEvent(new ContributionReceivedEvent(
                 confirmed.getId(),
                 confirmed.getMemberId(),
@@ -100,25 +147,30 @@ public class ContributionServiceImpl implements ContributionService {
 
     @Override
     @Transactional(readOnly = true)
-    public CursorPage<Contribution> list(String cursor, int size, ContributionStatus status) {
+    public CursorPage<Contribution> list(String cursor, int size, ContributionStatus status, UUID categoryId, UUID memberId) {
         UUID cursorId = (cursor != null && !cursor.isEmpty())
                 ? UUID.fromString(cursor)
                 : new UUID(0L, 0L);
 
-        List<Contribution> contributions;
+        Specification<Contribution> spec = Specification.where(null);
+
         if (status != null) {
-            contributions = contributionRepository.findByStatusAndIdGreaterThanOrderById(
-                    status, cursorId, PageRequest.of(0, size + 1)
-            );
-        } else {
-            contributions = contributionRepository.findByIdGreaterThanOrderById(
-                    cursorId, PageRequest.of(0, size + 1)
-            );
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
         }
+        if (categoryId != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("category").get("id"), categoryId));
+        }
+        if (memberId != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("memberId"), memberId));
+        }
+        spec = spec.and((root, query, cb) -> cb.greaterThan(root.get("id"), cursorId));
+
+        List<Contribution> contributions = contributionRepository.findAll(spec,
+                PageRequest.of(0, size + 1, Sort.by("id").ascending())).getContent();
 
         boolean hasMore = contributions.size() > size;
         if (hasMore) {
-            contributions = contributions.subList(0, size);
+            contributions = new ArrayList<>(contributions).subList(0, size);
         }
 
         String nextCursor = hasMore && !contributions.isEmpty()
@@ -131,25 +183,7 @@ public class ContributionServiceImpl implements ContributionService {
     @Override
     @Transactional(readOnly = true)
     public CursorPage<Contribution> getMemberContributions(UUID memberId, String cursor, int size) {
-        UUID cursorId = (cursor != null && !cursor.isEmpty())
-                ? UUID.fromString(cursor)
-                : new UUID(0L, 0L);
-
-        List<Contribution> contributions = contributionRepository
-                .findByMemberIdAndIdGreaterThanOrderById(
-                        memberId, cursorId, PageRequest.of(0, size + 1)
-                );
-
-        boolean hasMore = contributions.size() > size;
-        if (hasMore) {
-            contributions = contributions.subList(0, size);
-        }
-
-        String nextCursor = hasMore && !contributions.isEmpty()
-                ? contributions.get(contributions.size() - 1).getId().toString()
-                : null;
-
-        return CursorPage.of(contributions, nextCursor, hasMore);
+        return list(cursor, size, null, null, memberId);
     }
 
     @Override
@@ -168,5 +202,18 @@ public class ContributionServiceImpl implements ContributionService {
                 totalPenalties,
                 lastContributionDate
         );
+    }
+
+    // -------------------------------------------------------
+    // Helper methods
+    // -------------------------------------------------------
+
+    private ContributionCategory resolveCategory(UUID categoryId) {
+        ContributionCategory category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new BusinessException("Category not found: " + categoryId));
+        if (!category.isActive()) {
+            throw new BusinessException("Category is not active: " + category.getName());
+        }
+        return category;
     }
 }

@@ -2,6 +2,7 @@ package com.innercircle.sacco.contribution.controller;
 
 import com.innercircle.sacco.common.dto.ApiResponse;
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.contribution.dto.BulkContributionRequest;
 import com.innercircle.sacco.contribution.dto.ContributionResponse;
 import com.innercircle.sacco.contribution.dto.ContributionSummaryResponse;
 import com.innercircle.sacco.contribution.dto.RecordContributionRequest;
@@ -11,6 +12,7 @@ import com.innercircle.sacco.contribution.service.ContributionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,6 +23,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -40,20 +44,28 @@ public class ContributionController {
      */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<ContributionResponse> recordContribution(
+    public ResponseEntity<ApiResponse<ContributionResponse>> recordContribution(
             @Valid @RequestBody RecordContributionRequest request) {
 
-        Contribution contribution = new Contribution(
-                request.getMemberId(),
-                request.getAmount(),
-                request.getType(),
-                request.getContributionDate(),
-                request.getReferenceNumber(),
-                request.getNotes()
-        );
+        Contribution saved = contributionService.recordContribution(request);
+        return ResponseEntity.created(URI.create("/api/v1/contributions/" + saved.getId()))
+                .body(ApiResponse.ok(ContributionResponse.fromEntity(saved), "Contribution recorded successfully"));
+    }
 
-        Contribution saved = contributionService.recordContribution(contribution);
-        return ApiResponse.ok(ContributionResponse.fromEntity(saved), "Contribution recorded successfully");
+    /**
+     * Record multiple contributions at once.
+     * POST /api/v1/contributions/bulk
+     */
+    @PostMapping("/bulk")
+    public ResponseEntity<ApiResponse<List<ContributionResponse>>> recordBulk(
+            @Valid @RequestBody BulkContributionRequest request) {
+
+        List<Contribution> saved = contributionService.recordBulk(request);
+        List<ContributionResponse> responses = saved.stream()
+                .map(ContributionResponse::fromEntity)
+                .toList();
+
+        return ResponseEntity.ok(ApiResponse.ok(responses, "Bulk contributions recorded successfully"));
     }
 
     /**
@@ -83,16 +95,18 @@ public class ContributionController {
     }
 
     /**
-     * List contributions with cursor pagination and optional status filter.
+     * List contributions with cursor pagination and optional filters.
      * GET /api/v1/contributions
      */
     @GetMapping
     public ApiResponse<CursorPage<ContributionResponse>> listContributions(
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) ContributionStatus status) {
+            @RequestParam(required = false) ContributionStatus status,
+            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false) UUID memberId) {
 
-        CursorPage<Contribution> page = contributionService.list(cursor, size, status);
+        CursorPage<Contribution> page = contributionService.list(cursor, size, status, categoryId, memberId);
         CursorPage<ContributionResponse> responsePage = CursorPage.of(
                 page.getItems().stream()
                         .map(ContributionResponse::fromEntity)

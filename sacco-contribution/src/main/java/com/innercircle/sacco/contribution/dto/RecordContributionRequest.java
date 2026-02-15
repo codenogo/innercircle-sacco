@@ -1,6 +1,6 @@
 package com.innercircle.sacco.contribution.dto;
 
-import com.innercircle.sacco.contribution.entity.ContributionType;
+import com.innercircle.sacco.contribution.entity.PaymentMode;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -27,10 +27,16 @@ public class RecordContributionRequest {
     @DecimalMin(value = "0.01", message = "Amount must be greater than zero")
     private BigDecimal amount;
 
-    @NotNull(message = "Contribution type is required")
-    private ContributionType type;
+    @NotNull(message = "CategoryID is required")
+    private UUID categoryId;
 
-    @NotNull(message = "Contribution date is required")
+    @NotNull(message = "Payment mode is required")
+    private PaymentMode paymentMode;
+
+    @NotNull(message = "Contribution month is required")
+    private LocalDate contributionMonth;
+
+    @NotNull(message = "Transaction date is required")
     private LocalDate contributionDate;
 
     @Size(max = 100, message = "Reference number must not exceed 100 characters")

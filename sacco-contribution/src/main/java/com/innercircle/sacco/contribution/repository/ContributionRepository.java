@@ -14,11 +14,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+
 /**
  * Repository for Contribution entities with cursor-based pagination support.
  */
 @Repository
-public interface ContributionRepository extends JpaRepository<Contribution, UUID> {
+public interface ContributionRepository extends JpaRepository<Contribution, UUID>, JpaSpecificationExecutor<Contribution> {
 
     /**
      * Find contributions with cursor pagination.

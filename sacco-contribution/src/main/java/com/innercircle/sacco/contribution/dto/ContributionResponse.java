@@ -2,7 +2,7 @@ package com.innercircle.sacco.contribution.dto;
 
 import com.innercircle.sacco.contribution.entity.Contribution;
 import com.innercircle.sacco.contribution.entity.ContributionStatus;
-import com.innercircle.sacco.contribution.entity.ContributionType;
+import com.innercircle.sacco.contribution.entity.PaymentMode;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,7 +23,9 @@ public class ContributionResponse {
     private UUID id;
     private UUID memberId;
     private BigDecimal amount;
-    private ContributionType type;
+    private ContributionCategoryResponse category;
+    private PaymentMode paymentMode;
+    private LocalDate contributionMonth;
     private ContributionStatus status;
     private LocalDate contributionDate;
     private String referenceNumber;
@@ -36,7 +38,9 @@ public class ContributionResponse {
                 contribution.getId(),
                 contribution.getMemberId(),
                 contribution.getAmount(),
-                contribution.getType(),
+                ContributionCategoryResponse.fromEntity(contribution.getCategory()),
+                contribution.getPaymentMode(),
+                contribution.getContributionMonth(),
                 contribution.getStatus(),
                 contribution.getContributionDate(),
                 contribution.getReferenceNumber(),

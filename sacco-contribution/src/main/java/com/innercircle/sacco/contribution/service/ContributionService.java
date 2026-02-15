@@ -1,10 +1,13 @@
 package com.innercircle.sacco.contribution.service;
 
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.contribution.dto.BulkContributionRequest;
 import com.innercircle.sacco.contribution.dto.ContributionSummaryResponse;
+import com.innercircle.sacco.contribution.dto.RecordContributionRequest;
 import com.innercircle.sacco.contribution.entity.Contribution;
 import com.innercircle.sacco.contribution.entity.ContributionStatus;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -13,9 +16,14 @@ import java.util.UUID;
 public interface ContributionService {
 
     /**
-     * Record a new contribution (status: PENDING).
+     * Record a new contribution from a request DTO.
      */
-    Contribution recordContribution(Contribution contribution);
+    Contribution recordContribution(RecordContributionRequest request);
+
+    /**
+     * Record multiple contributions at once.
+     */
+    List<Contribution> recordBulk(BulkContributionRequest request);
 
     /**
      * Confirm a contribution and publish ContributionReceivedEvent.
@@ -28,22 +36,22 @@ public interface ContributionService {
     Contribution reverseContribution(UUID contributionId, String actor);
 
     /**
-     * Get a contribution by ID.
+     * Find contribution by ID.
      */
     Contribution findById(UUID contributionId);
 
     /**
-     * Get contributions with cursor pagination.
+     * List contributions with cursor pagination and optional filters.
      */
-    CursorPage<Contribution> list(String cursor, int size, ContributionStatus status);
+    CursorPage<Contribution> list(String cursor, int size, ContributionStatus status, UUID categoryId, UUID memberId);
 
     /**
-     * Get member contributions with cursor pagination.
+     * Get contributions for a specific member.
      */
     CursorPage<Contribution> getMemberContributions(UUID memberId, String cursor, int size);
 
     /**
-     * Get member contribution summary.
+     * Get contribution summary for a member.
      */
     ContributionSummaryResponse getMemberSummary(UUID memberId);
 }
