@@ -83,7 +83,7 @@ class LoanBenefitServiceImplTest {
             LoanRepaymentEvent event = new LoanRepaymentEvent(
                     loanId, memberId1, repaymentId,
                     new BigDecimal("10000"), new BigDecimal("8000"),
-                    new BigDecimal("2000"), "user");
+                    new BigDecimal("2000"), BigDecimal.ZERO, "user");
 
             Map<String, Object> member = new HashMap<>();
             member.put("id", memberId1);
@@ -105,7 +105,7 @@ class LoanBenefitServiceImplTest {
             LoanRepaymentEvent event = new LoanRepaymentEvent(
                     loanId, memberId1, repaymentId,
                     new BigDecimal("10000"), new BigDecimal("10000"),
-                    BigDecimal.ZERO, "user");
+                    BigDecimal.ZERO, BigDecimal.ZERO, "user");
 
             benefitService.handleLoanRepayment(event);
 
@@ -119,7 +119,7 @@ class LoanBenefitServiceImplTest {
             LoanRepaymentEvent event = new LoanRepaymentEvent(
                     loanId, memberId1, repaymentId,
                     new BigDecimal("10000"), new BigDecimal("10000"),
-                    new BigDecimal("-100"), "user");
+                    new BigDecimal("-100"), BigDecimal.ZERO, "user");
 
             benefitService.handleLoanRepayment(event);
 

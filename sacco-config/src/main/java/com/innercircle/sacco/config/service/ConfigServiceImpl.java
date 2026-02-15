@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -196,6 +197,13 @@ public class ConfigServiceImpl implements ConfigService {
     @Transactional(readOnly = true)
     public List<PenaltyRule> getActivePenaltyRules() {
         return penaltyRuleRepository.findByActiveTrue();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<PenaltyRule> getActivePenaltyRuleByType(PenaltyRule.PenaltyType penaltyType) {
+        List<PenaltyRule> rules = penaltyRuleRepository.findByPenaltyTypeAndActiveTrue(penaltyType);
+        return rules.isEmpty() ? Optional.empty() : Optional.of(rules.get(0));
     }
 
     @Override

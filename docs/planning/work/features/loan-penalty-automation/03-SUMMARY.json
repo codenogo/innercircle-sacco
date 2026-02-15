@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "feature": "loan-penalty-automation",
+  "planNumber": "03",
+  "outcome": "complete",
+  "changes": [
+    { "file": "sacco-loan/src/main/java/.../service/LoanPenaltyService.java", "change": "Added markPenaltyPaid() and payPenalties() interface methods" },
+    { "file": "sacco-loan/src/main/java/.../service/LoanPenaltyServiceImpl.java", "change": "Implemented atomic penalty payment with oldest-first ordering" },
+    { "file": "sacco-loan/src/main/java/.../repository/LoanPenaltyRepository.java", "change": "Added findByLoanIdAndPaidFalseOrderByAppliedAtAsc query" },
+    { "file": "sacco-common/src/main/java/.../event/PenaltyPaidEvent.java", "change": "New event record for penalty payment tracking" },
+    { "file": "sacco-common/src/main/java/.../event/LoanRepaymentEvent.java", "change": "Added penaltyPortion field" },
+    { "file": "sacco-loan/src/main/java/.../entity/LoanRepayment.java", "change": "Added penaltyPortion field" },
+    { "file": "sacco-loan/src/main/resources/db/changelog/loan/008-add-penalty-portion-to-repayments.yaml", "change": "Migration for penalty_portion column" },
+    { "file": "sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml", "change": "Registered new migration" },
+    { "file": "sacco-loan/src/main/java/.../service/LoanServiceImpl.java", "change": "Inserted penalty allocation step in recordRepayment()" },
+    { "file": "sacco-ledger/src/main/java/.../listener/FinancialEventListener.java", "change": "Added CR Penalty Income journal line in repayment handler" },
+    { "file": "sacco-loan/src/main/java/.../dto/LoanResponse.java", "change": "Added totalPenalties field and from() mapping" },
+    { "file": "sacco-loan/src/test/java/.../service/LoanServiceImplTest.java", "change": "Added penalty mocks and 2 penalty allocation tests" }
+  ],
+  "verification": [
+    { "task": 2, "result": "pass", "details": "mvn compile passed" },
+    { "task": 1, "result": "pass", "details": "mvn test -pl sacco-loan: 256 tests passed" },
+    { "task": 3, "result": "pass", "details": "mvn test -pl sacco-loan,sacco-config,sacco-ledger -am -q passed" }
+  ],
+  "commit": { "hash": "676f3bf", "message": "feat(loan-penalty): repayment allocation with Interest -> Penalties -> Principal" },
+  "timestamp": "2026-02-15T00:00:00Z"
+}

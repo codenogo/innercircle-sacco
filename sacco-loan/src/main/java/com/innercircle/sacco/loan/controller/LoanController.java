@@ -5,6 +5,8 @@ import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.loan.dto.LoanApplicationRequest;
 import com.innercircle.sacco.loan.dto.LoanResponse;
 import com.innercircle.sacco.loan.dto.LoanSummaryResponse;
+import com.innercircle.sacco.loan.dto.MemberInterestSummary;
+import com.innercircle.sacco.loan.dto.MonthlyInterestSummary;
 import com.innercircle.sacco.loan.dto.RepaymentRequest;
 import com.innercircle.sacco.loan.dto.RepaymentScheduleResponse;
 import com.innercircle.sacco.loan.entity.LoanApplication;
@@ -12,6 +14,7 @@ import com.innercircle.sacco.loan.entity.LoanRepayment;
 import com.innercircle.sacco.loan.entity.LoanStatus;
 import com.innercircle.sacco.loan.entity.RepaymentSchedule;
 import com.innercircle.sacco.loan.repository.LoanApplicationRepository;
+import com.innercircle.sacco.loan.service.InterestReportingService;
 import com.innercircle.sacco.loan.service.LoanService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +32,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -39,6 +43,7 @@ import java.util.stream.Collectors;
 public class LoanController {
 
     private final LoanService loanService;
+    private final InterestReportingService interestReportingService;
     private final LoanApplicationRepository loanRepository;
 
     @PostMapping("/apply")
@@ -183,5 +188,26 @@ public class LoanController {
                 .build();
 
         return ApiResponse.ok(summary);
+    }
+
+    @GetMapping("/interest/summary")
+    public ApiResponse<MonthlyInterestSummary> getMonthlyInterestSummary(
+            @RequestParam String month) {
+        YearMonth yearMonth = YearMonth.parse(month);
+        MonthlyInterestSummary summary = interestReportingService.getMonthlyInterestSummary(yearMonth);
+        return ApiResponse.ok(summary);
+    }
+
+    @GetMapping("/interest/member/{memberId}")
+    public ApiResponse<List<MemberInterestSummary>> getMemberInterestSummary(
+            @PathVariable UUID memberId) {
+        List<MemberInterestSummary> summaries = interestReportingService.getMemberInterestSummary(memberId);
+        return ApiResponse.ok(summaries);
+    }
+
+    @GetMapping("/interest/arrears")
+    public ApiResponse<List<MemberInterestSummary>> getPortfolioInterestArrears() {
+        List<MemberInterestSummary> arrears = interestReportingService.getPortfolioInterestArrears();
+        return ApiResponse.ok(arrears);
     }
 }

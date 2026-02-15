@@ -11,6 +11,7 @@ import com.innercircle.sacco.loan.entity.LoanStatus;
 import com.innercircle.sacco.loan.entity.RepaymentSchedule;
 import com.innercircle.sacco.loan.entity.RepaymentStatus;
 import com.innercircle.sacco.loan.repository.LoanApplicationRepository;
+import com.innercircle.sacco.loan.repository.LoanInterestHistoryRepository;
 import com.innercircle.sacco.loan.repository.LoanRepaymentRepository;
 import com.innercircle.sacco.loan.repository.RepaymentScheduleRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -53,6 +55,9 @@ class LoanServiceImplTest {
     private LoanRepaymentRepository repaymentRepository;
 
     @Mock
+    private LoanInterestHistoryRepository interestHistoryRepository;
+
+    @Mock
     private InterestCalculator interestCalculator;
 
     @Mock
@@ -63,6 +68,9 @@ class LoanServiceImplTest {
 
     @Mock
     private ConfigService configService;
+
+    @Mock
+    private LoanPenaltyService loanPenaltyService;
 
     @InjectMocks
     private LoanServiceImpl loanService;
@@ -447,6 +455,11 @@ class LoanServiceImplTest {
     @DisplayName("recordRepayment")
     class RecordRepayment {
 
+        @BeforeEach
+        void setUpPenaltyStub() {
+            lenient().when(loanPenaltyService.payPenalties(any(), any(), any())).thenReturn(BigDecimal.ZERO);
+        }
+
         @Test
         @DisplayName("should record a valid repayment and update loan balances")
         void shouldRecordValidRepayment() {
@@ -698,6 +711,72 @@ class LoanServiceImplTest {
             assertThat(event.memberId()).isEqualTo(memberId);
             assertThat(event.amount()).isEqualByComparingTo(new BigDecimal("10000"));
             assertThat(event.actor()).isEqualTo("cashier");
+        }
+
+        @Test
+        @DisplayName("should allocate repayment as Interest -> Penalties -> Principal")
+        void shouldAllocateInterestThenPenaltiesThenPrincipal() {
+            LoanApplication loan = createLoan(LoanStatus.REPAYING);
+            loan.setOutstandingBalance(new BigDecimal("100000"));
+            loan.setTotalRepaid(BigDecimal.ZERO);
+            loan.setTotalInterestAccrued(new BigDecimal("2000"));
+            loan.setTotalInterestPaid(BigDecimal.ZERO);
+
+            RepaymentSchedule schedule = createSchedule(1, new BigDecimal("10000"),
+                    new BigDecimal("8000"), new BigDecimal("2000"));
+
+            when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
+            when(scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loanId))
+                    .thenReturn(new ArrayList<>(List.of(schedule)));
+            // Penalties: 500 paid out of available amount
+            when(loanPenaltyService.payPenalties(eq(loanId), any(), eq("user")))
+                    .thenReturn(new BigDecimal("500"));
+            when(repaymentRepository.save(any(LoanRepayment.class))).thenAnswer(inv -> {
+                LoanRepayment r = inv.getArgument(0);
+                r.setId(UUID.randomUUID());
+                return r;
+            });
+            when(loanRepository.save(any(LoanApplication.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            LoanRepayment result = loanService.recordRepayment(loanId, new BigDecimal("10000"), "REF001", "user");
+
+            // Interest: 2000, Penalties: 500, Principal: 7500
+            assertThat(result.getInterestPortion()).isEqualByComparingTo(new BigDecimal("2000"));
+            assertThat(result.getPenaltyPortion()).isEqualByComparingTo(new BigDecimal("500"));
+            assertThat(result.getPrincipalPortion()).isEqualByComparingTo(new BigDecimal("7500"));
+        }
+
+        @Test
+        @DisplayName("should skip penalties when insufficient for any single penalty")
+        void shouldSkipPenaltiesWhenInsufficientForAnySinglePenalty() {
+            LoanApplication loan = createLoan(LoanStatus.REPAYING);
+            loan.setOutstandingBalance(new BigDecimal("100000"));
+            loan.setTotalRepaid(BigDecimal.ZERO);
+            loan.setTotalInterestAccrued(new BigDecimal("9500"));
+            loan.setTotalInterestPaid(BigDecimal.ZERO);
+
+            RepaymentSchedule schedule = createSchedule(1, new BigDecimal("10000"),
+                    new BigDecimal("8000"), new BigDecimal("2000"));
+
+            when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
+            when(scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loanId))
+                    .thenReturn(new ArrayList<>(List.of(schedule)));
+            // No penalties could be paid (atomic: each penalty requires full amount)
+            when(loanPenaltyService.payPenalties(eq(loanId), any(), eq("user")))
+                    .thenReturn(BigDecimal.ZERO);
+            when(repaymentRepository.save(any(LoanRepayment.class))).thenAnswer(inv -> {
+                LoanRepayment r = inv.getArgument(0);
+                r.setId(UUID.randomUUID());
+                return r;
+            });
+            when(loanRepository.save(any(LoanApplication.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            LoanRepayment result = loanService.recordRepayment(loanId, new BigDecimal("10000"), "REF001", "user");
+
+            // Interest takes 9500, no penalties paid, principal gets 500
+            assertThat(result.getInterestPortion()).isEqualByComparingTo(new BigDecimal("9500"));
+            assertThat(result.getPenaltyPortion()).isEqualByComparingTo(BigDecimal.ZERO);
+            assertThat(result.getPrincipalPortion()).isEqualByComparingTo(new BigDecimal("500"));
         }
 
         @Test

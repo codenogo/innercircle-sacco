@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "feature": "loan-penalty-automation",
+  "planNumber": "03",
+  "goal": "Update repayment allocation to Interest -> Penalties -> Principal order, with penalty marking and balance tracking",
+  "tasks": [
+    {
+      "name": "Update Repayment Allocation in LoanServiceImpl",
+      "cwd": ".",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java"
+      ],
+      "action": "Modify recordRepayment() to insert penalty allocation step between interest and principal. After interest is settled, fetch unpaid penalties via LoanPenaltyService, pay oldest-first, decrease loan.totalPenalties. Remaining goes to principal. Update LoanRepaymentEvent to include penalty amount.",
+      "verify": ["./mvnw test -pl sacco-loan -q 2>&1 | tail -10"],
+      "blockedBy": [1]
+    },
+    {
+      "name": "Add Penalty Payment Methods to LoanPenaltyService",
+      "cwd": ".",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanPenaltyService.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanPenaltyServiceImpl.java"
+      ],
+      "action": "Add markPenaltyPaid(UUID penaltyId, String actor) and payPenalties(UUID loanId, BigDecimal availableAmount, String actor) methods. payPenalties iterates unpaid penalties oldest-first, marks each paid, returns total paid.",
+      "verify": ["./mvnw compile -pl sacco-loan -q 2>&1 | tail -5"],
+      "blockedBy": []
+    },
+    {
+      "name": "Update LoanResponse DTO and Tests",
+      "cwd": ".",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/LoanResponse.java",
+        "sacco-loan/src/test/java/com/innercircle/sacco/loan/service/LoanServiceImplTest.java"
+      ],
+      "action": "Add totalPenalties to LoanResponse DTO and from() mapping. Add repayment tests: (1) repayment with penalties allocates Interest->Penalties->Principal, (2) repayment insufficient for penalties skips to principal after interest.",
+      "verify": ["./mvnw test -pl sacco-loan -q 2>&1 | tail -10"],
+      "blockedBy": [0, 1]
+    }
+  ],
+  "planVerify": ["./mvnw test -pl sacco-loan,sacco-config,sacco-ledger -q 2>&1 | tail -10"],
+  "commitMessage": "feat(loan-penalty): repayment allocation with Interest -> Penalties -> Principal",
+  "timestamp": "2026-02-15T15:30:00Z"
+}

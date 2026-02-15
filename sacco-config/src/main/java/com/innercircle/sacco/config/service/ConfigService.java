@@ -9,6 +9,7 @@ import com.innercircle.sacco.config.entity.PenaltyRule;
 import com.innercircle.sacco.config.entity.SystemConfig;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ConfigService {
@@ -38,6 +39,7 @@ public interface ConfigService {
     // Penalty Rule
     List<PenaltyRule> getAllPenaltyRules();
     List<PenaltyRule> getActivePenaltyRules();
+    Optional<PenaltyRule> getActivePenaltyRuleByType(PenaltyRule.PenaltyType penaltyType);
     PenaltyRule getPenaltyRule(UUID id);
     PenaltyRule createPenaltyRule(PenaltyRuleRequest request);
     PenaltyRule updatePenaltyRule(UUID id, PenaltyRuleRequest request);

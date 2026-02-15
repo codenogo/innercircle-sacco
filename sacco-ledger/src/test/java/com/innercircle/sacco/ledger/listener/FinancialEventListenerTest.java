@@ -53,6 +53,7 @@ class FinancialEventListenerTest {
     private Account memberSharesAccount;
     private Account loanReceivableAccount;
     private Account interestIncomeAccount;
+    private Account interestReceivableAccount;
     private Account contributionIncomeAccount;
     private Account penaltyIncomeAccount;
     private Account memberAccountAccount;
@@ -63,6 +64,7 @@ class FinancialEventListenerTest {
         memberSharesAccount = createAccount("2001", "Member Shares", AccountType.LIABILITY);
         loanReceivableAccount = createAccount("1002", "Loan Receivable", AccountType.ASSET);
         interestIncomeAccount = createAccount("4001", "Interest Income", AccountType.REVENUE);
+        interestReceivableAccount = createAccount("1003", "Interest Receivable", AccountType.ASSET);
         contributionIncomeAccount = createAccount("4002", "Contribution Income", AccountType.REVENUE);
         penaltyIncomeAccount = createAccount("4003", "Penalty Income", AccountType.REVENUE);
         memberAccountAccount = createAccount("2002", "Member Account", AccountType.LIABILITY);
@@ -284,12 +286,12 @@ class FinancialEventListenerTest {
             BigDecimal interestPortion = new BigDecimal("300.00");
 
             LoanRepaymentEvent event = new LoanRepaymentEvent(
-                    loanId, memberId, repaymentId, totalAmount, principalPortion, interestPortion, "admin"
+                    loanId, memberId, repaymentId, totalAmount, principalPortion, interestPortion, BigDecimal.ZERO, "admin"
             );
 
             setupAccountLookup("1001", cashAccount);
             setupAccountLookup("1002", loanReceivableAccount);
-            setupAccountLookup("4001", interestIncomeAccount);
+            setupAccountLookup("1003", interestReceivableAccount);
             setupLedgerService();
 
             financialEventListener.handleLoanRepayment(event);
@@ -314,9 +316,9 @@ class FinancialEventListenerTest {
             assertEquals(BigDecimal.ZERO, creditPrincipal.getDebitAmount());
             assertEquals(principalPortion, creditPrincipal.getCreditAmount());
 
-            // Verify credit to Interest Income
+            // Verify credit to Interest Receivable (settles accrual)
             JournalLine creditInterest = captured.getJournalLines().get(2);
-            assertEquals(interestIncomeAccount, creditInterest.getAccount());
+            assertEquals(interestReceivableAccount, creditInterest.getAccount());
             assertEquals(BigDecimal.ZERO, creditInterest.getDebitAmount());
             assertEquals(interestPortion, creditInterest.getCreditAmount());
         }
@@ -330,12 +332,12 @@ class FinancialEventListenerTest {
 
             LoanRepaymentEvent event = new LoanRepaymentEvent(
                     UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                    totalAmount, principalPortion, interestPortion, "admin"
+                    totalAmount, principalPortion, interestPortion, BigDecimal.ZERO, "admin"
             );
 
             setupAccountLookup("1001", cashAccount);
             setupAccountLookup("1002", loanReceivableAccount);
-            setupAccountLookup("4001", interestIncomeAccount);
+            setupAccountLookup("1003", interestReceivableAccount);
             setupLedgerService();
 
             financialEventListener.handleLoanRepayment(event);
@@ -362,12 +364,12 @@ class FinancialEventListenerTest {
 
             LoanRepaymentEvent event = new LoanRepaymentEvent(
                     UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                    totalAmount, principalPortion, interestPortion, "admin"
+                    totalAmount, principalPortion, interestPortion, BigDecimal.ZERO, "admin"
             );
 
             setupAccountLookup("1001", cashAccount);
             setupAccountLookup("1002", loanReceivableAccount);
-            setupAccountLookup("4001", interestIncomeAccount);
+            setupAccountLookup("1003", interestReceivableAccount);
             setupLedgerService();
 
             financialEventListener.handleLoanRepayment(event);
@@ -380,16 +382,61 @@ class FinancialEventListenerTest {
         }
 
         @Test
-        @DisplayName("should post repayment entry after creation")
-        void shouldPostRepaymentEntry() {
+        @DisplayName("should credit Member Account for penalty portion (not Penalty Income)")
+        void shouldCreditMemberAccountForPenaltyPortion() {
+            UUID repaymentId = UUID.randomUUID();
+            BigDecimal totalAmount = new BigDecimal("2000.00");
+            BigDecimal principalPortion = new BigDecimal("1200.00");
+            BigDecimal interestPortion = new BigDecimal("300.00");
+            BigDecimal penaltyPortion = new BigDecimal("500.00");
+
             LoanRepaymentEvent event = new LoanRepaymentEvent(
-                    UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                    new BigDecimal("1000.00"), new BigDecimal("800.00"), new BigDecimal("200.00"), "admin"
+                    UUID.randomUUID(), UUID.randomUUID(), repaymentId,
+                    totalAmount, principalPortion, interestPortion, penaltyPortion, "admin"
             );
 
             setupAccountLookup("1001", cashAccount);
             setupAccountLookup("1002", loanReceivableAccount);
-            setupAccountLookup("4001", interestIncomeAccount);
+            setupAccountLookup("1003", interestReceivableAccount);
+            setupAccountLookup("2002", memberAccountAccount);
+            setupLedgerService();
+
+            financialEventListener.handleLoanRepayment(event);
+
+            verify(ledgerService).createJournalEntry(journalEntryCaptor.capture());
+            JournalEntry captured = journalEntryCaptor.getValue();
+
+            // 4 lines: DR Cash, CR Loan Receivable, CR Interest Receivable, CR Member Account
+            assertEquals(4, captured.getJournalLines().size());
+
+            // Verify penalty portion credits Member Account (2002), NOT Penalty Income (4003)
+            JournalLine penaltyLine = captured.getJournalLines().get(3);
+            assertEquals(memberAccountAccount, penaltyLine.getAccount());
+            assertEquals(BigDecimal.ZERO, penaltyLine.getDebitAmount());
+            assertEquals(penaltyPortion, penaltyLine.getCreditAmount());
+            assertEquals("Penalty obligation settled - Repayment ID: " + repaymentId, penaltyLine.getDescription());
+
+            // Verify balanced entry
+            BigDecimal totalDebits = captured.getJournalLines().stream()
+                    .map(JournalLine::getDebitAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal totalCredits = captured.getJournalLines().stream()
+                    .map(JournalLine::getCreditAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            assertEquals(0, totalDebits.compareTo(totalCredits));
+        }
+
+        @Test
+        @DisplayName("should post repayment entry after creation")
+        void shouldPostRepaymentEntry() {
+            LoanRepaymentEvent event = new LoanRepaymentEvent(
+                    UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                    new BigDecimal("1000.00"), new BigDecimal("800.00"), new BigDecimal("200.00"), BigDecimal.ZERO, "admin"
+            );
+
+            setupAccountLookup("1001", cashAccount);
+            setupAccountLookup("1002", loanReceivableAccount);
+            setupAccountLookup("1003", interestReceivableAccount);
             UUID entryId = UUID.randomUUID();
             JournalEntry createdEntry = new JournalEntry();
             createdEntry.setId(entryId);

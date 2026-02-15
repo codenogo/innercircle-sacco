@@ -3,20 +3,16 @@ package com.innercircle.sacco.common.event;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-public record LoanRepaymentEvent(
-        UUID loanId,
+public record PenaltyPaidEvent(
+        UUID penaltyId,
         UUID memberId,
-        UUID repaymentId,
         BigDecimal amount,
-        BigDecimal principalPortion,
-        BigDecimal interestPortion,
-        BigDecimal penaltyPortion,
         String actor
 ) implements AuditableEvent {
 
     @Override
     public String getEventType() {
-        return "LOAN_REPAYMENT";
+        return "PENALTY_PAID";
     }
 
     @Override

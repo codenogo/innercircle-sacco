@@ -10,7 +10,17 @@ public interface LoanPenaltyService {
 
     LoanPenalty applyPenalty(UUID loanId, UUID memberId, BigDecimal amount, String reason, String actor);
 
+    LoanPenalty applyPenalty(UUID loanId, UUID memberId, BigDecimal amount, String reason, String actor, UUID scheduleId);
+
     List<LoanPenalty> getLoanPenalties(UUID loanId);
 
     List<LoanPenalty> getMemberPenalties(UUID memberId);
+
+    List<LoanPenalty> getUnpaidPenalties(UUID loanId);
+
+    BigDecimal getTotalUnpaidPenalties(UUID loanId);
+
+    void markPenaltyPaid(UUID penaltyId, String actor);
+
+    BigDecimal payPenalties(UUID loanId, BigDecimal availableAmount, String actor);
 }

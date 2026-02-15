@@ -5,12 +5,15 @@ import com.innercircle.sacco.common.event.LoanRepaymentEvent;
 import com.innercircle.sacco.config.entity.InterestMethod;
 import com.innercircle.sacco.config.entity.LoanProductConfig;
 import com.innercircle.sacco.config.service.ConfigService;
+import com.innercircle.sacco.loan.entity.InterestEventType;
 import com.innercircle.sacco.loan.entity.LoanApplication;
+import com.innercircle.sacco.loan.entity.LoanInterestHistory;
 import com.innercircle.sacco.loan.entity.LoanRepayment;
 import com.innercircle.sacco.loan.entity.LoanStatus;
 import com.innercircle.sacco.loan.entity.RepaymentSchedule;
 import com.innercircle.sacco.loan.entity.RepaymentStatus;
 import com.innercircle.sacco.loan.repository.LoanApplicationRepository;
+import com.innercircle.sacco.loan.repository.LoanInterestHistoryRepository;
 import com.innercircle.sacco.loan.repository.LoanRepaymentRepository;
 import com.innercircle.sacco.loan.repository.RepaymentScheduleRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -32,10 +36,12 @@ public class LoanServiceImpl implements LoanService {
     private final LoanApplicationRepository loanRepository;
     private final RepaymentScheduleRepository scheduleRepository;
     private final LoanRepaymentRepository repaymentRepository;
+    private final LoanInterestHistoryRepository interestHistoryRepository;
     private final InterestCalculator interestCalculator;
     private final RepaymentScheduleGenerator scheduleGenerator;
     private final ApplicationEventPublisher eventPublisher;
     private final ConfigService configService;
+    private final LoanPenaltyService loanPenaltyService;
 
     @Override
     @Transactional
@@ -187,14 +193,31 @@ public class LoanServiceImpl implements LoanService {
             throw new IllegalArgumentException("Repayment amount exceeds outstanding balance");
         }
 
-        // Get unpaid schedules in order
-        List<RepaymentSchedule> unpaidSchedules = scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loanId);
+        // Interest-first allocation: overdue interest → current interest → principal
+        BigDecimal unpaidInterest = loan.getTotalInterestAccrued()
+                .subtract(loan.getTotalInterestPaid())
+                .max(BigDecimal.ZERO);
 
         BigDecimal remainingAmount = amount;
-        BigDecimal totalPrincipalPaid = BigDecimal.ZERO;
         BigDecimal totalInterestPaid = BigDecimal.ZERO;
+        BigDecimal totalPrincipalPaid = BigDecimal.ZERO;
 
-        // Allocate payment to schedules
+        // Step 1: Allocate to accrued but unpaid interest first
+        if (unpaidInterest.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal interestPayment = remainingAmount.min(unpaidInterest);
+            totalInterestPaid = totalInterestPaid.add(interestPayment);
+            remainingAmount = remainingAmount.subtract(interestPayment);
+        }
+
+        // Step 2: Allocate remaining to unpaid penalties (oldest first, atomic — no partial)
+        BigDecimal totalPenaltyPaid = BigDecimal.ZERO;
+        if (remainingAmount.compareTo(BigDecimal.ZERO) > 0) {
+            totalPenaltyPaid = loanPenaltyService.payPenalties(loanId, remainingAmount, actor);
+            remainingAmount = remainingAmount.subtract(totalPenaltyPaid);
+        }
+
+        // Step 3: Allocate remaining to principal via schedule installments
+        List<RepaymentSchedule> unpaidSchedules = scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loanId);
         for (RepaymentSchedule schedule : unpaidSchedules) {
             if (remainingAmount.compareTo(BigDecimal.ZERO) <= 0) {
                 break;
@@ -206,17 +229,9 @@ public class LoanServiceImpl implements LoanService {
             }
             BigDecimal paymentForSchedule = remainingAmount.min(scheduleOutstanding);
 
-            // Proportionally allocate to interest and principal
-            BigDecimal interestPortion = schedule.getInterestAmount()
-                    .multiply(paymentForSchedule)
-                    .divide(schedule.getTotalAmount(), 2, java.math.RoundingMode.HALF_UP);
+            // With interest-first, schedule payments go toward principal
+            totalPrincipalPaid = totalPrincipalPaid.add(paymentForSchedule);
 
-            BigDecimal principalPortion = paymentForSchedule.subtract(interestPortion);
-
-            totalInterestPaid = totalInterestPaid.add(interestPortion);
-            totalPrincipalPaid = totalPrincipalPaid.add(principalPortion);
-
-            // Accumulate partial payment
             schedule.setAmountPaid(schedule.getAmountPaid().add(paymentForSchedule));
             if (schedule.getAmountPaid().compareTo(schedule.getTotalAmount()) >= 0) {
                 schedule.setPaid(true);
@@ -226,6 +241,24 @@ public class LoanServiceImpl implements LoanService {
             remainingAmount = remainingAmount.subtract(paymentForSchedule);
         }
 
+        // Update totalInterestPaid on the loan
+        loan.setTotalInterestPaid(loan.getTotalInterestPaid().add(totalInterestPaid));
+
+        // Create interest history record for repayment if interest was paid
+        if (totalInterestPaid.compareTo(BigDecimal.ZERO) > 0) {
+            LoanInterestHistory history = new LoanInterestHistory();
+            history.setLoanId(loanId);
+            history.setMemberId(loan.getMemberId());
+            history.setAccrualDate(LocalDate.now());
+            history.setInterestAmount(totalInterestPaid.negate());
+            history.setOutstandingBalanceSnapshot(loan.getOutstandingBalance());
+            history.setCumulativeInterestAccrued(loan.getTotalInterestAccrued());
+            history.setInterestRate(loan.getInterestRate());
+            history.setEventType(InterestEventType.REPAYMENT_APPLIED);
+            history.setDescription("Interest paid via repayment " + referenceNumber);
+            interestHistoryRepository.save(history);
+        }
+
         // Record the repayment
         LoanRepayment repayment = new LoanRepayment();
         repayment.setLoanId(loanId);
@@ -233,6 +266,7 @@ public class LoanServiceImpl implements LoanService {
         repayment.setAmount(amount);
         repayment.setPrincipalPortion(totalPrincipalPaid);
         repayment.setInterestPortion(totalInterestPaid);
+        repayment.setPenaltyPortion(totalPenaltyPaid);
         repayment.setRepaymentDate(LocalDate.now());
         repayment.setReferenceNumber(referenceNumber);
         repayment.setStatus(RepaymentStatus.CONFIRMED);
@@ -244,7 +278,7 @@ public class LoanServiceImpl implements LoanService {
         loan.setOutstandingBalance(loan.getOutstandingBalance().subtract(amount));
 
         // Check if loan is fully paid
-        if (loan.getOutstandingBalance().compareTo(BigDecimal.ZERO) == 0) {
+        if (loan.getOutstandingBalance().compareTo(BigDecimal.ZERO) <= 0) {
             loan.setStatus(LoanStatus.CLOSED);
         }
 
@@ -258,6 +292,7 @@ public class LoanServiceImpl implements LoanService {
                 amount,
                 totalPrincipalPaid,
                 totalInterestPaid,
+                totalPenaltyPaid,
                 actor
         ));
 

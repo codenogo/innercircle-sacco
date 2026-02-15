@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "feature": "loan-penalty-automation",
+  "planNumber": "02",
+  "goal": "Wire PenaltyRule config into LoanBatchServiceImpl so overdue loans automatically receive penalties based on FLAT/PERCENTAGE rules with compounding and idempotency",
+  "tasks": [
+    {
+      "name": "Add ConfigService Penalty Lookup",
+      "cwd": ".",
+      "files": [
+        "sacco-config/src/main/java/com/innercircle/sacco/config/service/ConfigService.java",
+        "sacco-config/src/main/java/com/innercircle/sacco/config/service/ConfigServiceImpl.java"
+      ],
+      "action": "Add getActivePenaltyRuleByType(PenaltyType) method to ConfigService interface and implementation. Delegates to penaltyRuleRepository.findByPenaltyTypeAndActiveTrue(), returns first result or Optional.empty().",
+      "verify": ["./mvnw compile -pl sacco-config -q 2>&1 | tail -5"],
+      "blockedBy": []
+    },
+    {
+      "name": "Wire Auto-Penalty into LoanBatchServiceImpl",
+      "cwd": ".",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchServiceImpl.java"
+      ],
+      "action": "Inject LoanPenaltyService, ConfigService, LoanPenaltyRepository. Replace hardcoded 30/90-day thresholds with SystemConfig values. In penalty detection block: fetch active LOAN_DEFAULT PenaltyRule, check idempotency via scheduleId, calculate FLAT or PERCENTAGE amount, call applyPenalty with scheduleId, update LoanApplication.totalPenalties.",
+      "verify": ["./mvnw test -pl sacco-loan -q 2>&1 | tail -10"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Update LoanPenaltyService for scheduleId Support",
+      "cwd": ".",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanPenaltyService.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanPenaltyServiceImpl.java"
+      ],
+      "action": "Add overloaded applyPenalty with scheduleId parameter. Add getUnpaidPenalties(UUID loanId) and getTotalUnpaidPenalties(UUID loanId) methods.",
+      "verify": ["./mvnw test -pl sacco-loan -q 2>&1 | tail -5"],
+      "blockedBy": [0]
+    }
+  ],
+  "planVerify": ["./mvnw test -pl sacco-loan,sacco-config -q 2>&1 | tail -10"],
+  "commitMessage": "feat(loan-penalty): auto-apply penalties via PenaltyRule in batch processing",
+  "timestamp": "2026-02-15T15:30:00Z"
+}

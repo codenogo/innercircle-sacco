@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-add-penalty-compounding
+      author: system
+      comment: "Add compounding boolean to penalty_rules for configurable penalty re-application"
+      changes:
+        - addColumn:
+            tableName: penalty_rules
+            columns:
+              - column:
+                  name: compounding
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+
+      rollback:
+        - dropColumn:
+            tableName: penalty_rules
+            columnName: compounding

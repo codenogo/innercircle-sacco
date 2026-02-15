@@ -1,0 +1,48 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-seed-penalty-system-config
+      author: system
+      comment: "Seed SystemConfig entries for penalty grace period and default threshold"
+      changes:
+        - insert:
+            tableName: system_configs
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: config_key
+                  value: "loan.penalty.grace_period_days"
+              - column:
+                  name: config_value
+                  value: "30"
+              - column:
+                  name: description
+                  value: "Number of days after installment due date before penalties are applied"
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+        - insert:
+            tableName: system_configs
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: config_key
+                  value: "loan.penalty.default_threshold_days"
+              - column:
+                  name: config_value
+                  value: "90"
+              - column:
+                  name: description
+                  value: "Number of days overdue before a loan is marked as DEFAULTED"
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"

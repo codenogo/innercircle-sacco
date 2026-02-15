@@ -38,6 +38,9 @@ public class LoanRepayment extends BaseEntity {
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal interestPortion;
 
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal penaltyPortion = BigDecimal.ZERO;
+
     @Column(nullable = false)
     private LocalDate repaymentDate;
 
