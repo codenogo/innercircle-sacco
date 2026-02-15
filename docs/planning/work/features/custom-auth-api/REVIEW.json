@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "timestamp": "2026-02-15T22:05:00Z",
+  "feature": "custom-auth-api",
+  "branch": "feat/custom-auth-api",
+  "commit": "21ee28b",
+  "automated": [
+    { "name": "compile", "result": "pass" },
+    { "name": "tests", "result": "pass", "details": "122 tests, 0 failures" },
+    { "name": "security", "result": "pass", "details": "Secret scan clean" },
+    { "name": "deps", "result": "pass", "details": "OAuth2 auth server removed, sacco-member added" }
+  ],
+  "verdict": "warn",
+  "blockers": [],
+  "warnings": [
+    {
+      "file": "sacco-security/src/main/java/com/innercircle/sacco/security/config/SecurityConfig.java",
+      "line": 72,
+      "issue": "JSON string interpolation without escaping in authenticationEntryPoint and accessDeniedHandler. Exception messages passed directly to String.format in JSON template.",
+      "severity": "medium"
+    },
+    {
+      "file": "sacco-security/src/main/java/com/innercircle/sacco/security/controller/AuthController.java",
+      "line": 111,
+      "issue": "Refresh endpoint leaks internal error message via e.getMessage(). Login endpoint uses static messages. Should be consistent.",
+      "severity": "low"
+    }
+  ],
+  "suggestions": [
+    {
+      "file": "sacco-security/src/main/java/com/innercircle/sacco/security/service/JwtService.java",
+      "line": 107,
+      "suggestion": "Reuse SecureRandom instance as a class field instead of creating new on every call"
+    },
+    {
+      "file": "sacco-security/src/main/java/com/innercircle/sacco/security/service/AuthService.java",
+      "suggestion": "No rate limiting on login/refresh. Consider brute-force protection."
+    },
+    {
+      "file": "sacco-security/src/main/java/com/innercircle/sacco/security/repository/RefreshTokenRepository.java",
+      "line": 22,
+      "suggestion": "deleteByExpiresAtBefore exists but is never called. Add @Scheduled cleanup job."
+    },
+    {
+      "file": "sacco-security/src/main/java/com/innercircle/sacco/security/service/JwtService.java",
+      "line": 76,
+      "suggestion": "Token expiry values (3600s access, 7d refresh) are hardcoded. Make configurable via @Value."
+    }
+  ],
+  "testCoverage": {
+    "tested": ["SaccoUserDetailsService", "PasswordResetServiceImpl", "UserManagementServiceImpl", "AuthController"],
+    "untested": ["JwtService", "AuthService", "MeController", "UserAdminController"]
+  }
+}

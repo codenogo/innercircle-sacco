@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "feature": "event-gl-completeness",
+  "planNumber": "01",
+  "outcome": "complete",
+  "changes": [
+    { "file": "sacco-common/src/main/java/com/innercircle/sacco/common/event/PenaltyWaivedEvent.java", "change": "Created event record" },
+    { "file": "sacco-common/src/main/java/com/innercircle/sacco/common/event/LoanReversalEvent.java", "change": "Added penaltyPortion field" },
+    { "file": "sacco-common/src/main/java/com/innercircle/sacco/common/event/LoanApplicationEvent.java", "change": "Created lifecycle event" },
+    { "file": "sacco-common/src/main/java/com/innercircle/sacco/common/event/LoanStatusChangeEvent.java", "change": "Created lifecycle event" },
+    { "file": "sacco-common/src/main/java/com/innercircle/sacco/common/event/ContributionCreatedEvent.java", "change": "Created lifecycle event" },
+    { "file": "sacco-common/src/main/java/com/innercircle/sacco/common/event/PayoutStatusChangeEvent.java", "change": "Created lifecycle event" },
+    { "file": "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/entity/TransactionType.java", "change": "Added 4 new enum values" },
+    { "file": "sacco-ledger/src/main/resources/db/changelog/ledger/005-seed-bad-debt-expense.yaml", "change": "Created Liquibase changeset" },
+    { "file": "sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml", "change": "Registered new changeset" },
+    { "file": "sacco-common/src/test/java/com/innercircle/sacco/common/event/LoanReversalEventTest.java", "change": "Updated for penaltyPortion field" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanReversalServiceImpl.java", "change": "Updated LoanReversalEvent constructor" }
+  ],
+  "verification": [
+    { "task": 1, "result": "pass", "details": "sacco-common compile clean" },
+    { "task": 2, "result": "pass", "details": "sacco-ledger compile clean" },
+    { "task": 3, "result": "pass", "details": "sacco-common compile clean" },
+    { "task": "plan", "result": "pass", "details": "sacco-common + sacco-ledger compile + test passed" }
+  ],
+  "commit": { "hash": "pending", "message": "feat(event-gl-completeness): add event records, Liquibase migration, and TransactionType values" },
+  "timestamp": "2026-02-15T19:58:00Z"
+}

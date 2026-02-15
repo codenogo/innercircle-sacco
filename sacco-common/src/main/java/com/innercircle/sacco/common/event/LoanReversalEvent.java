@@ -12,6 +12,7 @@ public record LoanReversalEvent(
         BigDecimal amount,
         BigDecimal principalPortion,
         BigDecimal interestPortion,
+        BigDecimal penaltyPortion,
         String reason,
         String actor
 ) implements AuditableEvent {

@@ -2,6 +2,7 @@ package com.innercircle.sacco.payout.service;
 
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.event.PayoutProcessedEvent;
+import com.innercircle.sacco.common.event.PayoutStatusChangeEvent;
 import com.innercircle.sacco.payout.entity.Payout;
 import com.innercircle.sacco.payout.entity.PayoutStatus;
 import com.innercircle.sacco.payout.entity.PayoutType;
@@ -31,7 +32,16 @@ public class PayoutServiceImpl implements PayoutService {
     public Payout createPayout(UUID memberId, BigDecimal amount, PayoutType type, String actor) {
         Payout payout = new Payout(memberId, amount, type);
         payout.setCreatedBy(actor);
-        return payoutRepository.save(payout);
+        Payout saved = payoutRepository.save(payout);
+
+        eventPublisher.publishEvent(new PayoutStatusChangeEvent(
+                saved.getId(),
+                saved.getMemberId(),
+                "CREATED",
+                actor
+        ));
+
+        return saved;
     }
 
     @Override
@@ -47,7 +57,16 @@ public class PayoutServiceImpl implements PayoutService {
         payout.setStatus(PayoutStatus.APPROVED);
         payout.setApprovedBy(actor);
 
-        return payoutRepository.save(payout);
+        Payout approved = payoutRepository.save(payout);
+
+        eventPublisher.publishEvent(new PayoutStatusChangeEvent(
+                approved.getId(),
+                approved.getMemberId(),
+                "APPROVED",
+                actor
+        ));
+
+        return approved;
     }
 
     @Override

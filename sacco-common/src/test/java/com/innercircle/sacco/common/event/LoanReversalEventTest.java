@@ -19,9 +19,11 @@ class LoanReversalEventTest {
         BigDecimal principal = new BigDecimal("20000.00");
         BigDecimal interest = new BigDecimal("5000.00");
 
+        BigDecimal penalty = new BigDecimal("1000.00");
+
         LoanReversalEvent event = new LoanReversalEvent(
                 reversalId, "FULL_REVERSAL", originalTxId, loanId, memberId,
-                amount, principal, interest, "Duplicate payment", "admin"
+                amount, principal, interest, penalty, "Duplicate payment", "admin"
         );
 
         assertThat(event.reversalId()).isEqualTo(reversalId);
@@ -32,6 +34,7 @@ class LoanReversalEventTest {
         assertThat(event.amount()).isEqualByComparingTo(amount);
         assertThat(event.principalPortion()).isEqualByComparingTo(principal);
         assertThat(event.interestPortion()).isEqualByComparingTo(interest);
+        assertThat(event.penaltyPortion()).isEqualByComparingTo(penalty);
         assertThat(event.reason()).isEqualTo("Duplicate payment");
         assertThat(event.actor()).isEqualTo("admin");
     }
@@ -40,7 +43,7 @@ class LoanReversalEventTest {
     void getEventType_shouldReturnLoanReversal() {
         LoanReversalEvent event = new LoanReversalEvent(
                 UUID.randomUUID(), "PARTIAL", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, "reason", "actor"
+                BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ZERO, "reason", "actor"
         );
 
         assertThat(event.getEventType()).isEqualTo("LOAN_REVERSAL");
@@ -50,7 +53,7 @@ class LoanReversalEventTest {
     void getActor_shouldReturnActorValue() {
         LoanReversalEvent event = new LoanReversalEvent(
                 UUID.randomUUID(), "FULL", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, "error", "supervisor"
+                BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ZERO, "error", "supervisor"
         );
 
         assertThat(event.getActor()).isEqualTo("supervisor");
@@ -60,7 +63,7 @@ class LoanReversalEventTest {
     void shouldImplementAuditableEvent() {
         LoanReversalEvent event = new LoanReversalEvent(
                 UUID.randomUUID(), "FULL", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, "reason", "actor"
+                BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ZERO, "reason", "actor"
         );
 
         assertThat(event).isInstanceOf(AuditableEvent.class);
@@ -74,10 +77,10 @@ class LoanReversalEventTest {
         UUID mId = UUID.randomUUID();
 
         LoanReversalEvent event1 = new LoanReversalEvent(
-                rId, "FULL", oId, lId, mId, BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, "r", "a"
+                rId, "FULL", oId, lId, mId, BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ZERO, "r", "a"
         );
         LoanReversalEvent event2 = new LoanReversalEvent(
-                rId, "FULL", oId, lId, mId, BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, "r", "a"
+                rId, "FULL", oId, lId, mId, BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ZERO, "r", "a"
         );
 
         assertThat(event1).isEqualTo(event2);
@@ -88,7 +91,7 @@ class LoanReversalEventTest {
     void toString_shouldContainFieldValues() {
         LoanReversalEvent event = new LoanReversalEvent(
                 UUID.randomUUID(), "PARTIAL_REVERSAL", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                new BigDecimal("3000"), new BigDecimal("2500"), new BigDecimal("500"),
+                new BigDecimal("3000"), new BigDecimal("2500"), new BigDecimal("500"), BigDecimal.ZERO,
                 "Wrong amount", "manager"
         );
 

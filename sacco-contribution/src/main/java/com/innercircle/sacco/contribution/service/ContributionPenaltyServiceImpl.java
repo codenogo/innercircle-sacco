@@ -1,6 +1,7 @@
 package com.innercircle.sacco.contribution.service;
 
 import com.innercircle.sacco.common.event.PenaltyAppliedEvent;
+import com.innercircle.sacco.common.event.PenaltyWaivedEvent;
 import com.innercircle.sacco.common.exception.BusinessException;
 import com.innercircle.sacco.common.exception.ResourceNotFoundException;
 import com.innercircle.sacco.contribution.entity.ContributionPenalty;
@@ -57,7 +58,13 @@ public class ContributionPenaltyServiceImpl implements ContributionPenaltyServic
 
         ContributionPenalty waivedPenalty = penaltyRepository.save(penalty);
 
-        // TODO: Publish PenaltyWaivedEvent when defined
+        eventPublisher.publishEvent(new PenaltyWaivedEvent(
+                waivedPenalty.getId(),
+                waivedPenalty.getMemberId(),
+                waivedPenalty.getAmount(),
+                "Manual waiver",
+                actor
+        ));
 
         return waivedPenalty;
     }

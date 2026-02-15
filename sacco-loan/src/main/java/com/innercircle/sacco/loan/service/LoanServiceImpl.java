@@ -1,7 +1,9 @@
 package com.innercircle.sacco.loan.service;
 
+import com.innercircle.sacco.common.event.LoanApplicationEvent;
 import com.innercircle.sacco.common.event.LoanDisbursedEvent;
 import com.innercircle.sacco.common.event.LoanRepaymentEvent;
+import com.innercircle.sacco.common.event.LoanStatusChangeEvent;
 import com.innercircle.sacco.config.entity.InterestMethod;
 import com.innercircle.sacco.config.entity.LoanProductConfig;
 import com.innercircle.sacco.config.service.ConfigService;
@@ -87,7 +89,16 @@ public class LoanServiceImpl implements LoanService {
         loan.setTotalInterestAccrued(BigDecimal.ZERO);
         loan.setTotalInterestPaid(BigDecimal.ZERO);
 
-        return loanRepository.save(loan);
+        LoanApplication savedLoan = loanRepository.save(loan);
+
+        eventPublisher.publishEvent(new LoanApplicationEvent(
+                savedLoan.getId(),
+                savedLoan.getMemberId(),
+                "APPLIED",
+                memberId.toString()
+        ));
+
+        return savedLoan;
     }
 
     @Override
@@ -103,7 +114,16 @@ public class LoanServiceImpl implements LoanService {
         loan.setApprovedBy(approvedBy);
         loan.setApprovedAt(Instant.now());
 
-        return loanRepository.save(loan);
+        LoanApplication approved = loanRepository.save(loan);
+
+        eventPublisher.publishEvent(new LoanApplicationEvent(
+                approved.getId(),
+                approved.getMemberId(),
+                "APPROVED",
+                approvedBy.toString()
+        ));
+
+        return approved;
     }
 
     @Override
@@ -119,7 +139,16 @@ public class LoanServiceImpl implements LoanService {
         loan.setApprovedBy(rejectedBy);
         loan.setApprovedAt(Instant.now());
 
-        return loanRepository.save(loan);
+        LoanApplication rejected = loanRepository.save(loan);
+
+        eventPublisher.publishEvent(new LoanApplicationEvent(
+                rejected.getId(),
+                rejected.getMemberId(),
+                "REJECTED",
+                rejectedBy.toString()
+        ));
+
+        return rejected;
     }
 
     @Override
@@ -308,8 +337,18 @@ public class LoanServiceImpl implements LoanService {
             throw new IllegalStateException("Cannot close loan with outstanding balance");
         }
 
+        String previousStatus = loan.getStatus().name();
         loan.setStatus(LoanStatus.CLOSED);
-        return loanRepository.save(loan);
+        LoanApplication closed = loanRepository.save(loan);
+
+        eventPublisher.publishEvent(new LoanStatusChangeEvent(
+                closed.getId(),
+                previousStatus,
+                "CLOSED",
+                "system"
+        ));
+
+        return closed;
     }
 
     @Override

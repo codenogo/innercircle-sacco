@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "feature": "custom-auth-api",
+  "planNumber": "02",
+  "parallelizable": false,
+  "memoryEpicId": "cn-1vdd3q6",
+  "goal": "Replace Spring Authorization Server with direct JWT issuance — create JwtService, update SecurityConfig, remove AuthorizationServerConfig and OAuth2 auth server dependency.",
+  "tasks": [
+    {
+      "name": "Create JwtService with RSA key loading and JWT generation",
+      "memoryId": "cn-1vdd3q6.4",
+      "cwd": "sacco-security",
+      "files": [
+        "sacco-security/src/main/java/com/innercircle/sacco/security/service/JwtService.java"
+      ],
+      "action": "Create JwtService @Service that loads RSA keys from config (port logic from AuthorizationServerConfig), initializes NimbusJwtEncoder/NimbusJwtDecoder, provides generateAccessToken(UserAccount), generateRefreshToken(), decodeToken(String) methods. Access token includes sub, userId, email, roles, authorities claims with 1h expiry.",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn -pl sacco-security -am compile -q"]
+    },
+    {
+      "name": "Update SecurityConfig with PasswordEncoder, JwtDecoder, JSON errors",
+      "memoryId": "cn-1vdd3q6.5",
+      "cwd": "sacco-security",
+      "files": [
+        "sacco-security/src/main/java/com/innercircle/sacco/security/config/SecurityConfig.java"
+      ],
+      "action": "Add PasswordEncoder (BCrypt) and JwtDecoder beans to SecurityConfig. Remove formLogin. Add /api/auth/login and /api/auth/refresh to permitAll. Add custom AuthenticationEntryPoint and AccessDeniedHandler returning JSON responses.",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn -pl sacco-security -am compile -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Delete AuthorizationServerConfig, JwtTokenCustomizer, remove OAuth2 auth server dep",
+      "memoryId": "cn-1vdd3q6.6",
+      "cwd": "sacco-security",
+      "files": [
+        "sacco-security/src/main/java/com/innercircle/sacco/security/config/AuthorizationServerConfig.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/config/JwtTokenCustomizer.java",
+        "sacco-security/pom.xml"
+      ],
+      "action": "Delete AuthorizationServerConfig.java and JwtTokenCustomizer.java. Remove spring-security-oauth2-authorization-server dependency from pom.xml. Keep spring-boot-starter-oauth2-resource-server.",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn -pl sacco-security -am compile -q && mvn -pl sacco-security test -q"],
+      "blockedBy": [1]
+    }
+  ],
+  "planVerify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn -pl sacco-security -am compile -q && mvn -pl sacco-security test -q"],
+  "commitMessage": "feat(custom-auth-api): replace Spring Authorization Server with direct JWT via JwtService",
+  "timestamp": "2026-02-15T23:00:00Z"
+}

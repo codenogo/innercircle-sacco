@@ -1,0 +1,50 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-seed-admin-user
+      author: system
+      changes:
+        - insert:
+            tableName: user_accounts
+            columns:
+              - column:
+                  name: id
+                  value: "01940000-0000-7000-8000-000000000100"
+              - column:
+                  name: username
+                  value: "admin"
+              - column:
+                  name: password
+                  value: "$2a$10$dXJ3SW6G7P50lGmMQgel6ux9BdHJkyTO1FNLIfMTd8pSdkWQJisJm"
+              - column:
+                  name: email
+                  value: "admin@innercircle.co.ke"
+              - column:
+                  name: enabled
+                  valueBoolean: true
+              - column:
+                  name: account_non_locked
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+
+        - insert:
+            tableName: user_account_roles
+            columns:
+              - column:
+                  name: user_account_id
+                  value: "01940000-0000-7000-8000-000000000100"
+              - column:
+                  name: role_id
+                  value: "01940000-0000-7000-8000-000000000001"
+
+      rollback:
+        - delete:
+            tableName: user_account_roles
+            where: user_account_id = '01940000-0000-7000-8000-000000000100'
+        - delete:
+            tableName: user_accounts
+            where: username = 'admin'

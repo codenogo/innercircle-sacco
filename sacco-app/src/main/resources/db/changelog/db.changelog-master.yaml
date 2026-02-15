@@ -49,6 +49,8 @@ databaseChangeLog:
       file: db/changelog/ledger/003-create-journal-entry-seq.yaml
   - include:
       file: db/changelog/ledger/004-seed-interest-receivable.yaml
+  - include:
+      file: db/changelog/ledger/005-seed-bad-debt-expense.yaml
 
   # Loan module
   - include:

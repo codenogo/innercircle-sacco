@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "feature": "custom-auth-api",
+  "planNumber": "01",
+  "parallelizable": true,
+  "memoryEpicId": "cn-1vdd3q6",
+  "goal": "Set up the data layer — Liquibase migrations for seed admin, member-id FK, and refresh tokens table; update entities accordingly.",
+  "tasks": [
+    {
+      "name": "Create Liquibase migrations (seed admin, member-id, refresh tokens)",
+      "memoryId": "cn-1vdd3q6.1",
+      "cwd": "sacco-security",
+      "files": [
+        "sacco-security/src/main/resources/db/changelog/security/005-seed-admin-user.yaml",
+        "sacco-security/src/main/resources/db/changelog/security/006-add-member-id-to-users.yaml",
+        "sacco-security/src/main/resources/db/changelog/security/007-create-refresh-tokens.yaml"
+      ],
+      "action": "Create 3 Liquibase migration files: 005 seeds admin user with BCrypt password and ADMIN role assignment, 006 adds nullable member_id FK column to user_accounts referencing members(id), 007 creates refresh_tokens table with user_id FK, token, expires_at, revoked columns.",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn -pl sacco-security -am compile -q"]
+    },
+    {
+      "name": "Create RefreshToken entity and RefreshTokenRepository",
+      "memoryId": "cn-1vdd3q6.2",
+      "cwd": "sacco-security",
+      "files": [
+        "sacco-security/src/main/java/com/innercircle/sacco/security/entity/RefreshToken.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/repository/RefreshTokenRepository.java"
+      ],
+      "action": "Create RefreshToken entity extending BaseEntity with userId, token, expiresAt, revoked fields. Create RefreshTokenRepository with findByToken, findByUserIdAndRevokedFalse, deleteByExpiresAtBefore, revokeAllByUserId methods.",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn -pl sacco-security -am compile -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Add memberId field to UserAccount entity",
+      "memoryId": "cn-1vdd3q6.3",
+      "cwd": "sacco-security",
+      "files": [
+        "sacco-security/src/main/java/com/innercircle/sacco/security/entity/UserAccount.java"
+      ],
+      "action": "Add nullable memberId UUID field with @Column(name = \"member_id\") to UserAccount. No JPA relationship to Member (cross-module boundary).",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn -pl sacco-security -am compile -q && mvn -pl sacco-security test -q"],
+      "blockedBy": [0]
+    }
+  ],
+  "planVerify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn -pl sacco-security -am compile -q && mvn -pl sacco-security test -q"],
+  "commitMessage": "feat(custom-auth-api): add migrations for seed admin, member-id FK, refresh tokens + entities",
+  "timestamp": "2026-02-15T23:00:00Z"
+}

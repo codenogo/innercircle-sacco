@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "feature": "event-gl-completeness",
+  "planNumber": "01",
+  "goal": "Establish all prerequisite event definitions, database migration, and enum values needed by GL handlers and publishers",
+  "memoryEpicId": "cn-1opz0qo",
+  "tasks": [
+    {
+      "name": "Create PenaltyWaivedEvent + enrich LoanReversalEvent",
+      "memoryId": "cn-1opz0qo.1",
+      "cwd": "sacco-common",
+      "files": [
+        "sacco-common/src/main/java/com/innercircle/sacco/common/event/PenaltyWaivedEvent.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/event/LoanReversalEvent.java"
+      ],
+      "action": "Create PenaltyWaivedEvent record (penaltyId, memberId, amount, reason, actor) implementing AuditableEvent. Add penaltyPortion BigDecimal field to LoanReversalEvent after interestPortion.",
+      "verify": ["mvn compile -pl sacco-common -q"],
+      "blockedBy": []
+    },
+    {
+      "name": "Liquibase migration for Bad Debt Expense + TransactionType enum",
+      "memoryId": "cn-1opz0qo.2",
+      "cwd": "sacco-ledger",
+      "files": [
+        "sacco-ledger/src/main/resources/db/changelog/ledger/005-seed-bad-debt-expense.yaml",
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/entity/TransactionType.java"
+      ],
+      "action": "Create changeset 005-seed-bad-debt-expense.yaml inserting account 5003 Bad Debt Expense (EXPENSE). Add LOAN_REVERSAL, CONTRIBUTION_REVERSAL, PENALTY_WAIVER, BENEFIT_DISTRIBUTION to TransactionType enum. Register in changelog master.",
+      "verify": ["mvn compile -pl sacco-ledger -am -q"],
+      "blockedBy": []
+    },
+    {
+      "name": "Create lifecycle event records",
+      "memoryId": "cn-1opz0qo.3",
+      "cwd": "sacco-common",
+      "files": [
+        "sacco-common/src/main/java/com/innercircle/sacco/common/event/LoanApplicationEvent.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/event/LoanStatusChangeEvent.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/event/ContributionCreatedEvent.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/event/PayoutStatusChangeEvent.java"
+      ],
+      "action": "Create 4 minimal audit-only event records implementing AuditableEvent: LoanApplicationEvent, LoanStatusChangeEvent, ContributionCreatedEvent, PayoutStatusChangeEvent. Keep payloads minimal.",
+      "verify": ["mvn compile -pl sacco-common -q"],
+      "blockedBy": []
+    }
+  ],
+  "planVerify": ["mvn compile -pl sacco-common,sacco-ledger -am -q", "mvn test -pl sacco-common,sacco-ledger -am -DskipITs -q"],
+  "commitMessage": "feat(event-gl-completeness): add event records, Liquibase migration, and TransactionType values",
+  "parallelizable": true,
+  "timestamp": "2026-02-15T00:00:00Z"
+}

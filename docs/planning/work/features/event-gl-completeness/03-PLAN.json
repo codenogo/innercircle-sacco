@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "feature": "event-gl-completeness",
+  "planNumber": "03",
+  "goal": "Wire event publishing for contribution reversals, penalty waivers, and all lifecycle events",
+  "memoryEpicId": "cn-1opz0qo",
+  "tasks": [
+    {
+      "name": "Wire ContributionReversedEvent + PenaltyWaivedEvent publishing",
+      "memoryId": "cn-1opz0qo.7",
+      "cwd": "sacco-contribution",
+      "files": [
+        "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/service/ContributionServiceImpl.java",
+        "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/service/ContributionPenaltyServiceImpl.java"
+      ],
+      "action": "Replace TODO comments with eventPublisher.publishEvent() calls for ContributionReversedEvent in reverseContribution() and PenaltyWaivedEvent in waivePenalty(). Ensure ApplicationEventPublisher is injected.",
+      "verify": ["mvn compile -pl sacco-contribution -am -q", "mvn test -pl sacco-contribution -am -DskipITs -q"],
+      "blockedBy": []
+    },
+    {
+      "name": "Wire lifecycle events in sacco-loan",
+      "memoryId": "cn-1opz0qo.8",
+      "cwd": "sacco-loan",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java"
+      ],
+      "action": "Publish LoanApplicationEvent in applyForLoan (APPLIED), approveLoan (APPROVED), rejectLoan (REJECTED). Publish LoanStatusChangeEvent in closeLoan and any default transition.",
+      "verify": ["mvn compile -pl sacco-loan -am -q", "mvn test -pl sacco-loan -am -DskipITs -q"],
+      "blockedBy": []
+    },
+    {
+      "name": "Wire lifecycle events in sacco-contribution + sacco-payout",
+      "memoryId": "cn-1opz0qo.9",
+      "cwd": ".",
+      "files": [
+        "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/service/ContributionServiceImpl.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/PayoutServiceImpl.java"
+      ],
+      "action": "Publish ContributionCreatedEvent in recordContribution() and bulkRecordContributions(). Publish PayoutStatusChangeEvent in createPayout (CREATED) and approvePayout (APPROVED).",
+      "verify": ["mvn compile -pl sacco-contribution,sacco-payout -am -q", "mvn test -pl sacco-contribution,sacco-payout -am -DskipITs -q"],
+      "blockedBy": []
+    }
+  ],
+  "planVerify": ["mvn test -pl sacco-contribution,sacco-loan,sacco-payout -am -DskipITs -q"],
+  "commitMessage": "feat(event-gl-completeness): wire event publishing for reversals, waivers, and lifecycle",
+  "parallelizable": true,
+  "timestamp": "2026-02-15T00:00:00Z"
+}

@@ -16,6 +16,7 @@ import lombok.Setter;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 @Entity
 @Table(name = "user_accounts")
@@ -42,6 +43,9 @@ public class UserAccount extends BaseEntity {
     @Column(nullable = false)
     @Builder.Default
     private Boolean accountNonLocked = true;
+
+    @Column(name = "member_id")
+    private UUID memberId;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(

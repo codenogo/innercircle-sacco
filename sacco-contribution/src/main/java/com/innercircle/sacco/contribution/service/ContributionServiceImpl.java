@@ -1,7 +1,9 @@
 package com.innercircle.sacco.contribution.service;
 
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.event.ContributionCreatedEvent;
 import com.innercircle.sacco.common.event.ContributionReceivedEvent;
+import com.innercircle.sacco.common.event.ContributionReversedEvent;
 import com.innercircle.sacco.common.exception.BusinessException;
 import com.innercircle.sacco.common.exception.ResourceNotFoundException;
 import com.innercircle.sacco.contribution.dto.BulkContributionItemRequest;
@@ -63,7 +65,17 @@ public class ContributionServiceImpl implements ContributionService {
                 request.getNotes()
         );
 
-        return contributionRepository.save(contribution);
+        Contribution saved = contributionRepository.save(contribution);
+
+        eventPublisher.publishEvent(new ContributionCreatedEvent(
+                saved.getId(),
+                saved.getMemberId(),
+                saved.getAmount(),
+                saved.getReferenceNumber(),
+                "system"
+        ));
+
+        return saved;
     }
 
     @Override
@@ -92,7 +104,19 @@ public class ContributionServiceImpl implements ContributionService {
             contributions.add(c);
         }
 
-        return contributionRepository.saveAll(contributions);
+        List<Contribution> saved = contributionRepository.saveAll(contributions);
+
+        for (Contribution c : saved) {
+            eventPublisher.publishEvent(new ContributionCreatedEvent(
+                    c.getId(),
+                    c.getMemberId(),
+                    c.getAmount(),
+                    c.getReferenceNumber(),
+                    "system"
+            ));
+        }
+
+        return saved;
     }
 
     @Override
@@ -133,7 +157,13 @@ public class ContributionServiceImpl implements ContributionService {
         contribution.setStatus(ContributionStatus.REVERSED);
         Contribution reversed = contributionRepository.save(contribution);
 
-        // TODO: Publish ContributionReversedEvent when defined
+        eventPublisher.publishEvent(new ContributionReversedEvent(
+                reversed.getId(),
+                reversed.getMemberId(),
+                reversed.getAmount(),
+                reversed.getReferenceNumber(),
+                actor
+        ));
 
         return reversed;
     }

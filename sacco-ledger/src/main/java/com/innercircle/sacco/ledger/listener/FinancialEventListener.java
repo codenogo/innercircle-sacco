@@ -1,11 +1,15 @@
 package com.innercircle.sacco.ledger.listener;
 
+import com.innercircle.sacco.common.event.BenefitsDistributedEvent;
 import com.innercircle.sacco.common.event.ContributionReceivedEvent;
+import com.innercircle.sacco.common.event.ContributionReversedEvent;
 import com.innercircle.sacco.common.event.LoanDisbursedEvent;
 import com.innercircle.sacco.common.event.LoanInterestAccrualEvent;
 import com.innercircle.sacco.common.event.LoanRepaymentEvent;
+import com.innercircle.sacco.common.event.LoanReversalEvent;
 import com.innercircle.sacco.common.event.PayoutProcessedEvent;
 import com.innercircle.sacco.common.event.PenaltyAppliedEvent;
+import com.innercircle.sacco.common.event.PenaltyWaivedEvent;
 import com.innercircle.sacco.common.exception.ResourceNotFoundException;
 import com.innercircle.sacco.ledger.entity.Account;
 import com.innercircle.sacco.ledger.entity.JournalEntry;
@@ -39,6 +43,7 @@ public class FinancialEventListener {
     private static final String ACCOUNT_PENALTY_INCOME = "4003";
     private static final String ACCOUNT_INTEREST_RECEIVABLE = "1003";
     private static final String ACCOUNT_MEMBER_ACCOUNT = "2002";
+    private static final String ACCOUNT_BAD_DEBT_EXPENSE = "5003";
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void handleContributionReceived(ContributionReceivedEvent event) {
@@ -254,6 +259,160 @@ public class FinancialEventListener {
         creditLine.setDebitAmount(BigDecimal.ZERO);
         creditLine.setCreditAmount(event.interestAmount());
         creditLine.setDescription("Interest income accrual - Loan ID: " + event.loanId());
+        entry.addJournalLine(creditLine);
+
+        JournalEntry created = ledgerService.createJournalEntry(entry);
+        ledgerService.postEntry(created.getId());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    public void handleLoanReversal(LoanReversalEvent event) {
+        log.info("Posting loan reversal to ledger: {}", event.reversalId());
+
+        Account loanReceivableAccount = getAccountByCode(ACCOUNT_LOAN_RECEIVABLE);
+        Account cashAccount = getAccountByCode(ACCOUNT_CASH);
+
+        JournalEntry entry = new JournalEntry();
+        entry.setTransactionDate(LocalDate.now());
+        entry.setDescription("Loan repayment reversal - " + event.reversalType());
+        entry.setTransactionType(TransactionType.LOAN_REVERSAL);
+        entry.setReferenceId(event.reversalId());
+
+        // DR Loan Receivable (principal portion)
+        JournalLine debitPrincipal = new JournalLine();
+        debitPrincipal.setAccount(loanReceivableAccount);
+        debitPrincipal.setDebitAmount(event.principalPortion());
+        debitPrincipal.setCreditAmount(BigDecimal.ZERO);
+        debitPrincipal.setDescription("Loan receivable restored - Reversal ID: " + event.reversalId());
+        entry.addJournalLine(debitPrincipal);
+
+        // DR Interest Receivable (interest portion, skip if zero)
+        if (event.interestPortion().compareTo(BigDecimal.ZERO) > 0) {
+            Account interestReceivableAccount = getAccountByCode(ACCOUNT_INTEREST_RECEIVABLE);
+            JournalLine debitInterest = new JournalLine();
+            debitInterest.setAccount(interestReceivableAccount);
+            debitInterest.setDebitAmount(event.interestPortion());
+            debitInterest.setCreditAmount(BigDecimal.ZERO);
+            debitInterest.setDescription("Interest receivable restored - Reversal ID: " + event.reversalId());
+            entry.addJournalLine(debitInterest);
+        }
+
+        // DR Member Account (penalty portion, skip if zero)
+        if (event.penaltyPortion() != null && event.penaltyPortion().compareTo(BigDecimal.ZERO) > 0) {
+            Account memberAccount = getAccountByCode(ACCOUNT_MEMBER_ACCOUNT);
+            JournalLine debitPenalty = new JournalLine();
+            debitPenalty.setAccount(memberAccount);
+            debitPenalty.setDebitAmount(event.penaltyPortion());
+            debitPenalty.setCreditAmount(BigDecimal.ZERO);
+            debitPenalty.setDescription("Penalty obligation restored - Reversal ID: " + event.reversalId());
+            entry.addJournalLine(debitPenalty);
+        }
+
+        // CR Cash (total amount)
+        JournalLine creditCash = new JournalLine();
+        creditCash.setAccount(cashAccount);
+        creditCash.setDebitAmount(BigDecimal.ZERO);
+        creditCash.setCreditAmount(event.amount());
+        creditCash.setDescription("Cash reversed - Reversal ID: " + event.reversalId());
+        entry.addJournalLine(creditCash);
+
+        JournalEntry created = ledgerService.createJournalEntry(entry);
+        ledgerService.postEntry(created.getId());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    public void handleContributionReversed(ContributionReversedEvent event) {
+        log.info("Posting contribution reversal to ledger: {}", event.contributionId());
+
+        Account memberSharesAccount = getAccountByCode(ACCOUNT_MEMBER_SHARES);
+        Account cashAccount = getAccountByCode(ACCOUNT_CASH);
+
+        JournalEntry entry = new JournalEntry();
+        entry.setTransactionDate(LocalDate.now());
+        entry.setDescription("Contribution reversal - " + event.referenceNumber());
+        entry.setTransactionType(TransactionType.CONTRIBUTION_REVERSAL);
+        entry.setReferenceId(event.contributionId());
+
+        // DR Member Shares
+        JournalLine debitLine = new JournalLine();
+        debitLine.setAccount(memberSharesAccount);
+        debitLine.setDebitAmount(event.amount());
+        debitLine.setCreditAmount(BigDecimal.ZERO);
+        debitLine.setDescription("Member shares reversed - " + event.referenceNumber());
+        entry.addJournalLine(debitLine);
+
+        // CR Cash
+        JournalLine creditLine = new JournalLine();
+        creditLine.setAccount(cashAccount);
+        creditLine.setDebitAmount(BigDecimal.ZERO);
+        creditLine.setCreditAmount(event.amount());
+        creditLine.setDescription("Cash reversed - " + event.referenceNumber());
+        entry.addJournalLine(creditLine);
+
+        JournalEntry created = ledgerService.createJournalEntry(entry);
+        ledgerService.postEntry(created.getId());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    public void handlePenaltyWaived(PenaltyWaivedEvent event) {
+        log.info("Posting penalty waiver to ledger: {}", event.penaltyId());
+
+        Account badDebtExpenseAccount = getAccountByCode(ACCOUNT_BAD_DEBT_EXPENSE);
+        Account memberAccount = getAccountByCode(ACCOUNT_MEMBER_ACCOUNT);
+
+        JournalEntry entry = new JournalEntry();
+        entry.setTransactionDate(LocalDate.now());
+        entry.setDescription("Penalty waived - " + event.reason());
+        entry.setTransactionType(TransactionType.PENALTY_WAIVER);
+        entry.setReferenceId(event.penaltyId());
+
+        // DR Bad Debt Expense
+        JournalLine debitLine = new JournalLine();
+        debitLine.setAccount(badDebtExpenseAccount);
+        debitLine.setDebitAmount(event.amount());
+        debitLine.setCreditAmount(BigDecimal.ZERO);
+        debitLine.setDescription("Bad debt expense - Penalty waived ID: " + event.penaltyId());
+        entry.addJournalLine(debitLine);
+
+        // CR Member Account
+        JournalLine creditLine = new JournalLine();
+        creditLine.setAccount(memberAccount);
+        creditLine.setDebitAmount(BigDecimal.ZERO);
+        creditLine.setCreditAmount(event.amount());
+        creditLine.setDescription("Member obligation relieved - Penalty waived ID: " + event.penaltyId());
+        entry.addJournalLine(creditLine);
+
+        JournalEntry created = ledgerService.createJournalEntry(entry);
+        ledgerService.postEntry(created.getId());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    public void handleBenefitsDistributed(BenefitsDistributedEvent event) {
+        log.info("Posting benefits distribution to ledger: loan {}", event.loanId());
+
+        Account interestIncomeAccount = getAccountByCode(ACCOUNT_INTEREST_INCOME);
+        Account memberAccount = getAccountByCode(ACCOUNT_MEMBER_ACCOUNT);
+
+        JournalEntry entry = new JournalEntry();
+        entry.setTransactionDate(LocalDate.now());
+        entry.setDescription("Benefits distributed - " + event.beneficiaryCount() + " beneficiaries");
+        entry.setTransactionType(TransactionType.BENEFIT_DISTRIBUTION);
+        entry.setReferenceId(event.loanId());
+
+        // DR Interest Income
+        JournalLine debitLine = new JournalLine();
+        debitLine.setAccount(interestIncomeAccount);
+        debitLine.setDebitAmount(event.totalInterestAmount());
+        debitLine.setCreditAmount(BigDecimal.ZERO);
+        debitLine.setDescription("Interest income distributed - Loan ID: " + event.loanId());
+        entry.addJournalLine(debitLine);
+
+        // CR Member Account
+        JournalLine creditLine = new JournalLine();
+        creditLine.setAccount(memberAccount);
+        creditLine.setDebitAmount(BigDecimal.ZERO);
+        creditLine.setCreditAmount(event.totalInterestAmount());
+        creditLine.setDescription("Benefits credited - Loan ID: " + event.loanId());
         entry.addJournalLine(creditLine);
 
         JournalEntry created = ledgerService.createJournalEntry(entry);

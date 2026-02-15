@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "feature": "event-gl-completeness",
+  "displayName": "Event & GL Completeness",
+  "decisions": [
+    { "area": "scope", "decision": "All gaps (critical + medium + low)", "rationale": "Comprehensive fix to prevent revisiting; user preference" },
+    { "area": "gl-reversal-style", "decision": "Mirror entries (swap debits/credits)", "rationale": "Standard accounting practice; clear audit trail; no negative amounts" },
+    { "area": "penalty-waiver-gl", "decision": "DR Bad Debt Expense (5003) / CR Member Account (2002)", "rationale": "Preserves penalty income recognition; waiver is explicit write-off" },
+    { "area": "new-account", "decision": "Add 5003 Bad Debt Expense via Liquibase", "rationale": "Required for penalty waiver GL entries" },
+    { "area": "penalty-paid-gl", "decision": "No standalone GL handler", "rationale": "All penalty payments flow through LoanRepaymentEvent which already handles penalty GL" },
+    { "area": "listener-phase", "decision": "GL=BEFORE_COMMIT, audit=AFTER_COMMIT", "rationale": "Consistent with existing FinancialEventListener pattern" },
+    { "area": "lifecycle-events", "decision": "Audit-only (no GL impact)", "rationale": "State transitions, not financial transactions" }
+  ],
+  "constraints": [
+    "Liquibase migration for account 5003 must be new changeset (no modifying existing)",
+    "LoanReversalEvent missing penaltyPortion field — add or derive",
+    "ContributionReversedEvent exists but unpublished — wire up",
+    "ContributionPenaltyServiceImpl.waivePenalty() has TODO — implement",
+    "Existing FinancialEventListenerTest has 6 handler tests — new handlers need tests",
+    "Keep lifecycle event payloads minimal for audit efficiency"
+  ],
+  "openQuestions": [],
+  "relatedCode": [
+    "sacco-common/src/main/java/com/innercircle/sacco/common/event/",
+    "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/listener/FinancialEventListener.java",
+    "sacco-audit/src/main/java/com/innercircle/sacco/audit/listener/AuditEventListener.java",
+    "sacco-ledger/src/main/resources/db/changelog/ledger/002-seed-chart-of-accounts.yaml",
+    "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/service/ContributionServiceImpl.java",
+    "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/service/ContributionPenaltyServiceImpl.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanReversalServiceImpl.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBenefitServiceImpl.java",
+    "sacco-ledger/src/test/java/com/innercircle/sacco/ledger/listener/FinancialEventListenerTest.java"
+  ],
+  "memoryEpicId": "cn-1opz0qo",
+  "timestamp": "2026-02-15T00:00:00Z"
+}

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "feature": "event-gl-completeness",
+  "planNumber": "02",
+  "goal": "Add 4 new GL event handlers to FinancialEventListener with full test coverage",
+  "memoryEpicId": "cn-1opz0qo",
+  "tasks": [
+    {
+      "name": "Add GL handlers for LoanReversalEvent and ContributionReversedEvent",
+      "memoryId": "cn-1opz0qo.4",
+      "cwd": "sacco-ledger",
+      "files": [
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/listener/FinancialEventListener.java"
+      ],
+      "action": "Add handleLoanReversal (DR Loan Receivable 1002 + DR Interest Receivable 1003 + CR Cash 1001, with optional DR Member Account 2002 for penalty) and handleContributionReversed (DR Member Shares 2001 + CR Cash 1001) handlers with BEFORE_COMMIT phase.",
+      "verify": ["mvn compile -pl sacco-ledger -am -q"],
+      "blockedBy": []
+    },
+    {
+      "name": "Add GL handlers for PenaltyWaivedEvent and BenefitsDistributedEvent",
+      "memoryId": "cn-1opz0qo.5",
+      "cwd": "sacco-ledger",
+      "files": [
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/listener/FinancialEventListener.java"
+      ],
+      "action": "Add ACCOUNT_BAD_DEBT_EXPENSE constant (5003). Add handlePenaltyWaived (DR Bad Debt Expense 5003 + CR Member Account 2002) and handleBenefitsDistributed (DR Interest Income 4001 + CR Member Account 2002) handlers with BEFORE_COMMIT phase.",
+      "verify": ["mvn compile -pl sacco-ledger -am -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Add tests for all 4 new GL handlers",
+      "memoryId": "cn-1opz0qo.6",
+      "cwd": "sacco-ledger",
+      "files": [
+        "sacco-ledger/src/test/java/com/innercircle/sacco/ledger/listener/FinancialEventListenerTest.java"
+      ],
+      "action": "Add 4 @Nested test classes: HandleLoanReversalTests, HandleContributionReversedTests, HandlePenaltyWaivedTests, HandleBenefitsDistributedTests. Follow existing test patterns with balanced entry verification and account assertions.",
+      "verify": ["mvn test -pl sacco-ledger -am -DskipITs -q"],
+      "blockedBy": [0, 1]
+    }
+  ],
+  "planVerify": ["mvn test -pl sacco-ledger -am -DskipITs -q"],
+  "commitMessage": "feat(event-gl-completeness): add GL handlers for reversals, waivers, and benefits",
+  "parallelizable": false,
+  "timestamp": "2026-02-15T00:00:00Z"
+}

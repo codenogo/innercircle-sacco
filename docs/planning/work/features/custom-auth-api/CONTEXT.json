@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "feature": "custom-auth-api",
+  "displayName": "Custom Auth API",
+  "decisions": [
+    { "area": "idp-strategy", "decision": "Direct JWT (no external IdP)", "rationale": "Single-app SACCO; external IdP is overkill. Self-contained JWT issuance." },
+    { "area": "registration", "decision": "Admin-only user creation", "rationale": "SACCO members are known entities. Admin creates accounts and sends password-reset email." },
+    { "area": "token-strategy", "decision": "Short-lived access (1h) + refresh token (7d)", "rationale": "Industry standard. Short access token limits blast radius; refresh enables seamless UX." },
+    { "area": "current-user", "decision": "GET /api/v1/me endpoint", "rationale": "Frontend needs user profile + roles + member data after login to hydrate UI." },
+    { "area": "seed-admin", "decision": "Liquibase migration with BCrypt-hashed default password", "rationale": "System must be usable on first startup." },
+    { "area": "onboarding", "decision": "Password reset link via email", "rationale": "More secure than sending temp passwords in transit." },
+    { "area": "user-member-link", "decision": "member_id FK on user_accounts", "rationale": "Enables /api/v1/me to return linked member data for self-service." },
+    { "area": "auth-removal", "decision": "Remove Spring Authorization Server", "rationale": "Replace with direct JWT issuance. Eliminates form login dependency." }
+  ],
+  "constraints": [
+    "Preserve existing /api/v1/users admin endpoints",
+    "Preserve existing password reset flow",
+    "RSA key config must continue to work for JWT signing",
+    "BCrypt password encoding must remain consistent",
+    "Default admin password must meet complexity rules",
+    "Batch client auth replacement deferred to separate task"
+  ],
+  "openQuestions": [
+    "Default admin password: hardcoded vs env var with fallback",
+    "Refresh token rotation: single-use vs reusable",
+    "Batch client auth mechanism after OAuth2 removal"
+  ],
+  "relatedCode": [
+    "sacco-security/src/main/java/com/innercircle/sacco/security/config/AuthorizationServerConfig.java",
+    "sacco-security/src/main/java/com/innercircle/sacco/security/config/SecurityConfig.java",
+    "sacco-security/src/main/java/com/innercircle/sacco/security/config/JwtTokenCustomizer.java",
+    "sacco-security/src/main/java/com/innercircle/sacco/security/service/SaccoUserDetailsService.java",
+    "sacco-security/src/main/java/com/innercircle/sacco/security/service/PasswordResetServiceImpl.java",
+    "sacco-security/src/main/java/com/innercircle/sacco/security/controller/AuthController.java",
+    "sacco-security/src/main/java/com/innercircle/sacco/security/controller/UserManagementController.java",
+    "sacco-security/src/main/java/com/innercircle/sacco/security/entity/UserAccount.java",
+    "sacco-security/src/main/java/com/innercircle/sacco/security/repository/UserAccountRepository.java"
+  ],
+  "memoryEpicId": "cn-1vdd3q6",
+  "timestamp": "2026-02-15T22:00:00Z"
+}

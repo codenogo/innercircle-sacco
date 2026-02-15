@@ -1,10 +1,14 @@
 package com.innercircle.sacco.ledger.listener;
 
+import com.innercircle.sacco.common.event.BenefitsDistributedEvent;
 import com.innercircle.sacco.common.event.ContributionReceivedEvent;
+import com.innercircle.sacco.common.event.ContributionReversedEvent;
 import com.innercircle.sacco.common.event.LoanDisbursedEvent;
 import com.innercircle.sacco.common.event.LoanRepaymentEvent;
+import com.innercircle.sacco.common.event.LoanReversalEvent;
 import com.innercircle.sacco.common.event.PayoutProcessedEvent;
 import com.innercircle.sacco.common.event.PenaltyAppliedEvent;
+import com.innercircle.sacco.common.event.PenaltyWaivedEvent;
 import com.innercircle.sacco.common.exception.ResourceNotFoundException;
 import com.innercircle.sacco.ledger.entity.Account;
 import com.innercircle.sacco.ledger.entity.AccountType;
@@ -57,6 +61,7 @@ class FinancialEventListenerTest {
     private Account contributionIncomeAccount;
     private Account penaltyIncomeAccount;
     private Account memberAccountAccount;
+    private Account badDebtExpenseAccount;
 
     @BeforeEach
     void setUp() {
@@ -68,6 +73,7 @@ class FinancialEventListenerTest {
         contributionIncomeAccount = createAccount("4002", "Contribution Income", AccountType.REVENUE);
         penaltyIncomeAccount = createAccount("4003", "Penalty Income", AccountType.REVENUE);
         memberAccountAccount = createAccount("2002", "Member Account", AccountType.LIABILITY);
+        badDebtExpenseAccount = createAccount("5003", "Bad Debt Expense", AccountType.EXPENSE);
     }
 
     @Nested
@@ -701,6 +707,506 @@ class FinancialEventListenerTest {
 
             assertThrows(ResourceNotFoundException.class,
                     () -> financialEventListener.handleContributionReceived(event));
+        }
+    }
+
+    @Nested
+    @DisplayName("handleLoanReversal")
+    class HandleLoanReversalTests {
+
+        @Test
+        @DisplayName("should create journal entry for loan reversal with principal and interest")
+        void shouldCreateJournalEntryForLoanReversal() {
+            UUID reversalId = UUID.randomUUID();
+            UUID loanId = UUID.randomUUID();
+            BigDecimal amount = new BigDecimal("1500.00");
+            BigDecimal principalPortion = new BigDecimal("1200.00");
+            BigDecimal interestPortion = new BigDecimal("300.00");
+
+            LoanReversalEvent event = new LoanReversalEvent(
+                    reversalId, "REPAYMENT", UUID.randomUUID(), loanId, UUID.randomUUID(),
+                    amount, principalPortion, interestPortion, BigDecimal.ZERO, "Duplicate payment", "admin"
+            );
+
+            setupAccountLookup("1002", loanReceivableAccount);
+            setupAccountLookup("1003", interestReceivableAccount);
+            setupAccountLookup("1001", cashAccount);
+            setupLedgerService();
+
+            financialEventListener.handleLoanReversal(event);
+
+            verify(ledgerService).createJournalEntry(journalEntryCaptor.capture());
+            JournalEntry captured = journalEntryCaptor.getValue();
+
+            assertEquals(TransactionType.LOAN_REVERSAL, captured.getTransactionType());
+            assertEquals(reversalId, captured.getReferenceId());
+            assertEquals("Loan repayment reversal - REPAYMENT", captured.getDescription());
+            assertEquals(3, captured.getJournalLines().size());
+
+            // DR Loan Receivable (principal)
+            JournalLine debitPrincipal = captured.getJournalLines().get(0);
+            assertEquals(loanReceivableAccount, debitPrincipal.getAccount());
+            assertEquals(principalPortion, debitPrincipal.getDebitAmount());
+            assertEquals(BigDecimal.ZERO, debitPrincipal.getCreditAmount());
+
+            // DR Interest Receivable (interest)
+            JournalLine debitInterest = captured.getJournalLines().get(1);
+            assertEquals(interestReceivableAccount, debitInterest.getAccount());
+            assertEquals(interestPortion, debitInterest.getDebitAmount());
+            assertEquals(BigDecimal.ZERO, debitInterest.getCreditAmount());
+
+            // CR Cash (total)
+            JournalLine creditCash = captured.getJournalLines().get(2);
+            assertEquals(cashAccount, creditCash.getAccount());
+            assertEquals(BigDecimal.ZERO, creditCash.getDebitAmount());
+            assertEquals(amount, creditCash.getCreditAmount());
+        }
+
+        @Test
+        @DisplayName("should skip interest line when interest portion is zero")
+        void shouldSkipInterestLineWhenZero() {
+            BigDecimal amount = new BigDecimal("1000.00");
+            BigDecimal principalPortion = new BigDecimal("1000.00");
+
+            LoanReversalEvent event = new LoanReversalEvent(
+                    UUID.randomUUID(), "REPAYMENT", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                    amount, principalPortion, BigDecimal.ZERO, BigDecimal.ZERO, "error", "admin"
+            );
+
+            setupAccountLookup("1002", loanReceivableAccount);
+            setupAccountLookup("1001", cashAccount);
+            setupLedgerService();
+
+            financialEventListener.handleLoanReversal(event);
+
+            verify(ledgerService).createJournalEntry(journalEntryCaptor.capture());
+            JournalEntry captured = journalEntryCaptor.getValue();
+
+            // Only 2 lines: DR Loan Receivable, CR Cash
+            assertEquals(2, captured.getJournalLines().size());
+        }
+
+        @Test
+        @DisplayName("should include penalty portion when present")
+        void shouldIncludePenaltyPortionWhenPresent() {
+            BigDecimal amount = new BigDecimal("2000.00");
+            BigDecimal principalPortion = new BigDecimal("1200.00");
+            BigDecimal interestPortion = new BigDecimal("300.00");
+            BigDecimal penaltyPortion = new BigDecimal("500.00");
+
+            LoanReversalEvent event = new LoanReversalEvent(
+                    UUID.randomUUID(), "REPAYMENT", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                    amount, principalPortion, interestPortion, penaltyPortion, "error", "admin"
+            );
+
+            setupAccountLookup("1002", loanReceivableAccount);
+            setupAccountLookup("1003", interestReceivableAccount);
+            setupAccountLookup("2002", memberAccountAccount);
+            setupAccountLookup("1001", cashAccount);
+            setupLedgerService();
+
+            financialEventListener.handleLoanReversal(event);
+
+            verify(ledgerService).createJournalEntry(journalEntryCaptor.capture());
+            JournalEntry captured = journalEntryCaptor.getValue();
+
+            // 4 lines: DR Loan Receivable, DR Interest Receivable, DR Member Account, CR Cash
+            assertEquals(4, captured.getJournalLines().size());
+
+            JournalLine penaltyLine = captured.getJournalLines().get(2);
+            assertEquals(memberAccountAccount, penaltyLine.getAccount());
+            assertEquals(penaltyPortion, penaltyLine.getDebitAmount());
+            assertEquals(BigDecimal.ZERO, penaltyLine.getCreditAmount());
+        }
+
+        @Test
+        @DisplayName("should create balanced reversal entry")
+        void shouldCreateBalancedReversalEntry() {
+            BigDecimal amount = new BigDecimal("1500.00");
+            BigDecimal principalPortion = new BigDecimal("1200.00");
+            BigDecimal interestPortion = new BigDecimal("300.00");
+
+            LoanReversalEvent event = new LoanReversalEvent(
+                    UUID.randomUUID(), "REPAYMENT", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                    amount, principalPortion, interestPortion, BigDecimal.ZERO, "error", "admin"
+            );
+
+            setupAccountLookup("1002", loanReceivableAccount);
+            setupAccountLookup("1003", interestReceivableAccount);
+            setupAccountLookup("1001", cashAccount);
+            setupLedgerService();
+
+            financialEventListener.handleLoanReversal(event);
+
+            verify(ledgerService).createJournalEntry(journalEntryCaptor.capture());
+            JournalEntry captured = journalEntryCaptor.getValue();
+
+            BigDecimal totalDebits = captured.getJournalLines().stream()
+                    .map(JournalLine::getDebitAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal totalCredits = captured.getJournalLines().stream()
+                    .map(JournalLine::getCreditAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            assertEquals(0, totalDebits.compareTo(totalCredits));
+        }
+
+        @Test
+        @DisplayName("should post reversal entry after creation")
+        void shouldPostReversalEntry() {
+            LoanReversalEvent event = new LoanReversalEvent(
+                    UUID.randomUUID(), "REPAYMENT", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                    new BigDecimal("1000.00"), new BigDecimal("1000.00"), BigDecimal.ZERO, BigDecimal.ZERO,
+                    "error", "admin"
+            );
+
+            setupAccountLookup("1002", loanReceivableAccount);
+            setupAccountLookup("1001", cashAccount);
+            UUID entryId = UUID.randomUUID();
+            JournalEntry createdEntry = new JournalEntry();
+            createdEntry.setId(entryId);
+            when(ledgerService.createJournalEntry(any(JournalEntry.class))).thenReturn(createdEntry);
+
+            financialEventListener.handleLoanReversal(event);
+
+            verify(ledgerService).postEntry(entryId);
+        }
+    }
+
+    @Nested
+    @DisplayName("handleContributionReversed")
+    class HandleContributionReversedTests {
+
+        @Test
+        @DisplayName("should create journal entry for contribution reversal")
+        void shouldCreateJournalEntryForContributionReversal() {
+            UUID contributionId = UUID.randomUUID();
+            UUID memberId = UUID.randomUUID();
+            BigDecimal amount = new BigDecimal("5000.00");
+            ContributionReversedEvent event = new ContributionReversedEvent(
+                    contributionId, memberId, amount, "REF-001", "admin"
+            );
+
+            setupAccountLookup("2001", memberSharesAccount);
+            setupAccountLookup("1001", cashAccount);
+            setupLedgerService();
+
+            financialEventListener.handleContributionReversed(event);
+
+            verify(ledgerService).createJournalEntry(journalEntryCaptor.capture());
+            JournalEntry captured = journalEntryCaptor.getValue();
+
+            assertEquals(TransactionType.CONTRIBUTION_REVERSAL, captured.getTransactionType());
+            assertEquals(contributionId, captured.getReferenceId());
+            assertEquals("Contribution reversal - REF-001", captured.getDescription());
+            assertEquals(2, captured.getJournalLines().size());
+
+            // DR Member Shares
+            JournalLine debitLine = captured.getJournalLines().get(0);
+            assertEquals(memberSharesAccount, debitLine.getAccount());
+            assertEquals(amount, debitLine.getDebitAmount());
+            assertEquals(BigDecimal.ZERO, debitLine.getCreditAmount());
+
+            // CR Cash
+            JournalLine creditLine = captured.getJournalLines().get(1);
+            assertEquals(cashAccount, creditLine.getAccount());
+            assertEquals(BigDecimal.ZERO, creditLine.getDebitAmount());
+            assertEquals(amount, creditLine.getCreditAmount());
+        }
+
+        @Test
+        @DisplayName("should create balanced contribution reversal entry")
+        void shouldCreateBalancedContributionReversalEntry() {
+            BigDecimal amount = new BigDecimal("7500.00");
+            ContributionReversedEvent event = new ContributionReversedEvent(
+                    UUID.randomUUID(), UUID.randomUUID(), amount, "REF-002", "admin"
+            );
+
+            setupAccountLookup("2001", memberSharesAccount);
+            setupAccountLookup("1001", cashAccount);
+            setupLedgerService();
+
+            financialEventListener.handleContributionReversed(event);
+
+            verify(ledgerService).createJournalEntry(journalEntryCaptor.capture());
+            JournalEntry captured = journalEntryCaptor.getValue();
+
+            BigDecimal totalDebits = captured.getJournalLines().stream()
+                    .map(JournalLine::getDebitAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal totalCredits = captured.getJournalLines().stream()
+                    .map(JournalLine::getCreditAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            assertEquals(0, totalDebits.compareTo(totalCredits));
+        }
+
+        @Test
+        @DisplayName("should include reference number in descriptions")
+        void shouldIncludeReferenceInDescriptions() {
+            UUID contributionId = UUID.randomUUID();
+            ContributionReversedEvent event = new ContributionReversedEvent(
+                    contributionId, UUID.randomUUID(), new BigDecimal("3000.00"), "REF-003", "admin"
+            );
+
+            setupAccountLookup("2001", memberSharesAccount);
+            setupAccountLookup("1001", cashAccount);
+            setupLedgerService();
+
+            financialEventListener.handleContributionReversed(event);
+
+            verify(ledgerService).createJournalEntry(journalEntryCaptor.capture());
+            JournalEntry captured = journalEntryCaptor.getValue();
+
+            JournalLine debitLine = captured.getJournalLines().get(0);
+            assertEquals("Member shares reversed - REF-003", debitLine.getDescription());
+
+            JournalLine creditLine = captured.getJournalLines().get(1);
+            assertEquals("Cash reversed - REF-003", creditLine.getDescription());
+        }
+
+        @Test
+        @DisplayName("should post contribution reversal entry after creation")
+        void shouldPostContributionReversalEntry() {
+            ContributionReversedEvent event = new ContributionReversedEvent(
+                    UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("2000.00"), "REF-004", "admin"
+            );
+
+            setupAccountLookup("2001", memberSharesAccount);
+            setupAccountLookup("1001", cashAccount);
+            UUID entryId = UUID.randomUUID();
+            JournalEntry createdEntry = new JournalEntry();
+            createdEntry.setId(entryId);
+            when(ledgerService.createJournalEntry(any(JournalEntry.class))).thenReturn(createdEntry);
+
+            financialEventListener.handleContributionReversed(event);
+
+            verify(ledgerService).postEntry(entryId);
+        }
+    }
+
+    @Nested
+    @DisplayName("handlePenaltyWaived")
+    class HandlePenaltyWaivedTests {
+
+        @Test
+        @DisplayName("should create journal entry for penalty waiver")
+        void shouldCreateJournalEntryForPenaltyWaiver() {
+            UUID penaltyId = UUID.randomUUID();
+            UUID memberId = UUID.randomUUID();
+            BigDecimal amount = new BigDecimal("500.00");
+            PenaltyWaivedEvent event = new PenaltyWaivedEvent(
+                    penaltyId, memberId, amount, "Goodwill gesture", "admin"
+            );
+
+            setupAccountLookup("5003", badDebtExpenseAccount);
+            setupAccountLookup("2002", memberAccountAccount);
+            setupLedgerService();
+
+            financialEventListener.handlePenaltyWaived(event);
+
+            verify(ledgerService).createJournalEntry(journalEntryCaptor.capture());
+            JournalEntry captured = journalEntryCaptor.getValue();
+
+            assertEquals(TransactionType.PENALTY_WAIVER, captured.getTransactionType());
+            assertEquals(penaltyId, captured.getReferenceId());
+            assertEquals("Penalty waived - Goodwill gesture", captured.getDescription());
+            assertEquals(2, captured.getJournalLines().size());
+
+            // DR Bad Debt Expense
+            JournalLine debitLine = captured.getJournalLines().get(0);
+            assertEquals(badDebtExpenseAccount, debitLine.getAccount());
+            assertEquals(amount, debitLine.getDebitAmount());
+            assertEquals(BigDecimal.ZERO, debitLine.getCreditAmount());
+
+            // CR Member Account
+            JournalLine creditLine = captured.getJournalLines().get(1);
+            assertEquals(memberAccountAccount, creditLine.getAccount());
+            assertEquals(BigDecimal.ZERO, creditLine.getDebitAmount());
+            assertEquals(amount, creditLine.getCreditAmount());
+        }
+
+        @Test
+        @DisplayName("should create balanced penalty waiver entry")
+        void shouldCreateBalancedPenaltyWaiverEntry() {
+            BigDecimal amount = new BigDecimal("750.00");
+            PenaltyWaivedEvent event = new PenaltyWaivedEvent(
+                    UUID.randomUUID(), UUID.randomUUID(), amount, "Error correction", "admin"
+            );
+
+            setupAccountLookup("5003", badDebtExpenseAccount);
+            setupAccountLookup("2002", memberAccountAccount);
+            setupLedgerService();
+
+            financialEventListener.handlePenaltyWaived(event);
+
+            verify(ledgerService).createJournalEntry(journalEntryCaptor.capture());
+            JournalEntry captured = journalEntryCaptor.getValue();
+
+            BigDecimal totalDebits = captured.getJournalLines().stream()
+                    .map(JournalLine::getDebitAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal totalCredits = captured.getJournalLines().stream()
+                    .map(JournalLine::getCreditAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            assertEquals(0, totalDebits.compareTo(totalCredits));
+        }
+
+        @Test
+        @DisplayName("should include reason in descriptions")
+        void shouldIncludeReasonInDescriptions() {
+            UUID penaltyId = UUID.randomUUID();
+            PenaltyWaivedEvent event = new PenaltyWaivedEvent(
+                    penaltyId, UUID.randomUUID(), new BigDecimal("300.00"), "First offence", "admin"
+            );
+
+            setupAccountLookup("5003", badDebtExpenseAccount);
+            setupAccountLookup("2002", memberAccountAccount);
+            setupLedgerService();
+
+            financialEventListener.handlePenaltyWaived(event);
+
+            verify(ledgerService).createJournalEntry(journalEntryCaptor.capture());
+            JournalEntry captured = journalEntryCaptor.getValue();
+
+            JournalLine debitLine = captured.getJournalLines().get(0);
+            assertEquals("Bad debt expense - Penalty waived ID: " + penaltyId, debitLine.getDescription());
+
+            JournalLine creditLine = captured.getJournalLines().get(1);
+            assertEquals("Member obligation relieved - Penalty waived ID: " + penaltyId, creditLine.getDescription());
+        }
+
+        @Test
+        @DisplayName("should post penalty waiver entry after creation")
+        void shouldPostPenaltyWaiverEntry() {
+            PenaltyWaivedEvent event = new PenaltyWaivedEvent(
+                    UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("400.00"), "waiver", "admin"
+            );
+
+            setupAccountLookup("5003", badDebtExpenseAccount);
+            setupAccountLookup("2002", memberAccountAccount);
+            UUID entryId = UUID.randomUUID();
+            JournalEntry createdEntry = new JournalEntry();
+            createdEntry.setId(entryId);
+            when(ledgerService.createJournalEntry(any(JournalEntry.class))).thenReturn(createdEntry);
+
+            financialEventListener.handlePenaltyWaived(event);
+
+            verify(ledgerService).postEntry(entryId);
+        }
+    }
+
+    @Nested
+    @DisplayName("handleBenefitsDistributed")
+    class HandleBenefitsDistributedTests {
+
+        @Test
+        @DisplayName("should create journal entry for benefits distribution")
+        void shouldCreateJournalEntryForBenefitsDistribution() {
+            UUID loanId = UUID.randomUUID();
+            BigDecimal totalInterest = new BigDecimal("10000.00");
+            BenefitsDistributedEvent event = new BenefitsDistributedEvent(
+                    loanId, totalInterest, 5, "admin"
+            );
+
+            setupAccountLookup("4001", interestIncomeAccount);
+            setupAccountLookup("2002", memberAccountAccount);
+            setupLedgerService();
+
+            financialEventListener.handleBenefitsDistributed(event);
+
+            verify(ledgerService).createJournalEntry(journalEntryCaptor.capture());
+            JournalEntry captured = journalEntryCaptor.getValue();
+
+            assertEquals(TransactionType.BENEFIT_DISTRIBUTION, captured.getTransactionType());
+            assertEquals(loanId, captured.getReferenceId());
+            assertEquals("Benefits distributed - 5 beneficiaries", captured.getDescription());
+            assertEquals(2, captured.getJournalLines().size());
+
+            // DR Interest Income
+            JournalLine debitLine = captured.getJournalLines().get(0);
+            assertEquals(interestIncomeAccount, debitLine.getAccount());
+            assertEquals(totalInterest, debitLine.getDebitAmount());
+            assertEquals(BigDecimal.ZERO, debitLine.getCreditAmount());
+
+            // CR Member Account
+            JournalLine creditLine = captured.getJournalLines().get(1);
+            assertEquals(memberAccountAccount, creditLine.getAccount());
+            assertEquals(BigDecimal.ZERO, creditLine.getDebitAmount());
+            assertEquals(totalInterest, creditLine.getCreditAmount());
+        }
+
+        @Test
+        @DisplayName("should create balanced benefits distribution entry")
+        void shouldCreateBalancedBenefitsDistributionEntry() {
+            BigDecimal totalInterest = new BigDecimal("15000.00");
+            BenefitsDistributedEvent event = new BenefitsDistributedEvent(
+                    UUID.randomUUID(), totalInterest, 3, "admin"
+            );
+
+            setupAccountLookup("4001", interestIncomeAccount);
+            setupAccountLookup("2002", memberAccountAccount);
+            setupLedgerService();
+
+            financialEventListener.handleBenefitsDistributed(event);
+
+            verify(ledgerService).createJournalEntry(journalEntryCaptor.capture());
+            JournalEntry captured = journalEntryCaptor.getValue();
+
+            BigDecimal totalDebits = captured.getJournalLines().stream()
+                    .map(JournalLine::getDebitAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal totalCredits = captured.getJournalLines().stream()
+                    .map(JournalLine::getCreditAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            assertEquals(0, totalDebits.compareTo(totalCredits));
+        }
+
+        @Test
+        @DisplayName("should include beneficiary count in description")
+        void shouldIncludeBeneficiaryCountInDescription() {
+            UUID loanId = UUID.randomUUID();
+            BenefitsDistributedEvent event = new BenefitsDistributedEvent(
+                    loanId, new BigDecimal("8000.00"), 10, "admin"
+            );
+
+            setupAccountLookup("4001", interestIncomeAccount);
+            setupAccountLookup("2002", memberAccountAccount);
+            setupLedgerService();
+
+            financialEventListener.handleBenefitsDistributed(event);
+
+            verify(ledgerService).createJournalEntry(journalEntryCaptor.capture());
+            JournalEntry captured = journalEntryCaptor.getValue();
+
+            assertEquals("Benefits distributed - 10 beneficiaries", captured.getDescription());
+
+            JournalLine debitLine = captured.getJournalLines().get(0);
+            assertEquals("Interest income distributed - Loan ID: " + loanId, debitLine.getDescription());
+
+            JournalLine creditLine = captured.getJournalLines().get(1);
+            assertEquals("Benefits credited - Loan ID: " + loanId, creditLine.getDescription());
+        }
+
+        @Test
+        @DisplayName("should post benefits distribution entry after creation")
+        void shouldPostBenefitsDistributionEntry() {
+            BenefitsDistributedEvent event = new BenefitsDistributedEvent(
+                    UUID.randomUUID(), new BigDecimal("5000.00"), 2, "admin"
+            );
+
+            setupAccountLookup("4001", interestIncomeAccount);
+            setupAccountLookup("2002", memberAccountAccount);
+            UUID entryId = UUID.randomUUID();
+            JournalEntry createdEntry = new JournalEntry();
+            createdEntry.setId(entryId);
+            when(ledgerService.createJournalEntry(any(JournalEntry.class))).thenReturn(createdEntry);
+
+            financialEventListener.handleBenefitsDistributed(event);
+
+            verify(ledgerService).postEntry(entryId);
         }
     }
 
