@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama-fixes",
+  "planNumber": "01",
+  "goal": "Fix incorrect ledger balance logic, final installment interest, disbursement race condition, and entry number atomicity",
+  "tasks": [
+    {
+      "name": "Fix ledger debit/credit balance logic (B1)",
+      "files": [
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/entity/AccountType.java",
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/service/LedgerServiceImpl.java"
+      ],
+      "action": "Add isNormalDebit() to AccountType enum (true for ASSET/EXPENSE, false for LIABILITY/EQUITY/REVENUE). Update LedgerServiceImpl.postEntry() to branch balance update logic by account type.",
+      "verify": ["mvn compile -pl sacco-ledger -q"]
+    },
+    {
+      "name": "Fix final installment interest + disbursement race (B3, W8)",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/RepaymentScheduleGenerator.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java"
+      ],
+      "action": "In RepaymentScheduleGenerator, ensure final installment interest is computed on actual remaining principal. In LoanServiceImpl.disburseLoan(), remove double save — set status to REPAYING directly before single save.",
+      "verify": ["mvn compile -pl sacco-loan -q"]
+    },
+    {
+      "name": "Fix journal entry number generation (W9)",
+      "files": [
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/repository/JournalEntryRepository.java",
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/service/LedgerServiceImpl.java",
+        "sacco-ledger/src/main/resources/db/changelog/ledger/003-create-journal-entry-seq.yaml",
+        "sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml"
+      ],
+      "action": "Create DB sequence via Liquibase changeset. Add native query to JournalEntryRepository. Update generateEntryNumber() to use sequence.",
+      "verify": ["mvn compile -pl sacco-ledger,sacco-app -q"]
+    }
+  ],
+  "planVerify": ["mvn compile -q"],
+  "commitMessage": "fix(ledger,loan): fix balance logic, interest calc, disbursement race, entry number atomicity",
+  "timestamp": "2026-02-15T00:00:00Z"
+}

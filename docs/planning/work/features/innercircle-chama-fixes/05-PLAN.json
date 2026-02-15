@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama-fixes",
+  "planNumber": "05",
+  "goal": "Fix CSV injection vulnerability and PDF page break truncation",
+  "tasks": [
+    {
+      "name": "Fix CSV injection in escapeCsv() (B7)",
+      "files": [
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/service/ExportServiceImpl.java"
+      ],
+      "action": "Prefix formula trigger characters (=, +, -, @, \\t, \\r) with single quote before CSV quoting logic.",
+      "verify": ["mvn compile -pl sacco-reporting -q"]
+    },
+    {
+      "name": "Fix PDF page break (W17)",
+      "files": [
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/service/ExportServiceImpl.java"
+      ],
+      "action": "Replace break at page boundary with new PDPageContentStream creation and continue rendering on new page.",
+      "verify": ["mvn compile -pl sacco-reporting -q"]
+    }
+  ],
+  "planVerify": ["mvn compile -q"],
+  "commitMessage": "fix(reporting): prevent CSV injection and fix PDF multi-page rendering",
+  "timestamp": "2026-02-15T00:00:00Z"
+}

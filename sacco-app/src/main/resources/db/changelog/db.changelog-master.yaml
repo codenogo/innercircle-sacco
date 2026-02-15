@@ -35,6 +35,8 @@ databaseChangeLog:
       file: db/changelog/ledger/001-create-ledger-tables.yaml
   - include:
       file: db/changelog/ledger/002-seed-chart-of-accounts.yaml
+  - include:
+      file: db/changelog/ledger/003-create-journal-entry-seq.yaml
 
   # Loan module
   - include:

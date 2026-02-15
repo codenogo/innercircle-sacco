@@ -108,7 +108,7 @@ public class LoanServiceImpl implements LoanService {
         Instant now = Instant.now();
         LocalDate disbursementDate = LocalDate.ofInstant(now, ZoneId.systemDefault());
 
-        loan.setStatus(LoanStatus.DISBURSED);
+        loan.setStatus(LoanStatus.REPAYING);
         loan.setDisbursedAt(now);
 
         // Calculate total amount including interest
@@ -137,10 +137,6 @@ public class LoanServiceImpl implements LoanService {
         scheduleRepository.saveAll(schedules);
 
         LoanApplication savedLoan = loanRepository.save(loan);
-
-        // Update status to REPAYING
-        savedLoan.setStatus(LoanStatus.REPAYING);
-        loanRepository.save(savedLoan);
 
         // Publish disbursement event
         eventPublisher.publishEvent(new LoanDisbursedEvent(

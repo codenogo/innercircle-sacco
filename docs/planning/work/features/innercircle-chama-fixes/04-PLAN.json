@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama-fixes",
+  "planNumber": "04",
+  "goal": "Fix IDOR vulnerabilities in reporting controllers and add date range validation",
+  "tasks": [
+    {
+      "name": "Create authorization helper for reporting module (B6)",
+      "files": [
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/security/ReportingAuthHelper.java"
+      ],
+      "action": "Create helper that resolves memberId from JWT email claim via JDBC and provides assertAccessToMember() method.",
+      "verify": ["mvn compile -pl sacco-reporting -q"]
+    },
+    {
+      "name": "Add authorization to DashboardController and ReportController (B6, W15)",
+      "files": [
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/controller/DashboardController.java",
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/controller/ReportController.java"
+      ],
+      "action": "Inject ReportingAuthHelper, add Authentication parameter, call assertAccessToMember(). Add fromDate < toDate validation.",
+      "verify": ["mvn compile -pl sacco-reporting -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Add authorization to ExportController (B6, W15)",
+      "files": [
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/controller/ExportController.java"
+      ],
+      "action": "Inject ReportingAuthHelper, add Authentication parameter, call assertAccessToMember(). Add date validation to export endpoints.",
+      "verify": ["mvn compile -pl sacco-reporting -q"],
+      "blockedBy": [0]
+    }
+  ],
+  "planVerify": ["mvn compile -q"],
+  "commitMessage": "fix(reporting): add IDOR protection and date validation to reporting endpoints",
+  "timestamp": "2026-02-15T00:00:00Z"
+}

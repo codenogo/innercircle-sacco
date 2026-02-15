@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama-fixes",
+  "planNumber": "06",
+  "goal": "Fix UUID generation, exception logging, optimistic locking, payout references, FK constraints, unique constraints, and rollbacks",
+  "tasks": [
+    {
+      "name": "Fix common module (W5, W6, W7)",
+      "files": [
+        "sacco-common/src/main/java/com/innercircle/sacco/common/util/UuidGenerator.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/exception/GlobalExceptionHandler.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/model/BaseEntity.java",
+        "sacco-common/pom.xml"
+      ],
+      "action": "Replace custom UUID v7 with java-uuid-generator library. Add log.error to generic exception handler. Add @Version to BaseEntity.",
+      "verify": ["mvn compile -pl sacco-common -q"]
+    },
+    {
+      "name": "Fix payout reference number + version column migration (W11, W7)",
+      "files": [
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/PayoutServiceImpl.java",
+        "sacco-common/src/main/resources/db/changelog/common/001-add-version-column.yaml",
+        "sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml"
+      ],
+      "action": "Fix generateReferenceNumber() to use UUID v7 substring. Create Liquibase changeset for version column on all tables.",
+      "verify": ["mvn compile -pl sacco-payout,sacco-app -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Liquibase FK constraints, unique constraints, rollbacks (B8, W18, W19)",
+      "files": [
+        "sacco-app/src/main/resources/db/changelog/common/002-add-fk-and-unique-constraints.yaml",
+        "sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml"
+      ],
+      "action": "Create changeset with ON DELETE RESTRICT FKs for all relationships. Add UNIQUE on reference_number columns. Include rollback definitions.",
+      "verify": ["mvn compile -pl sacco-app -q"],
+      "blockedBy": [0, 1]
+    }
+  ],
+  "planVerify": ["mvn compile -q"],
+  "commitMessage": "fix(common,payout,app): data integrity fixes and cross-cutting improvements",
+  "timestamp": "2026-02-15T00:00:00Z"
+}

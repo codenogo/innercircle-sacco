@@ -30,4 +30,7 @@ public interface JournalEntryRepository extends JpaRepository<JournalEntry, UUID
 
     @Query("SELECT COALESCE(MAX(CAST(SUBSTRING(je.entryNumber, 3) AS int)), 0) FROM JournalEntry je WHERE je.entryNumber LIKE 'JE%'")
     int findMaxEntryNumber();
+
+    @Query(value = "SELECT nextval('journal_entry_number_seq')", nativeQuery = true)
+    Long getNextEntryNumber();
 }

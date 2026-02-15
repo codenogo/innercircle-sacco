@@ -65,6 +65,9 @@ public class RepaymentScheduleGenerator {
             // For last installment, adjust to cover any rounding differences
             if (i == termMonths) {
                 principalAmount = remainingPrincipal;
+                // Recalculate interest on actual remaining principal
+                interestAmount = remainingPrincipal.multiply(monthlyRate)
+                        .setScale(2, RoundingMode.HALF_UP);
                 BigDecimal totalAmount = principalAmount.add(interestAmount);
 
                 RepaymentSchedule schedule = new RepaymentSchedule();

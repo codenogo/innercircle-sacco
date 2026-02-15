@@ -64,7 +64,12 @@ public class LedgerServiceImpl implements LedgerService {
             BigDecimal creditAmount = line.getCreditAmount();
 
             // Update account balance based on account type
-            BigDecimal balanceChange = debitAmount.subtract(creditAmount);
+            BigDecimal balanceChange;
+            if (account.getAccountType().isNormalDebit()) {
+                balanceChange = debitAmount.subtract(creditAmount);
+            } else {
+                balanceChange = creditAmount.subtract(debitAmount);
+            }
             account.setBalance(account.getBalance().add(balanceChange));
             accountRepository.save(account);
 
@@ -96,8 +101,8 @@ public class LedgerServiceImpl implements LedgerService {
 
     @Override
     public String generateEntryNumber() {
-        int maxNumber = journalEntryRepository.findMaxEntryNumber();
-        return String.format("JE%06d", maxNumber + 1);
+        Long nextVal = journalEntryRepository.getNextEntryNumber();
+        return String.format("JE%06d", nextVal);
     }
 
     private void validateBalancedEntry(JournalEntry entry) {

@@ -1,0 +1,12 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-journal-entry-seq
+      author: claude
+      changes:
+        - createSequence:
+            sequenceName: journal_entry_number_seq
+            startValue: 1
+            incrementBy: 1
+      rollback:
+        - dropSequence:
+            sequenceName: journal_entry_number_seq

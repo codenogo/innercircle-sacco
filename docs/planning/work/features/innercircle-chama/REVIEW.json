@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "timestamp": "2026-02-15T00:00:00Z",
+  "feature": "innercircle-chama",
+  "branch": "main",
+  "automated": [
+    { "name": "compile", "result": "pass" },
+    { "name": "tests", "result": "skipped" },
+    { "name": "lint", "result": "skipped" },
+    { "name": "security", "result": "pass" },
+    { "name": "types", "result": "skipped" },
+    { "name": "deps", "result": "skipped" }
+  ],
+  "verdict": "fail",
+  "blockers": [
+    { "file": "sacco-ledger/.../LedgerServiceImpl.java", "line": 67, "issue": "Incorrect debit/credit balance logic: doesn't account for account type semantics", "severity": "critical" },
+    { "file": "sacco-loan/.../LoanServiceImpl.java", "line": 182, "issue": "Partial payment tracking lost: no amountPaid field on RepaymentSchedule", "severity": "critical" },
+    { "file": "sacco-loan/.../RepaymentScheduleGenerator.java", "line": 65, "issue": "Final installment interest miscalculation: stale interest after principal adjustment", "severity": "critical" },
+    { "file": "sacco-security/.../AuthorizationServerConfig.java", "line": 60, "issue": "Hardcoded client secrets in source code", "severity": "critical" },
+    { "file": "sacco-security/.../SecurityConfig.java", "line": 37, "issue": ".anyRequest().permitAll() bypasses authentication for unmapped routes", "severity": "critical" },
+    { "file": "sacco-reporting/.../DashboardController.java", "line": 26, "issue": "IDOR: no authorization check on member data endpoints", "severity": "critical" },
+    { "file": "sacco-reporting/.../ExportServiceImpl.java", "line": 26, "issue": "CSV injection: formula characters not escaped in export", "severity": "critical" },
+    { "file": "Liquibase: contribution, loan, payout modules", "line": 0, "issue": "Missing FK constraints on 17 tables: no referential integrity", "severity": "critical" }
+  ],
+  "warnings": [
+    { "file": "sacco-security/.../AuthorizationServerConfig.java", "line": 97, "issue": "RSA keys regenerated on every startup", "severity": "high" },
+    { "file": "sacco-security/.../SecurityConfig.java", "line": 33, "issue": "Actuator and Swagger exposed unauthenticated", "severity": "high" },
+    { "file": "sacco-common/.../UuidGenerator.java", "line": 21, "issue": "UUID v7 bit manipulation may be incorrect per RFC 9562", "severity": "high" },
+    { "file": "sacco-common/.../GlobalExceptionHandler.java", "line": 43, "issue": "Generic exception handler swallows stack traces without logging", "severity": "high" },
+    { "file": "sacco-common/.../BaseEntity.java", "line": 15, "issue": "No @Version field for optimistic locking in financial system", "severity": "high" },
+    { "file": "sacco-loan/.../LoanServiceImpl.java", "line": 101, "issue": "Race condition: double status save in loan disbursement", "severity": "high" },
+    { "file": "sacco-ledger/.../LedgerServiceImpl.java", "line": 98, "issue": "Journal entry number generation uses non-atomic read-then-increment", "severity": "high" },
+    { "file": "sacco-loan/.../LoanApplicationRequest.java", "line": 0, "issue": "No upper bound on interest rate validation", "severity": "high" },
+    { "file": "sacco-payout/.../PayoutServiceImpl.java", "line": 141, "issue": "Predictable reference number generation using System.currentTimeMillis()", "severity": "high" },
+    { "file": "Liquibase: all modules", "line": 0, "issue": "Missing rollback definitions on 30 of 32 changesets", "severity": "high" },
+    { "file": "sacco-reporting/.../ReportController.java", "line": 42, "issue": "No fromDate < toDate validation", "severity": "medium" },
+    { "file": "sacco-reporting/.../ExportServiceImpl.java", "line": 102, "issue": "PDF page break logic incomplete", "severity": "medium" },
+    { "file": "Liquibase: loan, payout modules", "line": 0, "issue": "reference_number columns lack UNIQUE constraints", "severity": "medium" }
+  ]
+}

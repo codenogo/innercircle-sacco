@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama-fixes",
+  "planNumber": "03",
+  "goal": "Fix hardcoded secrets, permit-all bypass, RSA key regeneration, actuator/swagger exposure, and interest rate validation",
+  "tasks": [
+    {
+      "name": "Fix SecurityConfig (B5, W2)",
+      "files": [
+        "sacco-security/src/main/java/com/innercircle/sacco/security/config/SecurityConfig.java"
+      ],
+      "action": "Change .anyRequest().permitAll() to .authenticated(). Restrict actuator to ADMIN role. Restrict Swagger to authenticated users.",
+      "verify": ["mvn compile -pl sacco-security -q"]
+    },
+    {
+      "name": "Fix AuthorizationServerConfig (B4, W1)",
+      "files": [
+        "sacco-security/src/main/java/com/innercircle/sacco/security/config/AuthorizationServerConfig.java",
+        "sacco-app/src/main/resources/application.yml"
+      ],
+      "action": "Externalize client secrets to @Value properties with env var placeholders. Load RSA keys from config with dev fallback.",
+      "verify": ["mvn compile -pl sacco-security,sacco-app -q"]
+    },
+    {
+      "name": "Add interest rate validation (W10)",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/LoanApplicationRequest.java"
+      ],
+      "action": "Add @DecimalMax(100.0) to interestRate field.",
+      "verify": ["mvn compile -pl sacco-loan -q"]
+    }
+  ],
+  "planVerify": ["mvn compile -q"],
+  "commitMessage": "fix(security,loan): harden security config, externalize secrets, add rate validation",
+  "timestamp": "2026-02-15T00:00:00Z"
+}

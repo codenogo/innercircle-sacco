@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama-fixes",
+  "planNumber": "02",
+  "goal": "Add partial payment tracking to RepaymentSchedule and fix payment allocation logic",
+  "tasks": [
+    {
+      "name": "Add amountPaid field to RepaymentSchedule entity",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/RepaymentSchedule.java"
+      ],
+      "action": "Add amountPaid BigDecimal field with default ZERO to RepaymentSchedule entity.",
+      "verify": ["mvn compile -pl sacco-loan -q"]
+    },
+    {
+      "name": "Add Liquibase migration for amountPaid column",
+      "files": [
+        "sacco-loan/src/main/resources/db/changelog/loan/002-add-amount-paid-column.yaml",
+        "sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml"
+      ],
+      "action": "Create changeset adding amount_paid DECIMAL(19,2) NOT NULL DEFAULT 0.00 to repayment_schedules. Include in master changelog.",
+      "verify": ["mvn compile -pl sacco-loan,sacco-app -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Fix LoanServiceImpl payment allocation (B2)",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java"
+      ],
+      "action": "Fix recordRepayment() to use amountPaid for outstanding calculation, accumulate partial payments, and mark paid only when fully paid.",
+      "verify": ["mvn compile -pl sacco-loan -q"],
+      "blockedBy": [0]
+    }
+  ],
+  "planVerify": ["mvn compile -q"],
+  "commitMessage": "fix(loan): add partial payment tracking to repayment schedule",
+  "timestamp": "2026-02-15T00:00:00Z"
+}
