@@ -382,6 +382,51 @@ class FinancialEventListenerTest {
         }
 
         @Test
+        @DisplayName("should credit Member Account for penalty portion (not Penalty Income)")
+        void shouldCreditMemberAccountForPenaltyPortion() {
+            UUID repaymentId = UUID.randomUUID();
+            BigDecimal totalAmount = new BigDecimal("2000.00");
+            BigDecimal principalPortion = new BigDecimal("1200.00");
+            BigDecimal interestPortion = new BigDecimal("300.00");
+            BigDecimal penaltyPortion = new BigDecimal("500.00");
+
+            LoanRepaymentEvent event = new LoanRepaymentEvent(
+                    UUID.randomUUID(), UUID.randomUUID(), repaymentId,
+                    totalAmount, principalPortion, interestPortion, penaltyPortion, "admin"
+            );
+
+            setupAccountLookup("1001", cashAccount);
+            setupAccountLookup("1002", loanReceivableAccount);
+            setupAccountLookup("1003", interestReceivableAccount);
+            setupAccountLookup("2002", memberAccountAccount);
+            setupLedgerService();
+
+            financialEventListener.handleLoanRepayment(event);
+
+            verify(ledgerService).createJournalEntry(journalEntryCaptor.capture());
+            JournalEntry captured = journalEntryCaptor.getValue();
+
+            // 4 lines: DR Cash, CR Loan Receivable, CR Interest Receivable, CR Member Account
+            assertEquals(4, captured.getJournalLines().size());
+
+            // Verify penalty portion credits Member Account (2002), NOT Penalty Income (4003)
+            JournalLine penaltyLine = captured.getJournalLines().get(3);
+            assertEquals(memberAccountAccount, penaltyLine.getAccount());
+            assertEquals(BigDecimal.ZERO, penaltyLine.getDebitAmount());
+            assertEquals(penaltyPortion, penaltyLine.getCreditAmount());
+            assertEquals("Penalty obligation settled - Repayment ID: " + repaymentId, penaltyLine.getDescription());
+
+            // Verify balanced entry
+            BigDecimal totalDebits = captured.getJournalLines().stream()
+                    .map(JournalLine::getDebitAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal totalCredits = captured.getJournalLines().stream()
+                    .map(JournalLine::getCreditAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            assertEquals(0, totalDebits.compareTo(totalCredits));
+        }
+
+        @Test
         @DisplayName("should post repayment entry after creation")
         void shouldPostRepaymentEntry() {
             LoanRepaymentEvent event = new LoanRepaymentEvent(

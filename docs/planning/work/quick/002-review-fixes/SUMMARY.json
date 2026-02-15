@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "002",
+  "slug": "review-fixes",
+  "outcome": "complete",
+  "changes": [
+    { "file": "sacco-ledger/.../FinancialEventListener.java", "change": "Fixed GL penalty double-counting: CR Member Account instead of CR Penalty Income for penalty portion in repayment" },
+    { "file": "sacco-loan/.../LoanBatchServiceImpl.java", "change": "Extracted processPenaltiesAndStatus() helper, eliminating duplication between executeProcessing() and processLoan()" },
+    { "file": "sacco-loan/.../LoanPenaltyServiceImpl.java", "change": "Fixed log to report actual paid count instead of unpaidPenalties.size()" },
+    { "file": "sacco-ledger/.../FinancialEventListenerTest.java", "change": "Added test for penalty portion crediting Member Account" }
+  ],
+  "verification": ["mvn test -pl sacco-loan,sacco-ledger -am -DskipITs: 84 tests, 0 failures, BUILD SUCCESS"],
+  "commit": { "hash": "d662fa5", "message": "fix(loan-penalty): resolve GL double-counting, extract penalty helper, fix log" },
+  "timestamp": "2026-02-15T00:00:00Z"
+}

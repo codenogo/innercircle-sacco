@@ -228,76 +228,14 @@ public class LoanBatchServiceImpl implements LoanBatchService {
 
         for (LoanApplication loan : eligibleLoans) {
             try {
-                List<RepaymentSchedule> unpaidSchedules =
-                        scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loan.getId());
+                PenaltyProcessingResult penaltyResult = processPenaltiesAndStatus(
+                        loan, today, gracePeriodDays, defaultThresholdDays, penaltyRuleOpt);
 
-                boolean hasOverdue = false;
-                boolean loanPenalized = false;
-
-                for (RepaymentSchedule schedule : unpaidSchedules) {
-                    if (schedule.getDueDate().isBefore(today)) {
-                        hasOverdue = true;
-
-                        if (schedule.getDueDate().plusDays(gracePeriodDays).isBefore(today) && penaltyRuleOpt.isPresent()) {
-                            PenaltyRule rule = penaltyRuleOpt.get();
-
-                            // Idempotency: check if penalty already applied for this schedule
-                            List<com.innercircle.sacco.loan.entity.LoanPenalty> existing =
-                                    loanPenaltyRepository.findByLoanIdAndScheduleId(loan.getId(), schedule.getId());
-                            if (!existing.isEmpty() && !rule.isCompounding()) {
-                                continue;
-                            }
-
-                            // Calculate penalty amount
-                            BigDecimal penaltyAmount;
-                            BigDecimal overdueAmount = schedule.getTotalAmount().subtract(schedule.getAmountPaid());
-                            if (rule.getCalculationMethod() == PenaltyRule.CalculationMethod.FLAT) {
-                                penaltyAmount = rule.getRate();
-                            } else {
-                                penaltyAmount = overdueAmount.multiply(rule.getRate())
-                                        .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-                            }
-
-                            if (penaltyAmount.compareTo(BigDecimal.ZERO) > 0) {
-                                String reason = String.format("Late repayment penalty: installment #%d overdue since %s (%s %s)",
-                                        schedule.getInstallmentNumber(), schedule.getDueDate(),
-                                        rule.getCalculationMethod(), rule.getRate());
-
-                                loanPenaltyService.applyPenalty(
-                                        loan.getId(), loan.getMemberId(), penaltyAmount,
-                                        reason, "SYSTEM", schedule.getId());
-
-                                // Update loan totalPenalties
-                                BigDecimal totalUnpaid = loanPenaltyRepository.sumUnpaidAmountByLoanId(loan.getId());
-                                loan.setTotalPenalties(totalUnpaid);
-                                loanRepository.save(loan);
-
-                                loanPenalized = true;
-                                log.info("Applied {} penalty of {} for loan {} installment #{}",
-                                        rule.getCalculationMethod(), penaltyAmount, loan.getId(),
-                                        schedule.getInstallmentNumber());
-                            }
-                        }
-                    }
-                }
-
-                if (loanPenalized) {
+                if (penaltyResult.penalized) {
                     penalizedCount++;
                 }
-
-                if (hasOverdue && unpaidSchedules.stream()
-                        .anyMatch(s -> s.getDueDate().plusDays(defaultThresholdDays).isBefore(today))) {
-                    loan.setStatus(LoanStatus.DEFAULTED);
-                    loanRepository.save(loan);
-                    log.info("Loan {} marked as DEFAULTED", loan.getId());
-                }
-
-                if (unpaidSchedules.isEmpty() &&
-                        loan.getOutstandingBalance().compareTo(BigDecimal.ZERO) == 0) {
-                    loan.setStatus(LoanStatus.CLOSED);
-                    loanRepository.save(loan);
+                if (penaltyResult.closed) {
                     closedCount++;
-                    log.info("Loan {} marked as CLOSED", loan.getId());
                 }
 
                 processedCount++;
@@ -383,69 +321,100 @@ public class LoanBatchServiceImpl implements LoanBatchService {
         }
 
         LocalDate today = LocalDate.now();
-
-        List<RepaymentSchedule> unpaidSchedules =
-                scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loan.getId());
-
-        boolean hasOverdue = false;
         int gracePeriod = getConfigInt("loan.penalty.grace_period_days", 30);
         int defaultThreshold = getConfigInt("loan.penalty.default_threshold_days", 90);
         Optional<PenaltyRule> ruleOpt = configService.getActivePenaltyRuleByType(
                 PenaltyRule.PenaltyType.LOAN_DEFAULT);
 
+        processPenaltiesAndStatus(loan, today, gracePeriod, defaultThreshold, ruleOpt);
+
+        log.info("Individual loan processing completed for: {}", loanId);
+    }
+
+    private static class PenaltyProcessingResult {
+        final boolean penalized;
+        final boolean closed;
+
+        PenaltyProcessingResult(boolean penalized, boolean closed) {
+            this.penalized = penalized;
+            this.closed = closed;
+        }
+    }
+
+    private PenaltyProcessingResult processPenaltiesAndStatus(
+            LoanApplication loan, LocalDate today, int gracePeriodDays,
+            int defaultThresholdDays, Optional<PenaltyRule> penaltyRuleOpt) {
+
+        List<RepaymentSchedule> unpaidSchedules =
+                scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loan.getId());
+
+        boolean hasOverdue = false;
+        boolean loanPenalized = false;
+
         for (RepaymentSchedule schedule : unpaidSchedules) {
             if (schedule.getDueDate().isBefore(today)) {
                 hasOverdue = true;
-                long daysOverdue = java.time.temporal.ChronoUnit.DAYS.between(
-                        schedule.getDueDate(), today);
 
-                log.info("Loan {} has overdue installment #{} - {} days overdue",
-                        loanId, schedule.getInstallmentNumber(), daysOverdue);
+                if (schedule.getDueDate().plusDays(gracePeriodDays).isBefore(today) && penaltyRuleOpt.isPresent()) {
+                    PenaltyRule rule = penaltyRuleOpt.get();
 
-                if (daysOverdue > gracePeriod && ruleOpt.isPresent()) {
-                    PenaltyRule rule = ruleOpt.get();
+                    // Idempotency: check if penalty already applied for this schedule
                     List<com.innercircle.sacco.loan.entity.LoanPenalty> existing =
-                            loanPenaltyRepository.findByLoanIdAndScheduleId(loanId, schedule.getId());
-                    if (existing.isEmpty() || rule.isCompounding()) {
-                        BigDecimal overdueAmount = schedule.getTotalAmount().subtract(schedule.getAmountPaid());
-                        BigDecimal penaltyAmount;
-                        if (rule.getCalculationMethod() == PenaltyRule.CalculationMethod.FLAT) {
-                            penaltyAmount = rule.getRate();
-                        } else {
-                            penaltyAmount = overdueAmount.multiply(rule.getRate())
-                                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-                        }
-                        if (penaltyAmount.compareTo(BigDecimal.ZERO) > 0) {
-                            String reason = String.format("Late repayment penalty: installment #%d overdue %d days",
-                                    schedule.getInstallmentNumber(), daysOverdue);
-                            loanPenaltyService.applyPenalty(loanId, loan.getMemberId(), penaltyAmount,
-                                    reason, "SYSTEM", schedule.getId());
-                            BigDecimal totalUnpaid = loanPenaltyRepository.sumUnpaidAmountByLoanId(loanId);
-                            loan.setTotalPenalties(totalUnpaid);
-                            loanRepository.save(loan);
-                            log.info("Applied penalty {} for loan {} installment #{}",
-                                    penaltyAmount, loanId, schedule.getInstallmentNumber());
-                        }
+                            loanPenaltyRepository.findByLoanIdAndScheduleId(loan.getId(), schedule.getId());
+                    if (!existing.isEmpty() && !rule.isCompounding()) {
+                        continue;
+                    }
+
+                    // Calculate penalty amount
+                    BigDecimal overdueAmount = schedule.getTotalAmount().subtract(schedule.getAmountPaid());
+                    BigDecimal penaltyAmount;
+                    if (rule.getCalculationMethod() == PenaltyRule.CalculationMethod.FLAT) {
+                        penaltyAmount = rule.getRate();
+                    } else {
+                        penaltyAmount = overdueAmount.multiply(rule.getRate())
+                                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                    }
+
+                    if (penaltyAmount.compareTo(BigDecimal.ZERO) > 0) {
+                        String reason = String.format("Late repayment penalty: installment #%d overdue since %s (%s %s)",
+                                schedule.getInstallmentNumber(), schedule.getDueDate(),
+                                rule.getCalculationMethod(), rule.getRate());
+
+                        loanPenaltyService.applyPenalty(
+                                loan.getId(), loan.getMemberId(), penaltyAmount,
+                                reason, "SYSTEM", schedule.getId());
+
+                        // Update loan totalPenalties
+                        BigDecimal totalUnpaid = loanPenaltyRepository.sumUnpaidAmountByLoanId(loan.getId());
+                        loan.setTotalPenalties(totalUnpaid);
+                        loanRepository.save(loan);
+
+                        loanPenalized = true;
+                        log.info("Applied {} penalty of {} for loan {} installment #{}",
+                                rule.getCalculationMethod(), penaltyAmount, loan.getId(),
+                                schedule.getInstallmentNumber());
                     }
                 }
             }
         }
 
         if (hasOverdue && unpaidSchedules.stream()
-                .anyMatch(s -> s.getDueDate().plusDays(defaultThreshold).isBefore(today))) {
+                .anyMatch(s -> s.getDueDate().plusDays(defaultThresholdDays).isBefore(today))) {
             loan.setStatus(LoanStatus.DEFAULTED);
             loanRepository.save(loan);
-            log.info("Loan {} marked as DEFAULTED", loanId);
+            log.info("Loan {} marked as DEFAULTED", loan.getId());
         }
 
+        boolean closed = false;
         if (unpaidSchedules.isEmpty() &&
                 loan.getOutstandingBalance().compareTo(BigDecimal.ZERO) == 0) {
             loan.setStatus(LoanStatus.CLOSED);
             loanRepository.save(loan);
-            log.info("Loan {} marked as CLOSED", loanId);
+            closed = true;
+            log.info("Loan {} marked as CLOSED", loan.getId());
         }
 
-        log.info("Individual loan processing completed for: {}", loanId);
+        return new PenaltyProcessingResult(loanPenalized, closed);
     }
 
     private BigDecimal accrueMonthlyInterest(LoanApplication loan, LocalDate accrualDate) {

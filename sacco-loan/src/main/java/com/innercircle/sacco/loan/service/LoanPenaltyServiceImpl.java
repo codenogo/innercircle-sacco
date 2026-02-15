@@ -126,18 +126,20 @@ public class LoanPenaltyServiceImpl implements LoanPenaltyService {
         List<LoanPenalty> unpaidPenalties = penaltyRepository.findByLoanIdAndPaidFalseOrderByAppliedAtAsc(loanId);
         BigDecimal totalPaid = BigDecimal.ZERO;
         BigDecimal remaining = availableAmount;
+        int paidCount = 0;
 
         for (LoanPenalty penalty : unpaidPenalties) {
             if (remaining.compareTo(penalty.getAmount()) >= 0) {
                 markPenaltyPaid(penalty.getId(), actor);
                 remaining = remaining.subtract(penalty.getAmount());
                 totalPaid = totalPaid.add(penalty.getAmount());
+                paidCount++;
             }
             // Penalties are atomic — no partial payment; skip if insufficient
         }
 
         if (totalPaid.compareTo(BigDecimal.ZERO) > 0) {
-            log.info("Paid {} in penalties for loan {} ({} penalties)", totalPaid, loanId, unpaidPenalties.size());
+            log.info("Paid {} in penalties for loan {} ({} penalties)", totalPaid, loanId, paidCount);
         }
 
         return totalPaid;

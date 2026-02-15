@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "002",
+  "slug": "review-fixes",
+  "goal": "Fix GL double-counting, penalty logic duplication, and log inaccuracy from loan-penalty-automation review",
+  "files": [
+    "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/listener/FinancialEventListener.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchServiceImpl.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanPenaltyServiceImpl.java",
+    "sacco-ledger/src/test/java/com/innercircle/sacco/ledger/listener/FinancialEventListenerTest.java"
+  ],
+  "verify": ["mvn test -pl sacco-loan,sacco-ledger -am -q -DskipITs"],
+  "timestamp": "2026-02-15T00:00:00Z"
+}

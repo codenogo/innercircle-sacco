@@ -146,14 +146,14 @@ public class FinancialEventListener {
             entry.addJournalLine(creditInterest);
         }
 
-        // CR Penalty Income (penalty portion)
+        // CR Member Account (penalty portion) - settles the obligation created at penalty application
         if (event.penaltyPortion() != null && event.penaltyPortion().compareTo(BigDecimal.ZERO) > 0) {
-            Account penaltyIncomeAccount = getAccountByCode(ACCOUNT_PENALTY_INCOME);
+            Account memberAccount = getAccountByCode(ACCOUNT_MEMBER_ACCOUNT);
             JournalLine creditPenalty = new JournalLine();
-            creditPenalty.setAccount(penaltyIncomeAccount);
+            creditPenalty.setAccount(memberAccount);
             creditPenalty.setDebitAmount(BigDecimal.ZERO);
             creditPenalty.setCreditAmount(event.penaltyPortion());
-            creditPenalty.setDescription("Penalty paid via repayment - Repayment ID: " + event.repaymentId());
+            creditPenalty.setDescription("Penalty obligation settled - Repayment ID: " + event.repaymentId());
             entry.addJournalLine(creditPenalty);
         }
 
