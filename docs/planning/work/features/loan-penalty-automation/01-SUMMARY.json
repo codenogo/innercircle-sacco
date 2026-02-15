@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "feature": "loan-penalty-automation",
+  "planNumber": "01",
+  "outcome": "complete",
+  "changes": [
+    { "file": "sacco-loan/src/main/resources/db/changelog/loan/007-add-penalty-tracking-columns.yaml", "change": "New migration: paid, paid_at, schedule_id on loan_penalties; total_penalties on loan_applications; indexes" },
+    { "file": "sacco-config/src/main/resources/db/changelog/config/004-add-penalty-compounding.yaml", "change": "New migration: compounding boolean on penalty_rules" },
+    { "file": "sacco-config/src/main/resources/db/changelog/config/005-seed-penalty-system-config.yaml", "change": "New migration: seed grace_period_days=30 and default_threshold_days=90" },
+    { "file": "sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml", "change": "Added includes for loan/007, config/004, config/005" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/LoanPenalty.java", "change": "Added paid, paidAt, scheduleId fields" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/LoanApplication.java", "change": "Added totalPenalties field" },
+    { "file": "sacco-config/src/main/java/com/innercircle/sacco/config/entity/PenaltyRule.java", "change": "Added compounding field" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/repository/LoanPenaltyRepository.java", "change": "Added findByLoanIdAndPaidFalse, findByLoanIdAndScheduleId, sumUnpaidAmountByLoanId" }
+  ],
+  "verification": [
+    { "task": 1, "result": "pass", "details": "3 Liquibase migrations created and registered in master changelog" },
+    { "task": 2, "result": "pass", "details": "sacco-loan and sacco-config compile cleanly with new entity fields" },
+    { "task": 3, "result": "pass", "details": "sacco-loan 254 tests passed, BUILD SUCCESS" }
+  ],
+  "commit": { "hash": "pending", "message": "feat(loan-penalty): schema and entity changes for penalty tracking" },
+  "timestamp": "2026-02-15T14:55:00Z"
+}

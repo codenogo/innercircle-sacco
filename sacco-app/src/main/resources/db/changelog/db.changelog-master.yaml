@@ -25,6 +25,10 @@ databaseChangeLog:
       file: db/changelog/config/002-seed-default-config.yaml
   - include:
       file: db/changelog/config/003-seed-batch-config.yaml
+  - include:
+      file: db/changelog/config/004-add-penalty-compounding.yaml
+  - include:
+      file: db/changelog/config/005-seed-penalty-system-config.yaml
 
   # Contribution module
   - include:
@@ -59,6 +63,8 @@ databaseChangeLog:
       file: db/changelog/loan/005-create-loan-interest-history.yaml
   - include:
       file: db/changelog/loan/006-add-missing-loan-application-columns.yaml
+  - include:
+      file: db/changelog/loan/007-add-penalty-tracking-columns.yaml
 
   # Payout module
   - include:

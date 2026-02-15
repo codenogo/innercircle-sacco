@@ -37,4 +37,11 @@ public class LoanPenalty extends BaseEntity {
     private Boolean applied = false;
 
     private Instant appliedAt;
+
+    @Column(nullable = false)
+    private Boolean paid = false;
+
+    private Instant paidAt;
+
+    private UUID scheduleId;
 }

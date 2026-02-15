@@ -2,17 +2,20 @@ package com.innercircle.sacco.loan.service;
 
 import com.innercircle.sacco.common.event.LoanBatchProcessedEvent;
 import com.innercircle.sacco.config.entity.InterestMethod;
+import com.innercircle.sacco.config.entity.PenaltyRule;
 import com.innercircle.sacco.config.entity.SystemConfig;
 import com.innercircle.sacco.config.service.ConfigService;
 import com.innercircle.sacco.loan.dto.BatchProcessingResult;
 import com.innercircle.sacco.loan.entity.BatchProcessingLog;
 import com.innercircle.sacco.loan.entity.BatchProcessingStatus;
 import com.innercircle.sacco.loan.entity.LoanApplication;
+import com.innercircle.sacco.loan.entity.LoanPenalty;
 import com.innercircle.sacco.loan.entity.LoanStatus;
 import com.innercircle.sacco.loan.entity.RepaymentSchedule;
 import com.innercircle.sacco.loan.repository.BatchProcessingLogRepository;
 import com.innercircle.sacco.loan.repository.LoanApplicationRepository;
 import com.innercircle.sacco.loan.repository.LoanInterestHistoryRepository;
+import com.innercircle.sacco.loan.repository.LoanPenaltyRepository;
 import com.innercircle.sacco.loan.repository.RepaymentScheduleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -73,6 +76,12 @@ class LoanBatchServiceImplTest {
     @Mock
     private ConfigService configService;
 
+    @Mock
+    private LoanPenaltyService loanPenaltyService;
+
+    @Mock
+    private LoanPenaltyRepository loanPenaltyRepository;
+
     @InjectMocks
     private LoanBatchServiceImpl batchService;
 
@@ -102,6 +111,19 @@ class LoanBatchServiceImplTest {
         SystemConfig thresholdConfig = new SystemConfig();
         thresholdConfig.setConfigValue("15");
         when(configService.getSystemConfig("loan.batch.new_loan_threshold_day")).thenReturn(thresholdConfig);
+    }
+
+    private void setupPenaltyRuleMock() {
+        PenaltyRule rule = new PenaltyRule();
+        rule.setId(UUID.randomUUID());
+        rule.setName("Late Loan Repayment");
+        rule.setPenaltyType(PenaltyRule.PenaltyType.LOAN_DEFAULT);
+        rule.setCalculationMethod(PenaltyRule.CalculationMethod.FLAT);
+        rule.setRate(new BigDecimal("500"));
+        rule.setActive(true);
+        rule.setCompounding(false);
+        when(configService.getActivePenaltyRuleByType(PenaltyRule.PenaltyType.LOAN_DEFAULT))
+                .thenReturn(Optional.of(rule));
     }
 
     // -------------------------------------------------------------------------
@@ -135,12 +157,17 @@ class LoanBatchServiceImplTest {
         @DisplayName("should count penalized loans when overdue by 30+ days")
         void shouldCountPenalizedLoansWhenOverdue30Days() {
             setupDefaultBatchMocks();
+            setupPenaltyRuleMock();
             LoanApplication loan = createLoan(LoanStatus.REPAYING);
             RepaymentSchedule schedule = createSchedule(1, LocalDate.now().minusDays(31));
 
             when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of(loan));
             when(scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loan.getId()))
                     .thenReturn(List.of(schedule));
+            when(loanPenaltyRepository.findByLoanIdAndScheduleId(any(), any()))
+                    .thenReturn(List.of());
+            when(loanPenaltyRepository.sumUnpaidAmountByLoanId(any()))
+                    .thenReturn(new BigDecimal("500"));
 
             BatchProcessingResult result = batchService.processOutstandingLoans();
 
@@ -308,6 +335,7 @@ class LoanBatchServiceImplTest {
         @DisplayName("should process multiple loans with mixed statuses")
         void shouldProcessMultipleLoansWithMixedStatuses() {
             setupDefaultBatchMocks();
+            setupPenaltyRuleMock();
             LoanApplication loan1 = createLoan(LoanStatus.REPAYING);
             LoanApplication loan2 = createLoan(LoanStatus.REPAYING);
             loan2.setId(UUID.randomUUID());
@@ -322,6 +350,10 @@ class LoanBatchServiceImplTest {
                     .thenReturn(List.of(schedule1));
             when(scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loan2.getId()))
                     .thenReturn(List.of());
+            when(loanPenaltyRepository.findByLoanIdAndScheduleId(any(), any()))
+                    .thenReturn(List.of());
+            when(loanPenaltyRepository.sumUnpaidAmountByLoanId(any()))
+                    .thenReturn(new BigDecimal("500"));
 
             BatchProcessingResult result = batchService.processOutstandingLoans();
 

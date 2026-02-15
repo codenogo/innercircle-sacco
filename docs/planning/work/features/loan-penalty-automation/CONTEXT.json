@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "feature": "loan-penalty-automation",
+  "displayName": "Loan Penalty Automation",
+  "decisions": [
+    {
+      "area": "repayment-allocation",
+      "decision": "Interest -> Penalties -> Principal",
+      "rationale": "Standard SACCO policy: accrued interest first, then outstanding penalties, then principal"
+    },
+    {
+      "area": "auto-penalty",
+      "decision": "Batch job auto-applies via PenaltyRule config",
+      "rationale": "Reads active LOAN_DEFAULT PenaltyRule, calculates FLAT or PERCENTAGE amount, calls applyPenalty()"
+    },
+    {
+      "area": "compounding",
+      "decision": "Configurable per PenaltyRule via compounding boolean",
+      "rationale": "Flexible: one-time or monthly compounding per rule"
+    },
+    {
+      "area": "grace-period",
+      "decision": "SystemConfig: loan.penalty.grace_period_days (default 30)",
+      "rationale": "Admin-configurable without code changes"
+    },
+    {
+      "area": "default-threshold",
+      "decision": "SystemConfig: loan.penalty.default_threshold_days (default 90)",
+      "rationale": "Admin-configurable without code changes"
+    },
+    {
+      "area": "penalty-tracking",
+      "decision": "Add paid/paidAt to LoanPenalty, totalPenalties to LoanApplication, scheduleId to LoanPenalty",
+      "rationale": "Required for repayment allocation and idempotent penalty application"
+    }
+  ],
+  "constraints": [
+    "Must not break existing interest-first repayment allocation",
+    "PenaltyRule in sacco-config, batch in sacco-loan - bridge via ConfigService",
+    "Penalty GL entries already handled by FinancialEventListener",
+    "Liquibase migrations required for new/modified columns",
+    "Must prevent double-penalizing same installment"
+  ],
+  "openQuestions": [],
+  "relatedCode": [
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchServiceImpl.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanPenaltyServiceImpl.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/LoanPenalty.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/LoanApplication.java",
+    "sacco-config/src/main/java/com/innercircle/sacco/config/entity/PenaltyRule.java",
+    "sacco-config/src/main/java/com/innercircle/sacco/config/repository/PenaltyRuleRepository.java",
+    "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/listener/FinancialEventListener.java"
+  ],
+  "timestamp": "2026-02-15T15:00:00Z"
+}

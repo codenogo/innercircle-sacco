@@ -55,4 +55,7 @@ public class PenaltyRule extends BaseEntity {
 
     @Column(nullable = false)
     private boolean active;
+
+    @Column(nullable = false)
+    private boolean compounding = false;
 }

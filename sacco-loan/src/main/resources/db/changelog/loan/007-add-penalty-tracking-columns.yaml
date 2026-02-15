@@ -1,0 +1,64 @@
+databaseChangeLog:
+  - changeSet:
+      id: 007-add-penalty-tracking-columns
+      author: system
+      comment: "Add paid, paid_at, schedule_id to loan_penalties and total_penalties to loan_applications for penalty automation"
+      changes:
+        - addColumn:
+            tableName: loan_penalties
+            columns:
+              - column:
+                  name: paid
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: paid_at
+                  type: timestamp
+              - column:
+                  name: schedule_id
+                  type: uuid
+        - addColumn:
+            tableName: loan_applications
+            columns:
+              - column:
+                  name: total_penalties
+                  type: decimal(19,2)
+                  defaultValueNumeric: 0.00
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: loan_penalties
+            indexName: idx_penalty_schedule_id
+            columns:
+              - column:
+                  name: schedule_id
+        - createIndex:
+            tableName: loan_penalties
+            indexName: idx_penalty_loan_paid
+            columns:
+              - column:
+                  name: loan_id
+              - column:
+                  name: paid
+
+      rollback:
+        - dropIndex:
+            tableName: loan_penalties
+            indexName: idx_penalty_loan_paid
+        - dropIndex:
+            tableName: loan_penalties
+            indexName: idx_penalty_schedule_id
+        - dropColumn:
+            tableName: loan_applications
+            columnName: total_penalties
+        - dropColumn:
+            tableName: loan_penalties
+            columnName: schedule_id
+        - dropColumn:
+            tableName: loan_penalties
+            columnName: paid_at
+        - dropColumn:
+            tableName: loan_penalties
+            columnName: paid

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "feature": "loan-penalty-automation",
+  "planNumber": "01",
+  "goal": "Add database columns and update JPA entities to support penalty tracking, payment marking, and configurable compounding",
+  "tasks": [
+    {
+      "name": "Liquibase Migrations",
+      "cwd": ".",
+      "files": [
+        "src/main/resources/db/changelog/loan/007-add-penalty-tracking-columns.yaml",
+        "src/main/resources/db/changelog/config/004-add-penalty-compounding.yaml",
+        "src/main/resources/db/changelog/config/005-seed-penalty-system-config.yaml"
+      ],
+      "action": "Create 3 Liquibase migrations: (1) Add paid, paid_at, schedule_id to loan_penalties and total_penalties to loan_applications; (2) Add compounding to penalty_rules; (3) Seed SystemConfig with loan.penalty.grace_period_days=30 and loan.penalty.default_threshold_days=90",
+      "verify": ["./mvnw test -pl sacco-loan -q -Dtest=LoanApplicationTests 2>&1 | tail -5"],
+      "blockedBy": []
+    },
+    {
+      "name": "Update JPA Entities",
+      "cwd": ".",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/LoanPenalty.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/LoanApplication.java",
+        "sacco-config/src/main/java/com/innercircle/sacco/config/entity/PenaltyRule.java"
+      ],
+      "action": "Add paid (Boolean, default false), paidAt (Instant), scheduleId (UUID) to LoanPenalty. Add totalPenalties (BigDecimal, default ZERO) to LoanApplication. Add compounding (boolean, default false) to PenaltyRule.",
+      "verify": ["./mvnw compile -pl sacco-loan,sacco-config -q 2>&1 | tail -5"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Add LoanPenaltyRepository Query Methods",
+      "cwd": ".",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/repository/LoanPenaltyRepository.java"
+      ],
+      "action": "Add findByLoanIdAndPaidFalse(UUID), findByLoanIdAndScheduleId(UUID, UUID), and @Query for sumAmountByLoanIdAndPaidFalse(UUID) to LoanPenaltyRepository",
+      "verify": ["./mvnw test -pl sacco-loan -q 2>&1 | tail -5"],
+      "blockedBy": [1]
+    }
+  ],
+  "planVerify": ["./mvnw test -pl sacco-loan,sacco-config -q 2>&1 | tail -10"],
+  "commitMessage": "feat(loan-penalty): schema and entity changes for penalty tracking",
+  "timestamp": "2026-02-15T15:30:00Z"
+}

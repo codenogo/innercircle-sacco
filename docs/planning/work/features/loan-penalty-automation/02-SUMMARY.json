@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "feature": "loan-penalty-automation",
+  "planNumber": "02",
+  "outcome": "complete",
+  "changes": [
+    { "file": "sacco-config/src/main/java/com/innercircle/sacco/config/service/ConfigService.java", "change": "Added getActivePenaltyRuleByType(PenaltyType) method" },
+    { "file": "sacco-config/src/main/java/com/innercircle/sacco/config/service/ConfigServiceImpl.java", "change": "Implemented penalty rule lookup via repository" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanPenaltyService.java", "change": "Added overloaded applyPenalty with scheduleId, getUnpaidPenalties, getTotalUnpaidPenalties" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanPenaltyServiceImpl.java", "change": "Implemented scheduleId idempotency, unpaid penalty queries" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchServiceImpl.java", "change": "Wired auto-penalty via PenaltyRule with configurable thresholds and idempotency" },
+    { "file": "sacco-loan/src/test/java/com/innercircle/sacco/loan/service/LoanBatchServiceImplTest.java", "change": "Added mocks for LoanPenaltyService and LoanPenaltyRepository, penalty rule setup" }
+  ],
+  "verification": [
+    { "task": 1, "result": "pass", "details": "mvn compile -pl sacco-config -q passed" },
+    { "task": 2, "result": "pass", "details": "Tests pass after mock fixes" },
+    { "task": 3, "result": "pass", "details": "mvn compile -pl sacco-loan -q passed" },
+    { "task": "plan", "result": "pass", "details": "254 tests, 0 failures" }
+  ],
+  "commit": { "hash": "pending", "message": "feat(loan-penalty): auto-apply penalties via PenaltyRule in batch processing" },
+  "timestamp": "2026-02-15T18:10:00Z"
+}
