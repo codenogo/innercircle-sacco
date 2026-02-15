@@ -154,7 +154,7 @@ public class ExportServiceImpl implements ExportService {
     public byte[] financialSummaryToCsv(FinancialSummaryResponse summary) {
         StringBuilder sb = new StringBuilder();
         sb.append("Financial Summary\n");
-        sb.append("Period,").append(summary.fromDate()).append(" to ").append(summary.toDate()).append('\n');
+        sb.append("Period,").append(escapeCsv(summary.fromDate().toString())).append(" to ").append(escapeCsv(summary.toDate().toString())).append('\n');
         sb.append('\n');
         sb.append("Metric,Amount\n");
         sb.append("Total Contributions,").append(summary.totalContributions().toPlainString()).append('\n');

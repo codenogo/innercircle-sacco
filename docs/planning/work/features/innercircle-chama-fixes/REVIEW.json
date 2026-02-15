@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "timestamp": "2026-02-15T00:00:00Z",
+  "feature": "innercircle-chama-fixes",
+  "branch": "main",
+  "automated": [
+    { "name": "compile", "result": "pass" },
+    { "name": "tests", "result": "pass" },
+    { "name": "lint", "result": "skipped" },
+    { "name": "security", "result": "pass" },
+    { "name": "types", "result": "skipped" },
+    { "name": "deps", "result": "skipped" }
+  ],
+  "verdict": "warn",
+  "blockers": [],
+  "warnings": [
+    {
+      "file": "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/controller/DashboardController.java",
+      "line": 41,
+      "issue": "Treasurer and admin dashboard endpoints lack @PreAuthorize role guards; any authenticated user can access",
+      "severity": "high"
+    },
+    {
+      "file": "sacco-security/src/main/java/com/innercircle/sacco/security/config/AuthorizationServerConfig.java",
+      "line": 105,
+      "issue": "RSA key pair generated at startup; JWTs invalidated on restart. Load from persistent keystore for production.",
+      "severity": "medium"
+    },
+    {
+      "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java",
+      "line": 188,
+      "issue": "Proportional interest allocation can divide by zero if schedule totalAmount is zero",
+      "severity": "medium"
+    },
+    {
+      "file": "sacco-security/src/main/java/com/innercircle/sacco/security/config/SecurityConfig.java",
+      "line": 53,
+      "issue": "CORS origins hardcoded to localhost; should be externalized for deployment flexibility",
+      "severity": "low"
+    },
+    {
+      "file": "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/service/LedgerServiceImpl.java",
+      "line": 103,
+      "issue": "generateEntryNumber() is public and not @Transactional; sequence gaps possible if called outside transaction",
+      "severity": "low"
+    },
+    {
+      "file": "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/service/ExportServiceImpl.java",
+      "line": 41,
+      "issue": "CSV summary section does not use escapeCsv() for consistency (no actual injection risk)",
+      "severity": "low"
+    },
+    {
+      "file": "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/security/ReportingAuthHelper.java",
+      "line": 27,
+      "issue": "queryForObject throws EmptyResultDataAccessException if no member found, surfaces as 500 instead of clean 403",
+      "severity": "low"
+    }
+  ]
+}

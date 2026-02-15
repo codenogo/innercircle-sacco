@@ -100,6 +100,7 @@ public class LedgerServiceImpl implements LedgerService {
     }
 
     @Override
+    @Transactional
     public String generateEntryNumber() {
         Long nextVal = journalEntryRepository.getNextEntryNumber();
         return String.format("JE%06d", nextVal);

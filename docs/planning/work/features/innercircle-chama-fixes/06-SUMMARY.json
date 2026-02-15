@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama-fixes",
+  "planNumber": "06",
+  "outcome": "complete",
+  "changes": [
+    { "file": "sacco-common/pom.xml", "change": "Added java-uuid-generator 5.1.0 dependency" },
+    { "file": "sacco-common/src/main/java/com/innercircle/sacco/common/util/UuidGenerator.java", "change": "Replaced custom UUID v7 with Generators.timeBasedEpochGenerator()" },
+    { "file": "sacco-common/src/main/java/com/innercircle/sacco/common/exception/GlobalExceptionHandler.java", "change": "Added log.error for unhandled exceptions" },
+    { "file": "sacco-common/src/main/java/com/innercircle/sacco/common/model/BaseEntity.java", "change": "Added @Version optimistic locking field" },
+    { "file": "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/PayoutServiceImpl.java", "change": "Fixed generateReferenceNumber() to use UUID v7 substring" },
+    { "file": "sacco-common/src/main/resources/db/changelog/common/001-add-version-column.yaml", "change": "New migration: version column on all 21 entity tables" },
+    { "file": "sacco-common/src/main/resources/db/changelog/common/002-add-fk-and-unique-constraints.yaml", "change": "New migration: ON DELETE RESTRICT FKs + UNIQUE on reference_number" },
+    { "file": "sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml", "change": "Included common changesets" }
+  ],
+  "verification": [
+    { "task": 1, "result": "pass", "details": "mvn compile -pl sacco-common -q" },
+    { "task": 2, "result": "pass", "details": "mvn compile -pl sacco-payout -q" },
+    { "task": 3, "result": "pass", "details": "mvn compile -q (full project, sacco-app needs all modules)" },
+    { "task": 0, "result": "pass", "details": "mvn compile -q (full project)" }
+  ],
+  "commit": { "hash": "8c2ce65", "message": "fix(common,payout,app): data integrity fixes and cross-cutting improvements" },
+  "timestamp": "2026-02-15T00:00:00Z"
+}

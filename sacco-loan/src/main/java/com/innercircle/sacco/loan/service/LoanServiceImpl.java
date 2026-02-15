@@ -181,6 +181,9 @@ public class LoanServiceImpl implements LoanService {
             }
 
             BigDecimal scheduleOutstanding = schedule.getTotalAmount().subtract(schedule.getAmountPaid());
+            if (scheduleOutstanding.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
             BigDecimal paymentForSchedule = remainingAmount.min(scheduleOutstanding);
 
             // Proportionally allocate to interest and principal

@@ -1,5 +1,6 @@
 package com.innercircle.sacco.reporting.security;
 
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -24,11 +25,15 @@ public class ReportingAuthHelper {
         if (email == null) {
             throw new AccessDeniedException("No email claim in token");
         }
-        return jdbcTemplate.queryForObject(
-                "SELECT id FROM members WHERE email = ?",
-                UUID.class,
-                email
-        );
+        try {
+            return jdbcTemplate.queryForObject(
+                    "SELECT id FROM members WHERE email = ?",
+                    UUID.class,
+                    email
+            );
+        } catch (EmptyResultDataAccessException e) {
+            throw new AccessDeniedException("Member not found for authenticated user");
+        }
     }
 
     public void assertAccessToMember(UUID requestedMemberId, Authentication auth) {

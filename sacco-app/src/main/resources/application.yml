@@ -43,6 +43,9 @@ oauth2:
     batch-client:
       secret: ${OAUTH2_BATCH_SECRET:changeme}
 
+cors:
+  allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://localhost:8080}
+
 management:
   endpoints:
     web:
