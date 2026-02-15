@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "feature": "sacco-critical-features",
+  "planNumber": "03",
+  "outcome": "complete",
+  "changes": [
+    { "file": "sacco-common/pom.xml", "change": "Added spring-boot-starter-mail" },
+    { "file": "sacco-common/.../service/EmailService.java", "change": "Created email service interface" },
+    { "file": "sacco-common/.../service/EmailServiceImpl.java", "change": "Implemented with JavaMailSender" },
+    { "file": "sacco-app/.../application.yml", "change": "Added mail configuration" },
+    { "file": "sacco-security/.../entity/PasswordResetToken.java", "change": "Created token entity" },
+    { "file": "sacco-security/.../repository/PasswordResetTokenRepository.java", "change": "Created repository" },
+    { "file": "sacco-security/.../service/PasswordResetService.java", "change": "Created service interface" },
+    { "file": "sacco-security/.../service/PasswordResetServiceImpl.java", "change": "Implemented token flow" },
+    { "file": "sacco-security/.../controller/AuthController.java", "change": "Created forgot/reset password endpoints" },
+    { "file": "sacco-security/.../db/changelog/security/004-create-password-reset-tokens.yaml", "change": "Created migration" }
+  ],
+  "verification": [
+    { "task": 1, "result": "pass" },
+    { "task": 2, "result": "pass" },
+    { "task": 3, "result": "pass" }
+  ],
+  "timestamp": "2026-02-15T00:00:00Z"
+}
