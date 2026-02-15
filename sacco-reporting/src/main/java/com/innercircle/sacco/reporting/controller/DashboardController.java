@@ -4,8 +4,10 @@ import com.innercircle.sacco.common.dto.ApiResponse;
 import com.innercircle.sacco.reporting.dto.AdminDashboardResponse;
 import com.innercircle.sacco.reporting.dto.MemberDashboardResponse;
 import com.innercircle.sacco.reporting.dto.TreasurerDashboardResponse;
+import com.innercircle.sacco.reporting.security.ReportingAuthHelper;
 import com.innercircle.sacco.reporting.service.FinancialReportService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -18,14 +20,19 @@ import java.util.UUID;
 public class DashboardController {
 
     private final FinancialReportService financialReportService;
+    private final ReportingAuthHelper authHelper;
 
-    public DashboardController(FinancialReportService financialReportService) {
+    public DashboardController(FinancialReportService financialReportService,
+                               ReportingAuthHelper authHelper) {
         this.financialReportService = financialReportService;
+        this.authHelper = authHelper;
     }
 
     @GetMapping("/member")
     public ResponseEntity<ApiResponse<MemberDashboardResponse>> memberDashboard(
-            @RequestParam UUID memberId) {
+            @RequestParam UUID memberId,
+            Authentication authentication) {
+        authHelper.assertAccessToMember(memberId, authentication);
         MemberDashboardResponse dashboard = financialReportService.memberDashboard(memberId);
         return ResponseEntity.ok(ApiResponse.ok(dashboard));
     }

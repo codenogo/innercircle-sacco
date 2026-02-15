@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama-fixes",
+  "planNumber": "03",
+  "outcome": "complete",
+  "changes": [
+    { "file": "sacco-security/src/main/java/com/innercircle/sacco/security/config/SecurityConfig.java", "change": "Changed permitAll to authenticated/hasRole for actuator, swagger, and default" },
+    { "file": "sacco-security/src/main/java/com/innercircle/sacco/security/config/AuthorizationServerConfig.java", "change": "Externalized client secrets via @Value with env var fallbacks" },
+    { "file": "sacco-app/src/main/resources/application.yml", "change": "Added oauth2.client secret properties with env var placeholders" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/LoanApplicationRequest.java", "change": "Added @DecimalMax(100.0) to interestRate field" }
+  ],
+  "verification": [
+    { "task": 1, "result": "pass", "details": "mvn compile -pl sacco-security -q" },
+    { "task": 2, "result": "pass", "details": "mvn compile -pl sacco-security -q" },
+    { "task": 3, "result": "pass", "details": "mvn compile -pl sacco-loan -q" },
+    { "task": 0, "result": "pass", "details": "mvn compile -q (full project)" }
+  ],
+  "commit": { "hash": "2399850", "message": "fix(security,loan): harden security config, externalize secrets, add rate validation" },
+  "timestamp": "2026-02-15T00:00:00Z"
+}
