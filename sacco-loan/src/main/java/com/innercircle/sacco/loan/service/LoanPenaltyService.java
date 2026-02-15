@@ -19,4 +19,8 @@ public interface LoanPenaltyService {
     List<LoanPenalty> getUnpaidPenalties(UUID loanId);
 
     BigDecimal getTotalUnpaidPenalties(UUID loanId);
+
+    void markPenaltyPaid(UUID penaltyId, String actor);
+
+    BigDecimal payPenalties(UUID loanId, BigDecimal availableAmount, String actor);
 }

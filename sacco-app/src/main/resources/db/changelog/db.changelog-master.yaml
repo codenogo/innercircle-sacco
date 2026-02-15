@@ -65,6 +65,8 @@ databaseChangeLog:
       file: db/changelog/loan/006-add-missing-loan-application-columns.yaml
   - include:
       file: db/changelog/loan/007-add-penalty-tracking-columns.yaml
+  - include:
+      file: db/changelog/loan/008-add-penalty-portion-to-repayments.yaml
 
   # Payout module
   - include:

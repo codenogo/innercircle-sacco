@@ -1,6 +1,7 @@
 package com.innercircle.sacco.loan.service;
 
 import com.innercircle.sacco.common.event.PenaltyAppliedEvent;
+import com.innercircle.sacco.common.event.PenaltyPaidEvent;
 import com.innercircle.sacco.loan.entity.LoanPenalty;
 import com.innercircle.sacco.loan.repository.LoanPenaltyRepository;
 import lombok.RequiredArgsConstructor;
@@ -92,5 +93,53 @@ public class LoanPenaltyServiceImpl implements LoanPenaltyService {
     @Transactional(readOnly = true)
     public BigDecimal getTotalUnpaidPenalties(UUID loanId) {
         return penaltyRepository.sumUnpaidAmountByLoanId(loanId);
+    }
+
+    @Override
+    @Transactional
+    public void markPenaltyPaid(UUID penaltyId, String actor) {
+        LoanPenalty penalty = penaltyRepository.findById(penaltyId)
+                .orElseThrow(() -> new IllegalArgumentException("Penalty not found: " + penaltyId));
+
+        if (Boolean.TRUE.equals(penalty.getPaid())) {
+            log.info("Penalty {} already paid, skipping", penaltyId);
+            return;
+        }
+
+        penalty.setPaid(true);
+        penalty.setPaidAt(Instant.now());
+        penaltyRepository.save(penalty);
+
+        eventPublisher.publishEvent(new PenaltyPaidEvent(
+                penaltyId,
+                penalty.getMemberId(),
+                penalty.getAmount(),
+                actor
+        ));
+
+        log.info("Marked penalty {} as paid (amount: {})", penaltyId, penalty.getAmount());
+    }
+
+    @Override
+    @Transactional
+    public BigDecimal payPenalties(UUID loanId, BigDecimal availableAmount, String actor) {
+        List<LoanPenalty> unpaidPenalties = penaltyRepository.findByLoanIdAndPaidFalseOrderByAppliedAtAsc(loanId);
+        BigDecimal totalPaid = BigDecimal.ZERO;
+        BigDecimal remaining = availableAmount;
+
+        for (LoanPenalty penalty : unpaidPenalties) {
+            if (remaining.compareTo(penalty.getAmount()) >= 0) {
+                markPenaltyPaid(penalty.getId(), actor);
+                remaining = remaining.subtract(penalty.getAmount());
+                totalPaid = totalPaid.add(penalty.getAmount());
+            }
+            // Penalties are atomic — no partial payment; skip if insufficient
+        }
+
+        if (totalPaid.compareTo(BigDecimal.ZERO) > 0) {
+            log.info("Paid {} in penalties for loan {} ({} penalties)", totalPaid, loanId, unpaidPenalties.size());
+        }
+
+        return totalPaid;
     }
 }

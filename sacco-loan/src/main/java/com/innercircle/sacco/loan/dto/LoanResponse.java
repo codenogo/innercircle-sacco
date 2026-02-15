@@ -32,6 +32,7 @@ public class LoanResponse {
     private BigDecimal outstandingBalance;
     private BigDecimal totalInterestAccrued;
     private BigDecimal totalInterestPaid;
+    private BigDecimal totalPenalties;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -53,6 +54,7 @@ public class LoanResponse {
                 .outstandingBalance(loan.getOutstandingBalance())
                 .totalInterestAccrued(loan.getTotalInterestAccrued())
                 .totalInterestPaid(loan.getTotalInterestPaid())
+                .totalPenalties(loan.getTotalPenalties())
                 .createdAt(loan.getCreatedAt())
                 .updatedAt(loan.getUpdatedAt())
                 .build();

@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - changeSet:
+      id: 008-add-penalty-portion-to-repayments
+      author: system
+      comment: "Add penalty_portion column to loan_repayments for tracking penalty allocation in repayments"
+      changes:
+        - addColumn:
+            tableName: loan_repayments
+            columns:
+              - column:
+                  name: penalty_portion
+                  type: decimal(19,2)
+                  defaultValueNumeric: 0.00
+                  constraints:
+                    nullable: false
+
+      rollback:
+        - dropColumn:
+            tableName: loan_repayments
+            columnName: penalty_portion

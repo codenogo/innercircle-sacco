@@ -146,6 +146,17 @@ public class FinancialEventListener {
             entry.addJournalLine(creditInterest);
         }
 
+        // CR Penalty Income (penalty portion)
+        if (event.penaltyPortion() != null && event.penaltyPortion().compareTo(BigDecimal.ZERO) > 0) {
+            Account penaltyIncomeAccount = getAccountByCode(ACCOUNT_PENALTY_INCOME);
+            JournalLine creditPenalty = new JournalLine();
+            creditPenalty.setAccount(penaltyIncomeAccount);
+            creditPenalty.setDebitAmount(BigDecimal.ZERO);
+            creditPenalty.setCreditAmount(event.penaltyPortion());
+            creditPenalty.setDescription("Penalty paid via repayment - Repayment ID: " + event.repaymentId());
+            entry.addJournalLine(creditPenalty);
+        }
+
         JournalEntry created = ledgerService.createJournalEntry(entry);
         ledgerService.postEntry(created.getId());
     }

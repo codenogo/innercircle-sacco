@@ -19,7 +19,7 @@ class LoanRepaymentEventTest {
         BigDecimal interest = new BigDecimal("2000.00");
 
         LoanRepaymentEvent event = new LoanRepaymentEvent(
-                loanId, memberId, repaymentId, amount, principal, interest, "member"
+                loanId, memberId, repaymentId, amount, principal, interest, BigDecimal.ZERO, "member"
         );
 
         assertThat(event.loanId()).isEqualTo(loanId);
@@ -28,6 +28,7 @@ class LoanRepaymentEventTest {
         assertThat(event.amount()).isEqualByComparingTo(amount);
         assertThat(event.principalPortion()).isEqualByComparingTo(principal);
         assertThat(event.interestPortion()).isEqualByComparingTo(interest);
+        assertThat(event.penaltyPortion()).isEqualByComparingTo(BigDecimal.ZERO);
         assertThat(event.actor()).isEqualTo("member");
     }
 
@@ -35,7 +36,7 @@ class LoanRepaymentEventTest {
     void getEventType_shouldReturnLoanRepayment() {
         LoanRepaymentEvent event = new LoanRepaymentEvent(
                 UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, "actor"
+                BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ZERO, "actor"
         );
 
         assertThat(event.getEventType()).isEqualTo("LOAN_REPAYMENT");
@@ -45,7 +46,7 @@ class LoanRepaymentEventTest {
     void getActor_shouldReturnActorValue() {
         LoanRepaymentEvent event = new LoanRepaymentEvent(
                 UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, "cashier"
+                BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ZERO, "cashier"
         );
 
         assertThat(event.getActor()).isEqualTo("cashier");
@@ -55,7 +56,7 @@ class LoanRepaymentEventTest {
     void shouldImplementAuditableEvent() {
         LoanRepaymentEvent event = new LoanRepaymentEvent(
                 UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, "actor"
+                BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ZERO, "actor"
         );
 
         assertThat(event).isInstanceOf(AuditableEvent.class);
@@ -67,8 +68,8 @@ class LoanRepaymentEventTest {
         UUID mId = UUID.randomUUID();
         UUID rId = UUID.randomUUID();
 
-        LoanRepaymentEvent event1 = new LoanRepaymentEvent(lId, mId, rId, BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, "a");
-        LoanRepaymentEvent event2 = new LoanRepaymentEvent(lId, mId, rId, BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, "a");
+        LoanRepaymentEvent event1 = new LoanRepaymentEvent(lId, mId, rId, BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ZERO, "a");
+        LoanRepaymentEvent event2 = new LoanRepaymentEvent(lId, mId, rId, BigDecimal.TEN, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ZERO, "a");
 
         assertThat(event1).isEqualTo(event2);
         assertThat(event1.hashCode()).isEqualTo(event2.hashCode());
@@ -78,7 +79,7 @@ class LoanRepaymentEventTest {
     void toString_shouldContainFieldValues() {
         LoanRepaymentEvent event = new LoanRepaymentEvent(
                 UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                new BigDecimal("5000"), new BigDecimal("4000"), new BigDecimal("1000"), "actor"
+                new BigDecimal("5000"), new BigDecimal("4000"), new BigDecimal("1000"), BigDecimal.ZERO, "actor"
         );
 
         String str = event.toString();

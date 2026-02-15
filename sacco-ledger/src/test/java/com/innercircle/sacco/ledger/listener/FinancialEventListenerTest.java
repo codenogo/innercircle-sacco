@@ -286,7 +286,7 @@ class FinancialEventListenerTest {
             BigDecimal interestPortion = new BigDecimal("300.00");
 
             LoanRepaymentEvent event = new LoanRepaymentEvent(
-                    loanId, memberId, repaymentId, totalAmount, principalPortion, interestPortion, "admin"
+                    loanId, memberId, repaymentId, totalAmount, principalPortion, interestPortion, BigDecimal.ZERO, "admin"
             );
 
             setupAccountLookup("1001", cashAccount);
@@ -332,7 +332,7 @@ class FinancialEventListenerTest {
 
             LoanRepaymentEvent event = new LoanRepaymentEvent(
                     UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                    totalAmount, principalPortion, interestPortion, "admin"
+                    totalAmount, principalPortion, interestPortion, BigDecimal.ZERO, "admin"
             );
 
             setupAccountLookup("1001", cashAccount);
@@ -364,7 +364,7 @@ class FinancialEventListenerTest {
 
             LoanRepaymentEvent event = new LoanRepaymentEvent(
                     UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                    totalAmount, principalPortion, interestPortion, "admin"
+                    totalAmount, principalPortion, interestPortion, BigDecimal.ZERO, "admin"
             );
 
             setupAccountLookup("1001", cashAccount);
@@ -386,7 +386,7 @@ class FinancialEventListenerTest {
         void shouldPostRepaymentEntry() {
             LoanRepaymentEvent event = new LoanRepaymentEvent(
                     UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                    new BigDecimal("1000.00"), new BigDecimal("800.00"), new BigDecimal("200.00"), "admin"
+                    new BigDecimal("1000.00"), new BigDecimal("800.00"), new BigDecimal("200.00"), BigDecimal.ZERO, "admin"
             );
 
             setupAccountLookup("1001", cashAccount);

@@ -23,6 +23,8 @@ public interface LoanPenaltyRepository extends JpaRepository<LoanPenalty, UUID> 
 
     List<LoanPenalty> findByLoanIdAndPaidFalse(UUID loanId);
 
+    List<LoanPenalty> findByLoanIdAndPaidFalseOrderByAppliedAtAsc(UUID loanId);
+
     List<LoanPenalty> findByLoanIdAndScheduleId(UUID loanId, UUID scheduleId);
 
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM LoanPenalty p WHERE p.loanId = :loanId AND p.paid = false")

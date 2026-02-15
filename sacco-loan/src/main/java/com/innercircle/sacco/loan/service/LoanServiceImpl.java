@@ -41,6 +41,7 @@ public class LoanServiceImpl implements LoanService {
     private final RepaymentScheduleGenerator scheduleGenerator;
     private final ApplicationEventPublisher eventPublisher;
     private final ConfigService configService;
+    private final LoanPenaltyService loanPenaltyService;
 
     @Override
     @Transactional
@@ -208,7 +209,14 @@ public class LoanServiceImpl implements LoanService {
             remainingAmount = remainingAmount.subtract(interestPayment);
         }
 
-        // Step 2: Allocate remaining to principal via schedule installments
+        // Step 2: Allocate remaining to unpaid penalties (oldest first, atomic — no partial)
+        BigDecimal totalPenaltyPaid = BigDecimal.ZERO;
+        if (remainingAmount.compareTo(BigDecimal.ZERO) > 0) {
+            totalPenaltyPaid = loanPenaltyService.payPenalties(loanId, remainingAmount, actor);
+            remainingAmount = remainingAmount.subtract(totalPenaltyPaid);
+        }
+
+        // Step 3: Allocate remaining to principal via schedule installments
         List<RepaymentSchedule> unpaidSchedules = scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loanId);
         for (RepaymentSchedule schedule : unpaidSchedules) {
             if (remainingAmount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -258,6 +266,7 @@ public class LoanServiceImpl implements LoanService {
         repayment.setAmount(amount);
         repayment.setPrincipalPortion(totalPrincipalPaid);
         repayment.setInterestPortion(totalInterestPaid);
+        repayment.setPenaltyPortion(totalPenaltyPaid);
         repayment.setRepaymentDate(LocalDate.now());
         repayment.setReferenceNumber(referenceNumber);
         repayment.setStatus(RepaymentStatus.CONFIRMED);
@@ -283,6 +292,7 @@ public class LoanServiceImpl implements LoanService {
                 amount,
                 totalPrincipalPaid,
                 totalInterestPaid,
+                totalPenaltyPaid,
                 actor
         ));
 
