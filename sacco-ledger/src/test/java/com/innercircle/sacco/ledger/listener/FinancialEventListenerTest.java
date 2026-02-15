@@ -53,6 +53,7 @@ class FinancialEventListenerTest {
     private Account memberSharesAccount;
     private Account loanReceivableAccount;
     private Account interestIncomeAccount;
+    private Account interestReceivableAccount;
     private Account contributionIncomeAccount;
     private Account penaltyIncomeAccount;
     private Account memberAccountAccount;
@@ -63,6 +64,7 @@ class FinancialEventListenerTest {
         memberSharesAccount = createAccount("2001", "Member Shares", AccountType.LIABILITY);
         loanReceivableAccount = createAccount("1002", "Loan Receivable", AccountType.ASSET);
         interestIncomeAccount = createAccount("4001", "Interest Income", AccountType.REVENUE);
+        interestReceivableAccount = createAccount("1003", "Interest Receivable", AccountType.ASSET);
         contributionIncomeAccount = createAccount("4002", "Contribution Income", AccountType.REVENUE);
         penaltyIncomeAccount = createAccount("4003", "Penalty Income", AccountType.REVENUE);
         memberAccountAccount = createAccount("2002", "Member Account", AccountType.LIABILITY);
@@ -289,7 +291,7 @@ class FinancialEventListenerTest {
 
             setupAccountLookup("1001", cashAccount);
             setupAccountLookup("1002", loanReceivableAccount);
-            setupAccountLookup("4001", interestIncomeAccount);
+            setupAccountLookup("1003", interestReceivableAccount);
             setupLedgerService();
 
             financialEventListener.handleLoanRepayment(event);
@@ -314,9 +316,9 @@ class FinancialEventListenerTest {
             assertEquals(BigDecimal.ZERO, creditPrincipal.getDebitAmount());
             assertEquals(principalPortion, creditPrincipal.getCreditAmount());
 
-            // Verify credit to Interest Income
+            // Verify credit to Interest Receivable (settles accrual)
             JournalLine creditInterest = captured.getJournalLines().get(2);
-            assertEquals(interestIncomeAccount, creditInterest.getAccount());
+            assertEquals(interestReceivableAccount, creditInterest.getAccount());
             assertEquals(BigDecimal.ZERO, creditInterest.getDebitAmount());
             assertEquals(interestPortion, creditInterest.getCreditAmount());
         }
@@ -335,7 +337,7 @@ class FinancialEventListenerTest {
 
             setupAccountLookup("1001", cashAccount);
             setupAccountLookup("1002", loanReceivableAccount);
-            setupAccountLookup("4001", interestIncomeAccount);
+            setupAccountLookup("1003", interestReceivableAccount);
             setupLedgerService();
 
             financialEventListener.handleLoanRepayment(event);
@@ -367,7 +369,7 @@ class FinancialEventListenerTest {
 
             setupAccountLookup("1001", cashAccount);
             setupAccountLookup("1002", loanReceivableAccount);
-            setupAccountLookup("4001", interestIncomeAccount);
+            setupAccountLookup("1003", interestReceivableAccount);
             setupLedgerService();
 
             financialEventListener.handleLoanRepayment(event);
@@ -389,7 +391,7 @@ class FinancialEventListenerTest {
 
             setupAccountLookup("1001", cashAccount);
             setupAccountLookup("1002", loanReceivableAccount);
-            setupAccountLookup("4001", interestIncomeAccount);
+            setupAccountLookup("1003", interestReceivableAccount);
             UUID entryId = UUID.randomUUID();
             JournalEntry createdEntry = new JournalEntry();
             createdEntry.setId(entryId);

@@ -112,7 +112,7 @@ public class FinancialEventListener {
 
         Account cashAccount = getAccountByCode(ACCOUNT_CASH);
         Account loanReceivableAccount = getAccountByCode(ACCOUNT_LOAN_RECEIVABLE);
-        Account interestIncomeAccount = getAccountByCode(ACCOUNT_INTEREST_INCOME);
+        Account interestReceivableAccount = getAccountByCode(ACCOUNT_INTEREST_RECEIVABLE);
 
         JournalEntry entry = new JournalEntry();
         entry.setTransactionDate(LocalDate.now());
@@ -136,13 +136,13 @@ public class FinancialEventListener {
         creditPrincipal.setDescription("Principal repayment - Repayment ID: " + event.repaymentId());
         entry.addJournalLine(creditPrincipal);
 
-        // CR Interest Income (interest portion)
+        // CR Interest Receivable (interest portion) - settles the accrual from monthly batch
         if (event.interestPortion().compareTo(BigDecimal.ZERO) > 0) {
             JournalLine creditInterest = new JournalLine();
-            creditInterest.setAccount(interestIncomeAccount);
+            creditInterest.setAccount(interestReceivableAccount);
             creditInterest.setDebitAmount(BigDecimal.ZERO);
             creditInterest.setCreditAmount(event.interestPortion());
-            creditInterest.setDescription("Interest income - Repayment ID: " + event.repaymentId());
+            creditInterest.setDescription("Interest receivable settled - Repayment ID: " + event.repaymentId());
             entry.addJournalLine(creditInterest);
         }
 

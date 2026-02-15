@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "feature": "loan-interest-accrual",
+  "planNumber": "03",
+  "outcome": "complete",
+  "changes": [
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java", "change": "Refactored repayment allocation to interest-first: overdue interest -> current interest -> principal" },
+    { "file": "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/listener/FinancialEventListener.java", "change": "Changed repayment GL from cash-basis (CR 4001) to accrual-basis (CR 1003)" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/MonthlyInterestSummary.java", "change": "New DTO for monthly interest summary" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/MemberInterestSummary.java", "change": "New DTO for member interest summary" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/InterestReportingService.java", "change": "New interface for interest reporting" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/InterestReportingServiceImpl.java", "change": "Implementation of interest reporting service" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/controller/LoanController.java", "change": "Added 3 interest reporting endpoints" },
+    { "file": "sacco-ledger/src/test/java/com/innercircle/sacco/ledger/listener/FinancialEventListenerTest.java", "change": "Updated 4 repayment tests for accrual-basis GL (1003 instead of 4001)" }
+  ],
+  "verification": [
+    { "task": 1, "result": "pass", "details": "sacco-loan 254 tests passed" },
+    { "task": 2, "result": "pass", "details": "sacco-ledger 83 tests passed, including updated repayment tests" },
+    { "task": 3, "result": "pass", "details": "InterestReportingService created, endpoints compile and tests pass" }
+  ],
+  "commit": { "hash": "pending", "message": "feat(loan): interest-first repayment, accrual-basis GL, and interest reporting" },
+  "timestamp": "2026-02-15T14:35:00Z"
+}
