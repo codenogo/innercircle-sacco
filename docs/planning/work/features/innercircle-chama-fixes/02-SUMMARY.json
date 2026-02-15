@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama-fixes",
+  "planNumber": "02",
+  "outcome": "complete",
+  "changes": [
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/RepaymentSchedule.java", "change": "Added amountPaid BigDecimal field with default ZERO" },
+    { "file": "sacco-loan/src/main/resources/db/changelog/loan/002-add-amount-paid-column.yaml", "change": "New Liquibase changeset for amount_paid column" },
+    { "file": "sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml", "change": "Added include for 002-add-amount-paid-column.yaml" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java", "change": "Fixed recordRepayment() to track partial payments via amountPaid" }
+  ],
+  "verification": [
+    { "task": 1, "result": "pass", "details": "mvn compile -pl sacco-loan -q" },
+    { "task": 2, "result": "pass", "details": "mvn compile -pl sacco-loan -q" },
+    { "task": 3, "result": "pass", "details": "mvn compile -pl sacco-loan -q" },
+    { "task": 0, "result": "pass", "details": "mvn compile -q (full project)" }
+  ],
+  "commit": { "hash": "8bb1797", "message": "fix(loan): add partial payment tracking to repayment schedule" },
+  "timestamp": "2026-02-15T00:00:00Z"
+}

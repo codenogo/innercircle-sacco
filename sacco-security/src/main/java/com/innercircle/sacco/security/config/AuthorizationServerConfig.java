@@ -27,6 +27,8 @@ import org.springframework.security.oauth2.server.authorization.settings.TokenSe
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
@@ -36,6 +38,12 @@ import java.util.UUID;
 
 @Configuration
 public class AuthorizationServerConfig {
+
+    @Value("${oauth2.client.web-app.secret:changeme}")
+    private String webAppSecret;
+
+    @Value("${oauth2.client.batch-client.secret:changeme}")
+    private String batchClientSecret;
 
     @Bean
     @Order(1)
@@ -57,7 +65,7 @@ public class AuthorizationServerConfig {
     public RegisteredClientRepository registeredClientRepository(PasswordEncoder passwordEncoder) {
         RegisteredClient webAppClient = RegisteredClient.withId(UUID.randomUUID().toString())
                 .clientId("web-app")
-                .clientSecret(passwordEncoder.encode("web-app-secret"))
+                .clientSecret(passwordEncoder.encode(webAppSecret))
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                 .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
@@ -80,7 +88,7 @@ public class AuthorizationServerConfig {
 
         RegisteredClient batchClient = RegisteredClient.withId(UUID.randomUUID().toString())
                 .clientId("batch-client")
-                .clientSecret(passwordEncoder.encode("batch-client-secret"))
+                .clientSecret(passwordEncoder.encode(batchClientSecret))
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                 .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
                 .scope("batch:read")

@@ -36,6 +36,13 @@ springdoc:
     path: /swagger-ui.html
     enabled: true
 
+oauth2:
+  client:
+    web-app:
+      secret: ${OAUTH2_WEB_SECRET:changeme}
+    batch-client:
+      secret: ${OAUTH2_BATCH_SECRET:changeme}
+
 management:
   endpoints:
     web:

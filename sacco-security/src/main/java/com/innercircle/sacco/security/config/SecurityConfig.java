@@ -30,11 +30,11 @@ public class SecurityConfig {
                         .ignoringRequestMatchers("/api/**")
                 )
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/actuator/**").hasRole("ADMIN")
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").authenticated()
                         .requestMatchers("/api/auth/register").permitAll()
                         .requestMatchers("/api/**").authenticated()
-                        .anyRequest().permitAll()
+                        .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(Customizer.withDefaults())
