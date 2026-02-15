@@ -58,82 +58,89 @@ public class ExportServiceImpl implements ExportService {
             PDType1Font fontBold = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
             PDType1Font fontRegular = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
 
-            try (PDPageContentStream cs = new PDPageContentStream(document, page)) {
-                float y = 770;
-                float margin = 50;
+            float y = 770;
+            float margin = 50;
+            PDPageContentStream cs = new PDPageContentStream(document, page);
 
-                // Header
-                cs.beginText();
-                cs.setFont(fontBold, 16);
-                cs.newLineAtOffset(margin, y);
-                cs.showText("Member Statement");
-                cs.endText();
-                y -= 25;
+            // Header
+            cs.beginText();
+            cs.setFont(fontBold, 16);
+            cs.newLineAtOffset(margin, y);
+            cs.showText("Member Statement");
+            cs.endText();
+            y -= 25;
+
+            cs.beginText();
+            cs.setFont(fontRegular, 10);
+            cs.newLineAtOffset(margin, y);
+            cs.showText("Member: " + statement.memberName() + "  |  Period: " +
+                    statement.fromDate() + " to " + statement.toDate());
+            cs.endText();
+            y -= 30;
+
+            // Table header
+            cs.beginText();
+            cs.setFont(fontBold, 8);
+            cs.newLineAtOffset(margin, y);
+            cs.showText("Date");
+            cs.newLineAtOffset(100, 0);
+            cs.showText("Type");
+            cs.newLineAtOffset(80, 0);
+            cs.showText("Description");
+            cs.newLineAtOffset(120, 0);
+            cs.showText("Debit");
+            cs.newLineAtOffset(70, 0);
+            cs.showText("Credit");
+            cs.newLineAtOffset(70, 0);
+            cs.showText("Balance");
+            cs.endText();
+            y -= 15;
+
+            // Table rows
+            cs.setFont(fontRegular, 7);
+            for (MemberStatementEntry entry : statement.entries()) {
+                if (y < 80) {
+                    cs.close();
+                    page = new PDPage(PDRectangle.A4);
+                    document.addPage(page);
+                    cs = new PDPageContentStream(document, page);
+                    cs.setFont(fontRegular, 7);
+                    y = 770;
+                }
 
                 cs.beginText();
-                cs.setFont(fontRegular, 10);
                 cs.newLineAtOffset(margin, y);
-                cs.showText("Member: " + statement.memberName() + "  |  Period: " +
-                        statement.fromDate() + " to " + statement.toDate());
-                cs.endText();
-                y -= 30;
-
-                // Table header
-                cs.beginText();
-                cs.setFont(fontBold, 8);
-                cs.newLineAtOffset(margin, y);
-                cs.showText("Date");
+                cs.showText(entry.date().format(DATE_FMT));
                 cs.newLineAtOffset(100, 0);
-                cs.showText("Type");
+                cs.showText(truncate(entry.type(), 12));
                 cs.newLineAtOffset(80, 0);
-                cs.showText("Description");
+                cs.showText(truncate(entry.description(), 18));
                 cs.newLineAtOffset(120, 0);
-                cs.showText("Debit");
+                cs.showText(formatAmount(entry.debit()));
                 cs.newLineAtOffset(70, 0);
-                cs.showText("Credit");
+                cs.showText(formatAmount(entry.credit()));
                 cs.newLineAtOffset(70, 0);
-                cs.showText("Balance");
+                cs.showText(formatAmount(entry.runningBalance()));
                 cs.endText();
-                y -= 15;
-
-                // Table rows
-                cs.setFont(fontRegular, 7);
-                for (MemberStatementEntry entry : statement.entries()) {
-                    if (y < 80) {
-                        cs.close();
-                        page = new PDPage(PDRectangle.A4);
-                        document.addPage(page);
-                        // Note: need a new content stream for the new page
-                        break; // Simplified: stop at page boundary
-                    }
-
-                    cs.beginText();
-                    cs.newLineAtOffset(margin, y);
-                    cs.showText(entry.date().format(DATE_FMT));
-                    cs.newLineAtOffset(100, 0);
-                    cs.showText(truncate(entry.type(), 12));
-                    cs.newLineAtOffset(80, 0);
-                    cs.showText(truncate(entry.description(), 18));
-                    cs.newLineAtOffset(120, 0);
-                    cs.showText(formatAmount(entry.debit()));
-                    cs.newLineAtOffset(70, 0);
-                    cs.showText(formatAmount(entry.credit()));
-                    cs.newLineAtOffset(70, 0);
-                    cs.showText(formatAmount(entry.runningBalance()));
-                    cs.endText();
-                    y -= 12;
-                }
-
-                // Summary
-                y -= 20;
-                if (y > 80) {
-                    cs.beginText();
-                    cs.setFont(fontBold, 10);
-                    cs.newLineAtOffset(margin, y);
-                    cs.showText("Closing Balance: " + statement.closingBalance().toPlainString());
-                    cs.endText();
-                }
+                y -= 12;
             }
+
+            // Summary
+            y -= 20;
+            if (y < 80) {
+                cs.close();
+                page = new PDPage(PDRectangle.A4);
+                document.addPage(page);
+                cs = new PDPageContentStream(document, page);
+                y = 770;
+            }
+            cs.beginText();
+            cs.setFont(fontBold, 10);
+            cs.newLineAtOffset(margin, y);
+            cs.showText("Closing Balance: " + statement.closingBalance().toPlainString());
+            cs.endText();
+
+            cs.close();
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             document.save(out);
@@ -166,6 +173,14 @@ public class ExportServiceImpl implements ExportService {
 
     private String escapeCsv(String value) {
         if (value == null) return "";
+        // Prevent CSV injection: prefix formula trigger characters with single quote
+        if (!value.isEmpty()) {
+            char first = value.charAt(0);
+            if (first == '=' || first == '+' || first == '-' || first == '@'
+                    || first == '\t' || first == '\r') {
+                value = "'" + value;
+            }
+        }
         if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
             return "\"" + value.replace("\"", "\"\"") + "\"";
         }

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama-fixes",
+  "planNumber": "04",
+  "outcome": "complete",
+  "changes": [
+    { "file": "sacco-reporting/pom.xml", "change": "Added spring-boot-starter-oauth2-resource-server dependency" },
+    { "file": "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/security/ReportingAuthHelper.java", "change": "New helper resolving memberId from JWT email, with ADMIN/TREASURER bypass" },
+    { "file": "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/controller/DashboardController.java", "change": "Added IDOR protection via ReportingAuthHelper on member dashboard" },
+    { "file": "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/controller/ReportController.java", "change": "Added IDOR protection and date range validation" },
+    { "file": "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/controller/ExportController.java", "change": "Added IDOR protection and date range validation to all export endpoints" }
+  ],
+  "verification": [
+    { "task": 1, "result": "pass", "details": "mvn compile -pl sacco-reporting -q" },
+    { "task": 2, "result": "pass", "details": "mvn compile -pl sacco-reporting -q" },
+    { "task": 3, "result": "pass", "details": "mvn compile -pl sacco-reporting -q" },
+    { "task": 0, "result": "pass", "details": "mvn compile -q (full project)" }
+  ],
+  "commit": { "hash": "794dc8e", "message": "fix(reporting): add IDOR protection and date validation to reporting endpoints" },
+  "timestamp": "2026-02-15T00:00:00Z"
+}
