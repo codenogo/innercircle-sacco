@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "feature": "event-gl-completeness",
+  "planNumber": "03",
+  "outcome": "complete",
+  "changes": [
+    { "file": "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/service/ContributionServiceImpl.java", "change": "Wired ContributionCreatedEvent in recordContribution/recordBulk and ContributionReversedEvent in reverseContribution" },
+    { "file": "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/service/ContributionPenaltyServiceImpl.java", "change": "Wired PenaltyWaivedEvent in waivePenalty" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java", "change": "Wired LoanApplicationEvent in applyForLoan/approveLoan/rejectLoan and LoanStatusChangeEvent in closeLoan" },
+    { "file": "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/PayoutServiceImpl.java", "change": "Wired PayoutStatusChangeEvent in createPayout/approvePayout" }
+  ],
+  "verification": [
+    { "task": 1, "result": "pass", "details": "sacco-contribution compile + tests passed" },
+    { "task": 2, "result": "pass", "details": "sacco-loan compile + tests passed" },
+    { "task": 3, "result": "pass", "details": "sacco-contribution + sacco-payout compile + tests passed" },
+    { "task": "plan", "result": "pass", "details": "128 tests passed, 0 failures across sacco-contribution, sacco-loan, sacco-payout" }
+  ],
+  "commit": { "hash": "pending", "message": "feat(event-gl-completeness): wire event publishing for reversals, waivers, and lifecycle" },
+  "timestamp": "2026-02-15T20:10:00Z"
+}
