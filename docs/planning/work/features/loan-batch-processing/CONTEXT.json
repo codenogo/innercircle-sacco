@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "feature": "loan-batch-processing",
+  "displayName": "Loan Batch Processing (Monthly)",
+  "decisions": [
+    {
+      "area": "config-store",
+      "decision": "SystemConfig DB table (key-value pairs)",
+      "rationale": "Runtime-editable without redeployment; aligns with existing system_configs table and ConfigService API"
+    },
+    {
+      "area": "state-tracking",
+      "decision": "Dedicated batch_processing_log table",
+      "rationale": "New entity tracks each batch run with month, status, counts, timestamp; provides audit trail and idempotency check via unique constraint on processing_month"
+    },
+    {
+      "area": "warning-mode",
+      "decision": "Return warnings in BatchProcessingResult",
+      "rationale": "Include unpaid loan warnings in the result DTO; processing proceeds regardless — warnings are informational only"
+    },
+    {
+      "area": "manual-trigger",
+      "decision": "Same safeguard rules apply",
+      "rationale": "Manual trigger via REST API respects all checks (idempotency, sequential enforcement, threshold); no bypass allowed"
+    },
+    {
+      "area": "skip-handling",
+      "decision": "Reject and require sequential catch-up",
+      "rationale": "If last processed = January and current = March, reject with error 'Must process February first'; enforces strict sequential processing"
+    },
+    {
+      "area": "date-field",
+      "decision": "disbursedAt (Instant on LoanApplication)",
+      "rationale": "Actual disbursement date is when interest liability begins; field already exists on the entity"
+    }
+  ],
+  "constraints": [
+    "Must maintain backward compatibility with existing LoanBatchProcessedEvent consumers",
+    "Must work within existing @TransactionalEventListener GL posting pattern",
+    "Liquibase migrations must have rollback support",
+    "batch_processing_log needs unique constraint on processing_month for idempotency",
+    "All new config keys must be seeded via Liquibase changeset"
+  ],
+  "openQuestions": [],
+  "relatedCode": [
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchServiceImpl.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchService.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/controller/LoanBatchController.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/BatchProcessingResult.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/LoanApplication.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/RepaymentSchedule.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/LoanInterestHistory.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/InterestCalculator.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/repository/LoanApplicationRepository.java",
+    "sacco-common/src/main/java/com/innercircle/sacco/common/event/LoanBatchProcessedEvent.java",
+    "sacco-common/src/main/java/com/innercircle/sacco/common/event/LoanInterestAccrualEvent.java",
+    "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/listener/FinancialEventListener.java",
+    "sacco-config/src/main/java/com/innercircle/sacco/config/entity/SystemConfig.java",
+    "sacco-config/src/main/java/com/innercircle/sacco/config/service/ConfigService.java",
+    "sacco-config/src/main/java/com/innercircle/sacco/config/service/ConfigServiceImpl.java",
+    "sacco-config/src/main/resources/db/changelog/config/002-seed-default-config.yaml"
+  ],
+  "memoryEpicId": "cn-qztd7f",
+  "timestamp": "2026-02-15T00:00:00Z"
+}

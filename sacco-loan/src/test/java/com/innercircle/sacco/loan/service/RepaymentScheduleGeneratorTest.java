@@ -1,5 +1,6 @@
 package com.innercircle.sacco.loan.service;
 
+import com.innercircle.sacco.config.entity.InterestMethod;
 import com.innercircle.sacco.loan.entity.RepaymentSchedule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -40,7 +41,7 @@ class RepaymentScheduleGeneratorTest {
         void shouldGenerateCorrectNumberOfInstallments() {
             List<RepaymentSchedule> schedules = generator.generateSchedule(
                     LOAN_ID, new BigDecimal("120000"), new BigDecimal("12"),
-                    12, "FLAT_RATE", DISBURSEMENT_DATE);
+                    12, InterestMethod.FLAT_RATE, DISBURSEMENT_DATE);
             assertThat(schedules).hasSize(12);
         }
 
@@ -49,7 +50,7 @@ class RepaymentScheduleGeneratorTest {
         void shouldSetLoanIdOnAllSchedules() {
             List<RepaymentSchedule> schedules = generator.generateSchedule(
                     LOAN_ID, new BigDecimal("120000"), new BigDecimal("12"),
-                    12, "FLAT_RATE", DISBURSEMENT_DATE);
+                    12, InterestMethod.FLAT_RATE, DISBURSEMENT_DATE);
             assertThat(schedules).allSatisfy(s -> assertThat(s.getLoanId()).isEqualTo(LOAN_ID));
         }
 
@@ -58,7 +59,7 @@ class RepaymentScheduleGeneratorTest {
         void shouldSetInstallmentNumbersSequentially() {
             List<RepaymentSchedule> schedules = generator.generateSchedule(
                     LOAN_ID, new BigDecimal("120000"), new BigDecimal("12"),
-                    6, "FLAT_RATE", DISBURSEMENT_DATE);
+                    6, InterestMethod.FLAT_RATE, DISBURSEMENT_DATE);
             for (int i = 0; i < schedules.size(); i++) {
                 assertThat(schedules.get(i).getInstallmentNumber()).isEqualTo(i + 1);
             }
@@ -69,7 +70,7 @@ class RepaymentScheduleGeneratorTest {
         void shouldSetDueDatesMonthly() {
             List<RepaymentSchedule> schedules = generator.generateSchedule(
                     LOAN_ID, new BigDecimal("120000"), new BigDecimal("12"),
-                    6, "FLAT_RATE", DISBURSEMENT_DATE);
+                    6, InterestMethod.FLAT_RATE, DISBURSEMENT_DATE);
             for (int i = 0; i < schedules.size(); i++) {
                 assertThat(schedules.get(i).getDueDate())
                         .isEqualTo(DISBURSEMENT_DATE.plusMonths(i + 1));
@@ -81,7 +82,7 @@ class RepaymentScheduleGeneratorTest {
         void shouldMarkAllAsUnpaid() {
             List<RepaymentSchedule> schedules = generator.generateSchedule(
                     LOAN_ID, new BigDecimal("120000"), new BigDecimal("12"),
-                    12, "FLAT_RATE", DISBURSEMENT_DATE);
+                    12, InterestMethod.FLAT_RATE, DISBURSEMENT_DATE);
             assertThat(schedules).allSatisfy(s -> assertThat(s.getPaid()).isFalse());
         }
 
@@ -91,7 +92,7 @@ class RepaymentScheduleGeneratorTest {
             BigDecimal principal = new BigDecimal("120000");
             List<RepaymentSchedule> schedules = generator.generateSchedule(
                     LOAN_ID, principal, new BigDecimal("12"),
-                    12, "FLAT_RATE", DISBURSEMENT_DATE);
+                    12, InterestMethod.FLAT_RATE, DISBURSEMENT_DATE);
             BigDecimal totalPrincipal = schedules.stream()
                     .map(RepaymentSchedule::getPrincipalAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -107,7 +108,7 @@ class RepaymentScheduleGeneratorTest {
             BigDecimal expectedInterest = interestCalculator.calculateFlatRate(principal, rate, term);
 
             List<RepaymentSchedule> schedules = generator.generateSchedule(
-                    LOAN_ID, principal, rate, term, "FLAT_RATE", DISBURSEMENT_DATE);
+                    LOAN_ID, principal, rate, term, InterestMethod.FLAT_RATE, DISBURSEMENT_DATE);
             BigDecimal totalInterest = schedules.stream()
                     .map(RepaymentSchedule::getInterestAmount)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -119,7 +120,7 @@ class RepaymentScheduleGeneratorTest {
         void totalAmountShouldEqualPrincipalPlusInterest() {
             List<RepaymentSchedule> schedules = generator.generateSchedule(
                     LOAN_ID, new BigDecimal("120000"), new BigDecimal("12"),
-                    12, "FLAT_RATE", DISBURSEMENT_DATE);
+                    12, InterestMethod.FLAT_RATE, DISBURSEMENT_DATE);
             for (RepaymentSchedule schedule : schedules) {
                 BigDecimal expected = schedule.getPrincipalAmount().add(schedule.getInterestAmount());
                 assertThat(schedule.getTotalAmount()).isEqualByComparingTo(expected);
@@ -132,7 +133,7 @@ class RepaymentScheduleGeneratorTest {
             BigDecimal principal = new BigDecimal("100000");
             BigDecimal rate = new BigDecimal("12");
             List<RepaymentSchedule> schedules = generator.generateSchedule(
-                    LOAN_ID, principal, rate, 1, "FLAT_RATE", DISBURSEMENT_DATE);
+                    LOAN_ID, principal, rate, 1, InterestMethod.FLAT_RATE, DISBURSEMENT_DATE);
             assertThat(schedules).hasSize(1);
             assertThat(schedules.get(0).getPrincipalAmount()).isEqualByComparingTo(principal);
         }
@@ -146,7 +147,7 @@ class RepaymentScheduleGeneratorTest {
             int term = 7;
 
             List<RepaymentSchedule> schedules = generator.generateSchedule(
-                    LOAN_ID, principal, rate, term, "FLAT_RATE", DISBURSEMENT_DATE);
+                    LOAN_ID, principal, rate, term, InterestMethod.FLAT_RATE, DISBURSEMENT_DATE);
 
             assertThat(schedules).hasSize(term);
             BigDecimal totalPrincipal = schedules.stream()
@@ -168,7 +169,7 @@ class RepaymentScheduleGeneratorTest {
         void shouldGenerateCorrectNumberOfInstallments() {
             List<RepaymentSchedule> schedules = generator.generateSchedule(
                     LOAN_ID, new BigDecimal("100000"), new BigDecimal("12"),
-                    12, "REDUCING_BALANCE", DISBURSEMENT_DATE);
+                    12, InterestMethod.REDUCING_BALANCE, DISBURSEMENT_DATE);
             assertThat(schedules).hasSize(12);
         }
 
@@ -177,7 +178,7 @@ class RepaymentScheduleGeneratorTest {
         void shouldSetLoanIdOnAllSchedules() {
             List<RepaymentSchedule> schedules = generator.generateSchedule(
                     LOAN_ID, new BigDecimal("100000"), new BigDecimal("12"),
-                    12, "REDUCING_BALANCE", DISBURSEMENT_DATE);
+                    12, InterestMethod.REDUCING_BALANCE, DISBURSEMENT_DATE);
             assertThat(schedules).allSatisfy(s -> assertThat(s.getLoanId()).isEqualTo(LOAN_ID));
         }
 
@@ -186,7 +187,7 @@ class RepaymentScheduleGeneratorTest {
         void shouldSetInstallmentNumbersSequentially() {
             List<RepaymentSchedule> schedules = generator.generateSchedule(
                     LOAN_ID, new BigDecimal("100000"), new BigDecimal("12"),
-                    6, "REDUCING_BALANCE", DISBURSEMENT_DATE);
+                    6, InterestMethod.REDUCING_BALANCE, DISBURSEMENT_DATE);
             for (int i = 0; i < schedules.size(); i++) {
                 assertThat(schedules.get(i).getInstallmentNumber()).isEqualTo(i + 1);
             }
@@ -197,7 +198,7 @@ class RepaymentScheduleGeneratorTest {
         void shouldSetDueDatesMonthly() {
             List<RepaymentSchedule> schedules = generator.generateSchedule(
                     LOAN_ID, new BigDecimal("100000"), new BigDecimal("12"),
-                    6, "REDUCING_BALANCE", DISBURSEMENT_DATE);
+                    6, InterestMethod.REDUCING_BALANCE, DISBURSEMENT_DATE);
             for (int i = 0; i < schedules.size(); i++) {
                 assertThat(schedules.get(i).getDueDate())
                         .isEqualTo(DISBURSEMENT_DATE.plusMonths(i + 1));
@@ -209,7 +210,7 @@ class RepaymentScheduleGeneratorTest {
         void shouldMarkAllAsUnpaid() {
             List<RepaymentSchedule> schedules = generator.generateSchedule(
                     LOAN_ID, new BigDecimal("100000"), new BigDecimal("12"),
-                    12, "REDUCING_BALANCE", DISBURSEMENT_DATE);
+                    12, InterestMethod.REDUCING_BALANCE, DISBURSEMENT_DATE);
             assertThat(schedules).allSatisfy(s -> assertThat(s.getPaid()).isFalse());
         }
 
@@ -218,7 +219,7 @@ class RepaymentScheduleGeneratorTest {
         void interestPortionShouldDecrease() {
             List<RepaymentSchedule> schedules = generator.generateSchedule(
                     LOAN_ID, new BigDecimal("100000"), new BigDecimal("12"),
-                    12, "REDUCING_BALANCE", DISBURSEMENT_DATE);
+                    12, InterestMethod.REDUCING_BALANCE, DISBURSEMENT_DATE);
             // Check that interest generally decreases (last vs first, skip last since adjusted)
             BigDecimal firstInterest = schedules.get(0).getInterestAmount();
             BigDecimal secondToLastInterest = schedules.get(schedules.size() - 2).getInterestAmount();
@@ -230,7 +231,7 @@ class RepaymentScheduleGeneratorTest {
         void principalPortionShouldIncrease() {
             List<RepaymentSchedule> schedules = generator.generateSchedule(
                     LOAN_ID, new BigDecimal("100000"), new BigDecimal("12"),
-                    12, "REDUCING_BALANCE", DISBURSEMENT_DATE);
+                    12, InterestMethod.REDUCING_BALANCE, DISBURSEMENT_DATE);
             BigDecimal firstPrincipal = schedules.get(0).getPrincipalAmount();
             BigDecimal secondToLastPrincipal = schedules.get(schedules.size() - 2).getPrincipalAmount();
             assertThat(secondToLastPrincipal).isGreaterThan(firstPrincipal);
@@ -242,7 +243,7 @@ class RepaymentScheduleGeneratorTest {
             BigDecimal principal = new BigDecimal("100000");
             List<RepaymentSchedule> schedules = generator.generateSchedule(
                     LOAN_ID, principal, new BigDecimal("12"),
-                    1, "REDUCING_BALANCE", DISBURSEMENT_DATE);
+                    1, InterestMethod.REDUCING_BALANCE, DISBURSEMENT_DATE);
             assertThat(schedules).hasSize(1);
             // For single month, principal portion of the last installment = full principal
             assertThat(schedules.get(0).getPrincipalAmount()).isEqualByComparingTo(principal);
@@ -253,7 +254,7 @@ class RepaymentScheduleGeneratorTest {
         void totalAmountShouldEqualPrincipalPlusInterest() {
             List<RepaymentSchedule> schedules = generator.generateSchedule(
                     LOAN_ID, new BigDecimal("100000"), new BigDecimal("12"),
-                    12, "REDUCING_BALANCE", DISBURSEMENT_DATE);
+                    12, InterestMethod.REDUCING_BALANCE, DISBURSEMENT_DATE);
             for (RepaymentSchedule schedule : schedules) {
                 BigDecimal expected = schedule.getPrincipalAmount().add(schedule.getInterestAmount());
                 assertThat(schedule.getTotalAmount()).isEqualByComparingTo(expected);
@@ -265,17 +266,8 @@ class RepaymentScheduleGeneratorTest {
     // Invalid / unknown interest methods
     // -------------------------------------------------------------------------
     @Nested
-    @DisplayName("generateSchedule - invalid method")
-    class InvalidMethod {
-
-        @Test
-        @DisplayName("should return empty list for unknown interest method")
-        void shouldReturnEmptyForUnknownMethod() {
-            List<RepaymentSchedule> schedules = generator.generateSchedule(
-                    LOAN_ID, new BigDecimal("100000"), new BigDecimal("12"),
-                    12, "UNKNOWN_METHOD", DISBURSEMENT_DATE);
-            assertThat(schedules).isEmpty();
-        }
+    @DisplayName("generateSchedule - null method")
+    class NullMethod {
 
         @Test
         @DisplayName("should return empty list for null interest method")

@@ -2,6 +2,9 @@ package com.innercircle.sacco.loan.service;
 
 import com.innercircle.sacco.common.event.LoanDisbursedEvent;
 import com.innercircle.sacco.common.event.LoanRepaymentEvent;
+import com.innercircle.sacco.config.entity.InterestMethod;
+import com.innercircle.sacco.config.entity.LoanProductConfig;
+import com.innercircle.sacco.config.service.ConfigService;
 import com.innercircle.sacco.loan.entity.LoanApplication;
 import com.innercircle.sacco.loan.entity.LoanRepayment;
 import com.innercircle.sacco.loan.entity.LoanStatus;
@@ -19,7 +22,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -33,11 +35,12 @@ public class LoanServiceImpl implements LoanService {
     private final InterestCalculator interestCalculator;
     private final RepaymentScheduleGenerator scheduleGenerator;
     private final ApplicationEventPublisher eventPublisher;
+    private final ConfigService configService;
 
     @Override
     @Transactional
-    public LoanApplication applyForLoan(UUID memberId, BigDecimal principalAmount, BigDecimal interestRate,
-                                         Integer termMonths, String interestMethod, String purpose) {
+    public LoanApplication applyForLoan(UUID memberId, UUID loanProductId, BigDecimal principalAmount,
+                                         Integer termMonths, String purpose) {
         if (principalAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Principal amount must be greater than zero");
         }
@@ -46,20 +49,37 @@ public class LoanServiceImpl implements LoanService {
             throw new IllegalArgumentException("Term months must be greater than zero");
         }
 
-        if (!interestMethod.equals("REDUCING_BALANCE") && !interestMethod.equals("FLAT_RATE")) {
-            throw new IllegalArgumentException("Invalid interest method. Must be REDUCING_BALANCE or FLAT_RATE");
+        // Lookup loan product configuration
+        LoanProductConfig product = configService.getLoanProduct(loanProductId);
+
+        if (!product.isActive()) {
+            throw new IllegalArgumentException("Loan product is not active");
+        }
+
+        // Enforce config limits
+        if (principalAmount.compareTo(product.getMaxAmount()) > 0) {
+            throw new IllegalArgumentException(
+                    "Principal amount exceeds maximum allowed: " + product.getMaxAmount());
+        }
+
+        if (termMonths > product.getMaxTermMonths()) {
+            throw new IllegalArgumentException(
+                    "Term exceeds maximum allowed: " + product.getMaxTermMonths() + " months");
         }
 
         LoanApplication loan = new LoanApplication();
         loan.setMemberId(memberId);
+        loan.setLoanProductId(loanProductId);
         loan.setPrincipalAmount(principalAmount);
-        loan.setInterestRate(interestRate);
+        loan.setInterestRate(product.getAnnualInterestRate());
         loan.setTermMonths(termMonths);
-        loan.setInterestMethod(interestMethod);
+        loan.setInterestMethod(product.getInterestMethod());
         loan.setPurpose(purpose);
         loan.setStatus(LoanStatus.PENDING);
         loan.setTotalRepaid(BigDecimal.ZERO);
         loan.setOutstandingBalance(BigDecimal.ZERO);
+        loan.setTotalInterestAccrued(BigDecimal.ZERO);
+        loan.setTotalInterestPaid(BigDecimal.ZERO);
 
         return loanRepository.save(loan);
     }
@@ -113,7 +133,7 @@ public class LoanServiceImpl implements LoanService {
 
         // Calculate total amount including interest
         BigDecimal totalInterest;
-        if ("REDUCING_BALANCE".equals(loan.getInterestMethod())) {
+        if (loan.getInterestMethod() == InterestMethod.REDUCING_BALANCE) {
             totalInterest = interestCalculator.calculateReducingBalance(
                     loan.getPrincipalAmount(), loan.getInterestRate(), loan.getTermMonths());
         } else {

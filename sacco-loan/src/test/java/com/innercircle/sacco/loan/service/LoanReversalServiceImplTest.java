@@ -1,6 +1,7 @@
 package com.innercircle.sacco.loan.service;
 
 import com.innercircle.sacco.common.event.LoanReversalEvent;
+import com.innercircle.sacco.config.entity.InterestMethod;
 import com.innercircle.sacco.loan.dto.ReversalResponse;
 import com.innercircle.sacco.loan.entity.LoanApplication;
 import com.innercircle.sacco.loan.entity.LoanRepayment;
@@ -409,7 +410,7 @@ class LoanReversalServiceImplTest {
         loan.setPrincipalAmount(new BigDecimal("100000"));
         loan.setInterestRate(new BigDecimal("12"));
         loan.setTermMonths(12);
-        loan.setInterestMethod("FLAT_RATE");
+        loan.setInterestMethod(InterestMethod.FLAT_RATE);
         loan.setStatus(status);
         loan.setTotalRepaid(totalRepaid);
         loan.setOutstandingBalance(outstandingBalance);

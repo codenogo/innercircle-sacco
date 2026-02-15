@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "feature": "loan-batch-processing",
+  "planNumber": "01",
+  "outcome": "complete",
+  "changes": [
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/BatchProcessingStatus.java", "change": "New enum: STARTED, COMPLETED, FAILED" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/BatchProcessingLog.java", "change": "New entity tracking batch processing runs" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/repository/BatchProcessingLogRepository.java", "change": "New repository with idempotency and tracking queries" },
+    { "file": "sacco-loan/src/main/resources/db/changelog/changes/009-batch-processing-log.yaml", "change": "Liquibase migration for batch_processing_logs table" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/BatchProcessingResult.java", "change": "Added warnings, processingMonth, interest fields" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/repository/LoanApplicationRepository.java", "change": "Added disbursement date filtering queries" }
+  ],
+  "verification": [{ "task": 1, "result": "pass", "details": "mvn compile -q passed" }],
+  "timestamp": "2026-02-15T00:00:00Z"
+}

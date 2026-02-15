@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,4 +25,8 @@ public interface LoanApplicationRepository extends JpaRepository<LoanApplication
     List<LoanApplication> findByMemberId(UUID memberId);
 
     List<LoanApplication> findByStatus(LoanStatus status);
+
+    List<LoanApplication> findByStatusAndDisbursedAtAfter(LoanStatus status, Instant instant);
+
+    List<LoanApplication> findByStatusAndDisbursedAtBefore(LoanStatus status, Instant instant);
 }

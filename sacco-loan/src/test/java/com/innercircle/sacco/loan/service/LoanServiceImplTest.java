@@ -2,6 +2,9 @@ package com.innercircle.sacco.loan.service;
 
 import com.innercircle.sacco.common.event.LoanDisbursedEvent;
 import com.innercircle.sacco.common.event.LoanRepaymentEvent;
+import com.innercircle.sacco.config.entity.InterestMethod;
+import com.innercircle.sacco.config.entity.LoanProductConfig;
+import com.innercircle.sacco.config.service.ConfigService;
 import com.innercircle.sacco.loan.entity.LoanApplication;
 import com.innercircle.sacco.loan.entity.LoanRepayment;
 import com.innercircle.sacco.loan.entity.LoanStatus;
@@ -58,6 +61,9 @@ class LoanServiceImplTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private ConfigService configService;
+
     @InjectMocks
     private LoanServiceImpl loanService;
 
@@ -70,12 +76,27 @@ class LoanServiceImplTest {
     private UUID memberId;
     private UUID loanId;
     private UUID approverId;
+    private UUID loanProductId;
 
     @BeforeEach
     void setUp() {
         memberId = UUID.randomUUID();
         loanId = UUID.randomUUID();
         approverId = UUID.randomUUID();
+        loanProductId = UUID.randomUUID();
+    }
+
+    private LoanProductConfig createLoanProduct(InterestMethod method, BigDecimal rate,
+                                                  BigDecimal maxAmount, int maxTermMonths) {
+        LoanProductConfig product = new LoanProductConfig();
+        product.setId(loanProductId);
+        product.setName("Test Loan Product");
+        product.setInterestMethod(method);
+        product.setAnnualInterestRate(rate);
+        product.setMaxAmount(maxAmount);
+        product.setMaxTermMonths(maxTermMonths);
+        product.setActive(true);
+        return product;
     }
 
     // -------------------------------------------------------------------------
@@ -88,20 +109,23 @@ class LoanServiceImplTest {
         @Test
         @DisplayName("should create loan application with PENDING status")
         void shouldCreateLoanWithPendingStatus() {
+            LoanProductConfig product = createLoanProduct(InterestMethod.FLAT_RATE,
+                    new BigDecimal("12"), new BigDecimal("500000"), 24);
+            when(configService.getLoanProduct(loanProductId)).thenReturn(product);
             when(loanRepository.save(any(LoanApplication.class))).thenAnswer(inv -> inv.getArgument(0));
 
             LoanApplication result = loanService.applyForLoan(
-                    memberId, new BigDecimal("100000"), new BigDecimal("12"),
-                    12, "FLAT_RATE", "Business");
+                    memberId, loanProductId, new BigDecimal("100000"), 12, "Business");
 
             verify(loanRepository).save(loanCaptor.capture());
             LoanApplication saved = loanCaptor.getValue();
 
             assertThat(saved.getMemberId()).isEqualTo(memberId);
+            assertThat(saved.getLoanProductId()).isEqualTo(loanProductId);
             assertThat(saved.getPrincipalAmount()).isEqualByComparingTo(new BigDecimal("100000"));
             assertThat(saved.getInterestRate()).isEqualByComparingTo(new BigDecimal("12"));
             assertThat(saved.getTermMonths()).isEqualTo(12);
-            assertThat(saved.getInterestMethod()).isEqualTo("FLAT_RATE");
+            assertThat(saved.getInterestMethod()).isEqualTo(InterestMethod.FLAT_RATE);
             assertThat(saved.getPurpose()).isEqualTo("Business");
             assertThat(saved.getStatus()).isEqualTo(LoanStatus.PENDING);
             assertThat(saved.getTotalRepaid()).isEqualByComparingTo(BigDecimal.ZERO);
@@ -109,24 +133,25 @@ class LoanServiceImplTest {
         }
 
         @Test
-        @DisplayName("should accept REDUCING_BALANCE interest method")
+        @DisplayName("should accept REDUCING_BALANCE interest method from product config")
         void shouldAcceptReducingBalance() {
+            LoanProductConfig product = createLoanProduct(InterestMethod.REDUCING_BALANCE,
+                    new BigDecimal("12"), new BigDecimal("500000"), 24);
+            when(configService.getLoanProduct(loanProductId)).thenReturn(product);
             when(loanRepository.save(any(LoanApplication.class))).thenAnswer(inv -> inv.getArgument(0));
 
             LoanApplication result = loanService.applyForLoan(
-                    memberId, new BigDecimal("100000"), new BigDecimal("12"),
-                    12, "REDUCING_BALANCE", null);
+                    memberId, loanProductId, new BigDecimal("100000"), 12, null);
 
             verify(loanRepository).save(loanCaptor.capture());
-            assertThat(loanCaptor.getValue().getInterestMethod()).isEqualTo("REDUCING_BALANCE");
+            assertThat(loanCaptor.getValue().getInterestMethod()).isEqualTo(InterestMethod.REDUCING_BALANCE);
         }
 
         @Test
         @DisplayName("should throw for zero principal amount")
         void shouldThrowForZeroPrincipal() {
             assertThatThrownBy(() ->
-                    loanService.applyForLoan(memberId, BigDecimal.ZERO, new BigDecimal("12"),
-                            12, "FLAT_RATE", null))
+                    loanService.applyForLoan(memberId, loanProductId, BigDecimal.ZERO, 12, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Principal amount must be greater than zero");
         }
@@ -135,8 +160,7 @@ class LoanServiceImplTest {
         @DisplayName("should throw for negative principal amount")
         void shouldThrowForNegativePrincipal() {
             assertThatThrownBy(() ->
-                    loanService.applyForLoan(memberId, new BigDecimal("-1000"), new BigDecimal("12"),
-                            12, "FLAT_RATE", null))
+                    loanService.applyForLoan(memberId, loanProductId, new BigDecimal("-1000"), 12, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Principal amount must be greater than zero");
         }
@@ -145,8 +169,7 @@ class LoanServiceImplTest {
         @DisplayName("should throw for zero term months")
         void shouldThrowForZeroTermMonths() {
             assertThatThrownBy(() ->
-                    loanService.applyForLoan(memberId, new BigDecimal("100000"), new BigDecimal("12"),
-                            0, "FLAT_RATE", null))
+                    loanService.applyForLoan(memberId, loanProductId, new BigDecimal("100000"), 0, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Term months must be greater than zero");
         }
@@ -155,20 +178,49 @@ class LoanServiceImplTest {
         @DisplayName("should throw for negative term months")
         void shouldThrowForNegativeTermMonths() {
             assertThatThrownBy(() ->
-                    loanService.applyForLoan(memberId, new BigDecimal("100000"), new BigDecimal("12"),
-                            -5, "FLAT_RATE", null))
+                    loanService.applyForLoan(memberId, loanProductId, new BigDecimal("100000"), -5, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Term months must be greater than zero");
         }
 
         @Test
-        @DisplayName("should throw for invalid interest method")
-        void shouldThrowForInvalidInterestMethod() {
+        @DisplayName("should throw for inactive loan product")
+        void shouldThrowForInactiveLoanProduct() {
+            LoanProductConfig product = createLoanProduct(InterestMethod.FLAT_RATE,
+                    new BigDecimal("12"), new BigDecimal("500000"), 24);
+            product.setActive(false);
+            when(configService.getLoanProduct(loanProductId)).thenReturn(product);
+
             assertThatThrownBy(() ->
-                    loanService.applyForLoan(memberId, new BigDecimal("100000"), new BigDecimal("12"),
-                            12, "INVALID", null))
+                    loanService.applyForLoan(memberId, loanProductId, new BigDecimal("100000"), 12, null))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Invalid interest method");
+                    .hasMessageContaining("Loan product is not active");
+        }
+
+        @Test
+        @DisplayName("should throw when principal exceeds product max amount")
+        void shouldThrowWhenPrincipalExceedsMax() {
+            LoanProductConfig product = createLoanProduct(InterestMethod.FLAT_RATE,
+                    new BigDecimal("12"), new BigDecimal("50000"), 24);
+            when(configService.getLoanProduct(loanProductId)).thenReturn(product);
+
+            assertThatThrownBy(() ->
+                    loanService.applyForLoan(memberId, loanProductId, new BigDecimal("100000"), 12, null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Principal amount exceeds maximum allowed");
+        }
+
+        @Test
+        @DisplayName("should throw when term exceeds product max term")
+        void shouldThrowWhenTermExceedsMax() {
+            LoanProductConfig product = createLoanProduct(InterestMethod.FLAT_RATE,
+                    new BigDecimal("12"), new BigDecimal("500000"), 12);
+            when(configService.getLoanProduct(loanProductId)).thenReturn(product);
+
+            assertThatThrownBy(() ->
+                    loanService.applyForLoan(memberId, loanProductId, new BigDecimal("100000"), 24, null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Term exceeds maximum allowed");
         }
     }
 
@@ -289,7 +341,7 @@ class LoanServiceImplTest {
         @DisplayName("should disburse an approved loan with FLAT_RATE")
         void shouldDisburseApprovedLoanFlatRate() {
             LoanApplication loan = createLoan(LoanStatus.APPROVED);
-            loan.setInterestMethod("FLAT_RATE");
+            loan.setInterestMethod(InterestMethod.FLAT_RATE);
             loan.setPrincipalAmount(new BigDecimal("100000"));
             loan.setInterestRate(new BigDecimal("12"));
             loan.setTermMonths(12);
@@ -315,7 +367,7 @@ class LoanServiceImplTest {
         @DisplayName("should disburse an approved loan with REDUCING_BALANCE")
         void shouldDisburseApprovedLoanReducingBalance() {
             LoanApplication loan = createLoan(LoanStatus.APPROVED);
-            loan.setInterestMethod("REDUCING_BALANCE");
+            loan.setInterestMethod(InterestMethod.REDUCING_BALANCE);
             loan.setPrincipalAmount(new BigDecimal("100000"));
             loan.setInterestRate(new BigDecimal("12"));
             loan.setTermMonths(12);
@@ -362,7 +414,7 @@ class LoanServiceImplTest {
         @DisplayName("should publish LoanDisbursedEvent with correct data")
         void shouldPublishDisbursedEvent() {
             LoanApplication loan = createLoan(LoanStatus.APPROVED);
-            loan.setInterestMethod("FLAT_RATE");
+            loan.setInterestMethod(InterestMethod.FLAT_RATE);
             loan.setPrincipalAmount(new BigDecimal("50000"));
             loan.setInterestRate(new BigDecimal("10"));
             loan.setTermMonths(6);
@@ -817,13 +869,16 @@ class LoanServiceImplTest {
         LoanApplication loan = new LoanApplication();
         loan.setId(loanId);
         loan.setMemberId(memberId);
+        loan.setLoanProductId(loanProductId);
         loan.setPrincipalAmount(new BigDecimal("100000"));
         loan.setInterestRate(new BigDecimal("12"));
         loan.setTermMonths(12);
-        loan.setInterestMethod("FLAT_RATE");
+        loan.setInterestMethod(InterestMethod.FLAT_RATE);
         loan.setStatus(status);
         loan.setTotalRepaid(BigDecimal.ZERO);
         loan.setOutstandingBalance(BigDecimal.ZERO);
+        loan.setTotalInterestAccrued(BigDecimal.ZERO);
+        loan.setTotalInterestPaid(BigDecimal.ZERO);
         return loan;
     }
 

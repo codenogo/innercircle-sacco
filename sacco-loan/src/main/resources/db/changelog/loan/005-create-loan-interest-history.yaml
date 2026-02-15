@@ -1,0 +1,110 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-create-loan-interest-history
+      author: system
+      changes:
+        - createTable:
+            tableName: loan_interest_history
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: loan_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: member_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: accrual_date
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: interest_amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: outstanding_balance_snapshot
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: cumulative_interest_accrued
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: interest_rate
+                  type: decimal(5,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: event_type
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: varchar(500)
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+
+        - createIndex:
+            tableName: loan_interest_history
+            indexName: idx_loan_interest_history_loan_id
+            columns:
+              - column:
+                  name: loan_id
+
+        - createIndex:
+            tableName: loan_interest_history
+            indexName: idx_loan_interest_history_member_id
+            columns:
+              - column:
+                  name: member_id
+
+        - createIndex:
+            tableName: loan_interest_history
+            indexName: idx_loan_interest_history_accrual_date
+            columns:
+              - column:
+                  name: accrual_date
+
+        - createIndex:
+            tableName: loan_interest_history
+            indexName: idx_loan_interest_history_loan_date
+            columns:
+              - column:
+                  name: loan_id
+              - column:
+                  name: accrual_date
+
+      rollback:
+        - dropTable:
+            tableName: loan_interest_history

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "feature": "loan-interest-accrual",
+  "planNumber": "02",
+  "goal": "Create LoanInterestHistory entity, monthly interest accrual batch, and GL integration for accrual-basis accounting",
+  "tasks": [
+    {
+      "name": "Create LoanInterestHistory entity, repository, and LoanInterestAccrualEvent",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/LoanInterestHistory.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/InterestEventType.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/repository/LoanInterestHistoryRepository.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/event/LoanInterestAccrualEvent.java"
+      ],
+      "action": "Create InterestEventType enum (MONTHLY_ACCRUAL, REPAYMENT_APPLIED, ADJUSTMENT). Create LoanInterestHistory entity with loanId, memberId, accrualDate, interestAmount, outstandingBalanceSnapshot, cumulativeInterestAccrued, interestRate, eventType, description. Create repository with queries for per-loan, per-member, and portfolio-level history. Create LoanInterestAccrualEvent record in sacco-common implementing AuditableEvent.",
+      "verify": ["cd sacco-loan && mvn compile -q", "cd sacco-common && mvn compile -q"]
+    },
+    {
+      "name": "Add INTEREST_ACCRUAL to TransactionType, seed Interest Receivable account, add accrual GL handler",
+      "files": [
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/entity/TransactionType.java",
+        "sacco-ledger/src/main/resources/db/changelog/ledger/003-seed-interest-receivable.yaml",
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/listener/FinancialEventListener.java"
+      ],
+      "action": "Add INTEREST_ACCRUAL to TransactionType enum. Create Liquibase changeset to seed Interest Receivable account (code 1003, type ASSET). Add handleInterestAccrual method to FinancialEventListener: DR Interest Receivable (1003) / CR Interest Income (4001).",
+      "verify": ["cd sacco-ledger && mvn compile -q"]
+    },
+    {
+      "name": "Extend LoanBatchServiceImpl with monthly interest accrual logic",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchServiceImpl.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchService.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/BatchProcessingResult.java"
+      ],
+      "action": "Inject InterestCalculator and LoanInterestHistoryRepository. Add accrueMonthlyInterest() method: for each REPAYING loan, calculate monthly interest on outstanding balance (reducing balance) or principal (flat rate), create LoanInterestHistory record, update totalInterestAccrued on LoanApplication, publish LoanInterestAccrualEvent. Add interestAccruedLoans and totalInterestAccrued to BatchProcessingResult.",
+      "verify": ["mvn test -pl sacco-loan -q"],
+      "blockedBy": [0, 1]
+    }
+  ],
+  "planVerify": ["mvn test -pl sacco-loan -q", "mvn test -pl sacco-ledger -q", "mvn test -pl sacco-common -q"],
+  "commitMessage": "feat(loan): add monthly interest accrual batch with GL integration",
+  "timestamp": "2026-02-15T11:00:00Z"
+}

@@ -2,6 +2,7 @@ package com.innercircle.sacco.loan.controller;
 
 import com.innercircle.sacco.common.dto.ApiResponse;
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.config.entity.InterestMethod;
 import com.innercircle.sacco.loan.dto.LoanApplicationRequest;
 import com.innercircle.sacco.loan.dto.LoanResponse;
 import com.innercircle.sacco.loan.dto.LoanSummaryResponse;
@@ -52,11 +53,13 @@ class LoanControllerTest {
 
     private UUID memberId;
     private UUID loanId;
+    private UUID loanProductId;
 
     @BeforeEach
     void setUp() {
         memberId = UUID.randomUUID();
         loanId = UUID.randomUUID();
+        loanProductId = UUID.randomUUID();
     }
 
     // -------------------------------------------------------------------------
@@ -71,16 +74,15 @@ class LoanControllerTest {
         void shouldCreateLoan() {
             LoanApplicationRequest request = LoanApplicationRequest.builder()
                     .memberId(memberId)
+                    .loanProductId(loanProductId)
                     .principalAmount(new BigDecimal("100000"))
-                    .interestRate(new BigDecimal("12"))
                     .termMonths(12)
-                    .interestMethod("FLAT_RATE")
                     .purpose("Business")
                     .build();
 
             LoanApplication loan = createLoan(LoanStatus.PENDING);
-            when(loanService.applyForLoan(memberId, new BigDecimal("100000"),
-                    new BigDecimal("12"), 12, "FLAT_RATE", "Business"))
+            when(loanService.applyForLoan(memberId, loanProductId, new BigDecimal("100000"),
+                    12, "Business"))
                     .thenReturn(loan);
 
             ApiResponse<LoanResponse> response = loanController.applyForLoan(request);
@@ -95,24 +97,24 @@ class LoanControllerTest {
         @Test
         @DisplayName("should pass all fields to service")
         void shouldPassAllFieldsToService() {
+            UUID otherProductId = UUID.randomUUID();
             LoanApplicationRequest request = LoanApplicationRequest.builder()
                     .memberId(memberId)
+                    .loanProductId(otherProductId)
                     .principalAmount(new BigDecimal("50000"))
-                    .interestRate(new BigDecimal("10"))
                     .termMonths(6)
-                    .interestMethod("REDUCING_BALANCE")
                     .purpose("Education")
                     .build();
 
             LoanApplication loan = createLoan(LoanStatus.PENDING);
-            when(loanService.applyForLoan(any(), any(), any(), any(), any(), any()))
+            when(loanService.applyForLoan(any(), any(), any(), any(), any()))
                     .thenReturn(loan);
 
             loanController.applyForLoan(request);
 
             verify(loanService).applyForLoan(
-                    memberId, new BigDecimal("50000"), new BigDecimal("10"),
-                    6, "REDUCING_BALANCE", "Education");
+                    memberId, otherProductId, new BigDecimal("50000"),
+                    6, "Education");
         }
     }
 
@@ -503,14 +505,17 @@ class LoanControllerTest {
         LoanApplication loan = new LoanApplication();
         loan.setId(loanId);
         loan.setMemberId(memberId);
+        loan.setLoanProductId(loanProductId);
         loan.setPrincipalAmount(new BigDecimal("100000"));
         loan.setInterestRate(new BigDecimal("12"));
         loan.setTermMonths(12);
-        loan.setInterestMethod("FLAT_RATE");
+        loan.setInterestMethod(InterestMethod.FLAT_RATE);
         loan.setStatus(status);
         loan.setPurpose("Business");
         loan.setTotalRepaid(BigDecimal.ZERO);
         loan.setOutstandingBalance(BigDecimal.ZERO);
+        loan.setTotalInterestAccrued(BigDecimal.ZERO);
+        loan.setTotalInterestPaid(BigDecimal.ZERO);
         loan.setCreatedAt(Instant.now());
         loan.setUpdatedAt(Instant.now());
         return loan;

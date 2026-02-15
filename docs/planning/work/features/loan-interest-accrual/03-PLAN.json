@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "feature": "loan-interest-accrual",
+  "planNumber": "03",
+  "goal": "Refactor repayment allocation to interest-first, update GL for accrual-basis, and add portfolio-level interest reporting",
+  "tasks": [
+    {
+      "name": "Refactor repayment allocation to interest-first and track totalInterestPaid",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/LoanInterestHistory.java"
+      ],
+      "action": "Replace proportional repayment allocation with interest-first: overdue interest → current interest → principal. Update totalInterestPaid on LoanApplication. Create LoanInterestHistory record with eventType REPAYMENT_APPLIED.",
+      "verify": ["cd sacco-loan && mvn compile -q"]
+    },
+    {
+      "name": "Update FinancialEventListener repayment handler for accrual-basis GL entries",
+      "files": [
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/listener/FinancialEventListener.java"
+      ],
+      "action": "Change repayment interest credit from Interest Income (4001) to Interest Receivable (1003). Interest income was already recognized at monthly accrual time; repayment settles the receivable.",
+      "verify": ["cd sacco-ledger && mvn compile -q"]
+    },
+    {
+      "name": "Create InterestReportingService with portfolio-level interest summary API",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/InterestReportingService.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/InterestReportingServiceImpl.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/MonthlyInterestSummary.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/MemberInterestSummary.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/controller/LoanController.java"
+      ],
+      "action": "Create MonthlyInterestSummary and MemberInterestSummary DTOs. Create InterestReportingService interface and implementation using LoanInterestHistoryRepository and LoanApplicationRepository. Add REST endpoints: GET /api/v1/loans/interest/summary?month=, GET /api/v1/loans/interest/member/{memberId}, GET /api/v1/loans/interest/arrears.",
+      "verify": ["mvn test -pl sacco-loan -q"],
+      "blockedBy": [0, 1]
+    }
+  ],
+  "planVerify": ["mvn test -pl sacco-loan -q", "mvn test -pl sacco-ledger -q"],
+  "commitMessage": "feat(loan): interest-first repayment allocation and portfolio interest reporting",
+  "timestamp": "2026-02-15T11:15:00Z"
+}

@@ -1,0 +1,35 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-seed-interest-receivable
+      author: claude
+      changes:
+        - insert:
+            tableName: accounts
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: account_code
+                  value: "1003"
+              - column:
+                  name: account_name
+                  value: "Interest Receivable"
+              - column:
+                  name: account_type
+                  value: "ASSET"
+              - column:
+                  name: balance
+                  value: "0.00"
+              - column:
+                  name: description
+                  value: "Accrued interest receivable from loans"
+              - column:
+                  name: active
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"

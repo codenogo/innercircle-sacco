@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "feature": "loan-interest-accrual",
+  "displayName": "Loan Interest Accrual",
+  "decisions": [
+    {
+      "area": "rate-source",
+      "decision": "Strict from config — applyForLoan takes loanProductId, rate/method/limits enforced from LoanProductConfig",
+      "rationale": "Single source of truth; prevents rate inconsistency"
+    },
+    {
+      "area": "accrual-model",
+      "decision": "Monthly accrual on live outstanding balance via batch job",
+      "rationale": "Reflects actual balance after repayments; industry standard; IFRS compliant"
+    },
+    {
+      "area": "history-detail",
+      "decision": "Full audit log — new LoanInterestHistory entity",
+      "rationale": "Complete audit trail for compliance and dispute resolution"
+    },
+    {
+      "area": "module-coupling",
+      "decision": "Direct dependency — sacco-loan depends on sacco-config",
+      "rationale": "Simpler than event-driven; acceptable in modular monolith"
+    },
+    {
+      "area": "schedule-update",
+      "decision": "Keep original repayment schedule; track actual interest separately",
+      "rationale": "Schedule serves as amortization plan; actual tracked in LoanInterestHistory"
+    },
+    {
+      "area": "interest-fields",
+      "decision": "Both totalInterestAccrued and totalInterestPaid as separate BigDecimal fields on LoanApplication",
+      "rationale": "Enables accrued-vs-paid gap tracking (arrears); essential for accounting reconciliation"
+    },
+    {
+      "area": "api-migration",
+      "decision": "Breaking change — replace interestRate/interestMethod with loanProductId on LoanApplicationRequest",
+      "rationale": "Pre-production system; clean API surface; no backward-compat burden"
+    },
+    {
+      "area": "repayment-allocation",
+      "decision": "Interest-first: overdue interest → current interest → principal",
+      "rationale": "Standard SACCO practice per SASRA/UN SACCO loan agreements"
+    },
+    {
+      "area": "gl-accounting",
+      "decision": "Accrual basis — monthly DR Interest Receivable / CR Interest Income; on repayment DR Cash / CR Interest Receivable / CR Loan Receivable",
+      "rationale": "IFRS compliant; proper revenue recognition"
+    },
+    {
+      "area": "portfolio-reporting",
+      "decision": "Monthly interest summary across all loans: accrued, received, arrears",
+      "rationale": "Institutional view for treasurer reporting"
+    }
+  ],
+  "constraints": [
+    "LoanProductConfig must exist and be active before loan application",
+    "Monthly accrual runs inside existing LoanBatchServiceImpl cron",
+    "BigDecimal scale 6 intermediate / scale 2 final / HALF_UP rounding",
+    "LoanInterestHistory records are append-only",
+    "interestMethod migrates from String to InterestMethod enum",
+    "Interest Receivable account (1003) must be seeded in ledger",
+    "INTEREST_ACCRUAL added to TransactionType enum",
+    "LoanInterestAccrualEvent created in sacco-common"
+  ],
+  "openQuestions": [],
+  "relatedCode": [
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/InterestCalculator.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/RepaymentScheduleGenerator.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchServiceImpl.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/LoanApplication.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/LoanApplicationRequest.java",
+    "sacco-config/src/main/java/com/innercircle/sacco/config/entity/LoanProductConfig.java",
+    "sacco-config/src/main/java/com/innercircle/sacco/config/entity/InterestMethod.java",
+    "sacco-config/src/main/java/com/innercircle/sacco/config/service/ConfigService.java",
+    "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/listener/FinancialEventListener.java",
+    "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/entity/TransactionType.java",
+    "sacco-common/src/main/java/com/innercircle/sacco/common/event/LoanDisbursedEvent.java"
+  ],
+  "timestamp": "2026-02-15T10:30:00Z"
+}

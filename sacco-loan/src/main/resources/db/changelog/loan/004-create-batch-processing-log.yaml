@@ -1,0 +1,76 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-create-batch-processing-log
+      author: innercircle
+      changes:
+        - createTable:
+            tableName: batch_processing_log
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: processing_month
+                  type: varchar(7)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: loans_processed
+                  type: integer
+              - column:
+                  name: interest_accrued
+                  type: decimal(19,2)
+              - column:
+                  name: penalized_loans
+                  type: integer
+              - column:
+                  name: closed_loans
+                  type: integer
+              - column:
+                  name: warnings_summary
+                  type: text
+              - column:
+                  name: started_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: completed_at
+                  type: timestamp
+              - column:
+                  name: triggered_by
+                  type: varchar(255)
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+              - column:
+                  name: version
+                  type: bigint
+        - addUniqueConstraint:
+            tableName: batch_processing_log
+            columnNames: processing_month
+            constraintName: uq_batch_processing_month
+        - createIndex:
+            tableName: batch_processing_log
+            indexName: idx_batch_log_status
+            columns:
+              - column:
+                  name: status

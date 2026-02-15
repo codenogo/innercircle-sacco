@@ -1,5 +1,6 @@
 package com.innercircle.sacco.loan.service;
 
+import com.innercircle.sacco.config.entity.InterestMethod;
 import com.innercircle.sacco.loan.entity.RepaymentSchedule;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -22,14 +23,14 @@ public class RepaymentScheduleGenerator {
             BigDecimal principal,
             BigDecimal annualRate,
             Integer termMonths,
-            String interestMethod,
+            InterestMethod interestMethod,
             LocalDate disbursementDate) {
 
         List<RepaymentSchedule> schedules = new ArrayList<>();
 
-        if ("REDUCING_BALANCE".equals(interestMethod)) {
+        if (interestMethod == InterestMethod.REDUCING_BALANCE) {
             schedules = generateReducingBalanceSchedule(loanId, principal, annualRate, termMonths, disbursementDate);
-        } else if ("FLAT_RATE".equals(interestMethod)) {
+        } else if (interestMethod == InterestMethod.FLAT_RATE) {
             schedules = generateFlatRateSchedule(loanId, principal, annualRate, termMonths, disbursementDate);
         }
 

@@ -2,6 +2,7 @@ package com.innercircle.sacco.ledger.listener;
 
 import com.innercircle.sacco.common.event.ContributionReceivedEvent;
 import com.innercircle.sacco.common.event.LoanDisbursedEvent;
+import com.innercircle.sacco.common.event.LoanInterestAccrualEvent;
 import com.innercircle.sacco.common.event.LoanRepaymentEvent;
 import com.innercircle.sacco.common.event.PayoutProcessedEvent;
 import com.innercircle.sacco.common.event.PenaltyAppliedEvent;
@@ -36,6 +37,7 @@ public class FinancialEventListener {
     private static final String ACCOUNT_INTEREST_INCOME = "4001";
     private static final String ACCOUNT_CONTRIBUTION_INCOME = "4002";
     private static final String ACCOUNT_PENALTY_INCOME = "4003";
+    private static final String ACCOUNT_INTEREST_RECEIVABLE = "1003";
     private static final String ACCOUNT_MEMBER_ACCOUNT = "2002";
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
@@ -208,6 +210,39 @@ public class FinancialEventListener {
         creditLine.setDebitAmount(BigDecimal.ZERO);
         creditLine.setCreditAmount(event.amount());
         creditLine.setDescription("Penalty income - " + event.penaltyType() + " - ID: " + event.penaltyId());
+        entry.addJournalLine(creditLine);
+
+        JournalEntry created = ledgerService.createJournalEntry(entry);
+        ledgerService.postEntry(created.getId());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    public void handleInterestAccrual(LoanInterestAccrualEvent event) {
+        log.info("Posting interest accrual to ledger: loan {}", event.loanId());
+
+        Account interestReceivableAccount = getAccountByCode(ACCOUNT_INTEREST_RECEIVABLE);
+        Account interestIncomeAccount = getAccountByCode(ACCOUNT_INTEREST_INCOME);
+
+        JournalEntry entry = new JournalEntry();
+        entry.setTransactionDate(event.accrualDate());
+        entry.setDescription("Monthly interest accrual - Loan ID: " + event.loanId());
+        entry.setTransactionType(TransactionType.INTEREST_ACCRUAL);
+        entry.setReferenceId(event.loanId());
+
+        // DR Interest Receivable
+        JournalLine debitLine = new JournalLine();
+        debitLine.setAccount(interestReceivableAccount);
+        debitLine.setDebitAmount(event.interestAmount());
+        debitLine.setCreditAmount(BigDecimal.ZERO);
+        debitLine.setDescription("Interest accrual - Loan ID: " + event.loanId());
+        entry.addJournalLine(debitLine);
+
+        // CR Interest Income
+        JournalLine creditLine = new JournalLine();
+        creditLine.setAccount(interestIncomeAccount);
+        creditLine.setDebitAmount(BigDecimal.ZERO);
+        creditLine.setCreditAmount(event.interestAmount());
+        creditLine.setDescription("Interest income accrual - Loan ID: " + event.loanId());
         entry.addJournalLine(creditLine);
 
         JournalEntry created = ledgerService.createJournalEntry(entry);

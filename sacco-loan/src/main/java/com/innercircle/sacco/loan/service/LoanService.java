@@ -10,8 +10,8 @@ import java.util.UUID;
 
 public interface LoanService {
 
-    LoanApplication applyForLoan(UUID memberId, BigDecimal principalAmount, BigDecimal interestRate,
-                                  Integer termMonths, String interestMethod, String purpose);
+    LoanApplication applyForLoan(UUID memberId, UUID loanProductId, BigDecimal principalAmount,
+                                  Integer termMonths, String purpose);
 
     LoanApplication approveLoan(UUID loanId, UUID approvedBy);
 

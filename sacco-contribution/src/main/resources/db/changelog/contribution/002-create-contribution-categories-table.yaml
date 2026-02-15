@@ -1,0 +1,135 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-create-contribution-categories-table
+      author: system
+      changes:
+        - createTable:
+            tableName: contribution_categories
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: description
+                  type: varchar(500)
+              - column:
+                  name: active
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_mandatory
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+
+        - createIndex:
+            tableName: contribution_categories
+            indexName: idx_contribution_categories_active
+            columns:
+              - column:
+                  name: active
+
+      rollback:
+        - dropTable:
+            tableName: contribution_categories
+
+  - changeSet:
+      id: 002-alter-contributions-add-category-columns
+      author: system
+      comment: "Add category_id FK, payment_mode, and contribution_month to contributions table"
+      changes:
+        - addColumn:
+            tableName: contributions
+            columns:
+              - column:
+                  name: category_id
+                  type: uuid
+              - column:
+                  name: payment_mode
+                  type: varchar(20)
+              - column:
+                  name: contribution_month
+                  type: date
+
+        - addForeignKeyConstraint:
+            baseTableName: contributions
+            baseColumnNames: category_id
+            constraintName: fk_contributions_category
+            referencedTableName: contribution_categories
+            referencedColumnNames: id
+            onDelete: RESTRICT
+
+        - createIndex:
+            tableName: contributions
+            indexName: idx_contributions_category_id
+            columns:
+              - column:
+                  name: category_id
+
+        - createIndex:
+            tableName: contributions
+            indexName: idx_contributions_payment_mode
+            columns:
+              - column:
+                  name: payment_mode
+
+        - createIndex:
+            tableName: contributions
+            indexName: idx_contributions_contribution_month
+            columns:
+              - column:
+                  name: contribution_month
+
+      rollback:
+        - dropIndex:
+            tableName: contributions
+            indexName: idx_contributions_contribution_month
+        - dropIndex:
+            tableName: contributions
+            indexName: idx_contributions_payment_mode
+        - dropIndex:
+            tableName: contributions
+            indexName: idx_contributions_category_id
+        - dropForeignKeyConstraint:
+            baseTableName: contributions
+            constraintName: fk_contributions_category
+        - dropColumn:
+            tableName: contributions
+            columnName: contribution_month
+        - dropColumn:
+            tableName: contributions
+            columnName: payment_mode
+        - dropColumn:
+            tableName: contributions
+            columnName: category_id

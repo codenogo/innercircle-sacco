@@ -6,5 +6,6 @@ public enum TransactionType {
     LOAN_REPAYMENT,
     PAYOUT,
     PENALTY,
+    INTEREST_ACCRUAL,
     MANUAL_ADJUSTMENT
 }

@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "feature": "loan-batch-processing",
+  "planNumber": "03",
+  "memoryEpicId": "cn-qztd7f",
+  "goal": "Add comprehensive unit and integration tests for all batch processing safeguards",
+  "tasks": [
+    {
+      "name": "Unit tests for BatchProcessingLog entity and repository",
+      "memoryId": "cn-qztd7f.7",
+      "files": [
+        "sacco-loan/src/test/java/com/innercircle/sacco/loan/entity/BatchProcessingLogTest.java",
+        "sacco-loan/src/test/java/com/innercircle/sacco/loan/entity/BatchProcessingStatusTest.java",
+        "sacco-loan/src/test/java/com/innercircle/sacco/loan/repository/BatchProcessingLogRepositoryTest.java"
+      ],
+      "action": "Test BatchProcessingStatus enum values. Test BatchProcessingLog entity creation and builder. Test repository methods with Mockito: findByProcessingMonth, existsByProcessingMonth, findTopByStatusOrderByProcessingMonthDesc.",
+      "verify": ["cd sacco-loan && mvn test -pl . -Dtest=\"BatchProcessingLogTest,BatchProcessingStatusTest,BatchProcessingLogRepositoryTest\" -q"],
+      "blockedBy": []
+    },
+    {
+      "name": "Unit tests for LoanBatchServiceImpl safeguards",
+      "memoryId": "cn-qztd7f.8",
+      "files": [
+        "sacco-loan/src/test/java/com/innercircle/sacco/loan/service/LoanBatchServiceImplTest.java"
+      ],
+      "action": "Test all safeguards: idempotency rejection (7.4), sequential enforcement rejection and success (7.5), same-month skip (7.6), threshold day filtering (7.3), warnings population (7.7), batch log lifecycle (7.8), configurable day check (7.2), and happy-path full processing.",
+      "verify": ["cd sacco-loan && mvn test -pl . -Dtest=\"LoanBatchServiceImplTest\" -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Controller tests for updated batch endpoints",
+      "memoryId": "cn-qztd7f.9",
+      "files": [
+        "sacco-loan/src/test/java/com/innercircle/sacco/loan/controller/LoanBatchControllerTest.java"
+      ],
+      "action": "Test processBatch with auto-determined month, explicit month, idempotency 409 response, sequential 409 response, unauthorized 403, and warnings in response body. Use @WebMvcTest with mocked LoanBatchService.",
+      "verify": ["cd sacco-loan && mvn test -pl . -Dtest=\"LoanBatchControllerTest\" -q"],
+      "blockedBy": [0]
+    }
+  ],
+  "planVerify": ["cd sacco-loan && mvn test -q"],
+  "commitMessage": "test(loan-batch): add tests for batch processing safeguards",
+  "timestamp": "2026-02-15T00:00:00Z"
+}

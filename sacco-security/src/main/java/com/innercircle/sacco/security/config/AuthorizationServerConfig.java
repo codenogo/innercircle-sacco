@@ -27,16 +27,22 @@ import org.springframework.security.oauth2.server.authorization.settings.TokenSe
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 
+import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.time.Duration;
+import java.util.Base64;
 import java.util.UUID;
 
 @Configuration
+@Slf4j
 public class AuthorizationServerConfig {
 
     @Value("${oauth2.client.web-app.secret:changeme}")
@@ -44,6 +50,12 @@ public class AuthorizationServerConfig {
 
     @Value("${oauth2.client.batch-client.secret:changeme}")
     private String batchClientSecret;
+
+    @Value("${oauth2.jwt.rsa.public-key:}")
+    private String rsaPublicKeyPem;
+
+    @Value("${oauth2.jwt.rsa.private-key:}")
+    private String rsaPrivateKeyPem;
 
     @Bean
     @Order(1)
@@ -103,7 +115,14 @@ public class AuthorizationServerConfig {
 
     @Bean
     public JWKSource<SecurityContext> jwkSource() {
-        KeyPair keyPair = generateRsaKey();
+        KeyPair keyPair;
+        if (!rsaPublicKeyPem.isBlank() && !rsaPrivateKeyPem.isBlank()) {
+            log.info("Loading RSA keys from configuration");
+            keyPair = loadRsaKeyFromConfig();
+        } else {
+            log.warn("RSA keys not configured — generating ephemeral key pair (dev mode only)");
+            keyPair = generateRsaKey();
+        }
         RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
         RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();
         RSAKey rsaKey = new RSAKey.Builder(publicKey)
@@ -114,16 +133,39 @@ public class AuthorizationServerConfig {
         return new ImmutableJWKSet<>(jwkSet);
     }
 
+    private KeyPair loadRsaKeyFromConfig() {
+        try {
+            String publicKeyContent = rsaPublicKeyPem
+                    .replace("-----BEGIN PUBLIC KEY-----", "")
+                    .replace("-----END PUBLIC KEY-----", "")
+                    .replaceAll("\\s", "");
+            String privateKeyContent = rsaPrivateKeyPem
+                    .replace("-----BEGIN PRIVATE KEY-----", "")
+                    .replace("-----END PRIVATE KEY-----", "")
+                    .replaceAll("\\s", "");
+
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+
+            X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(publicKeyContent));
+            RSAPublicKey publicKey = (RSAPublicKey) keyFactory.generatePublic(publicKeySpec);
+
+            PKCS8EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(privateKeyContent));
+            RSAPrivateKey privateKey = (RSAPrivateKey) keyFactory.generatePrivate(privateKeySpec);
+
+            return new KeyPair(publicKey, privateKey);
+        } catch (Exception ex) {
+            throw new IllegalStateException("Failed to load RSA keys from configuration", ex);
+        }
+    }
+
     private static KeyPair generateRsaKey() {
-        KeyPair keyPair;
         try {
             KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
             keyPairGenerator.initialize(2048);
-            keyPair = keyPairGenerator.generateKeyPair();
+            return keyPairGenerator.generateKeyPair();
         } catch (Exception ex) {
             throw new IllegalStateException(ex);
         }
-        return keyPair;
     }
 
     @Bean

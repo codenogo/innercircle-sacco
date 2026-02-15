@@ -1,6 +1,7 @@
 package com.innercircle.sacco.loan.entity;
 
 import com.innercircle.sacco.common.model.BaseEntity;
+import com.innercircle.sacco.config.entity.InterestMethod;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -26,6 +27,8 @@ public class LoanApplication extends BaseEntity {
     @Column(nullable = false)
     private UUID memberId;
 
+    private UUID loanProductId;
+
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal principalAmount;
 
@@ -35,8 +38,9 @@ public class LoanApplication extends BaseEntity {
     @Column(nullable = false)
     private Integer termMonths;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
-    private String interestMethod; // REDUCING_BALANCE or FLAT_RATE
+    private InterestMethod interestMethod;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -56,4 +60,10 @@ public class LoanApplication extends BaseEntity {
 
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal outstandingBalance = BigDecimal.ZERO;
+
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal totalInterestAccrued = BigDecimal.ZERO;
+
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal totalInterestPaid = BigDecimal.ZERO;
 }

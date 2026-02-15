@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "feature": "loan-interest-accrual",
+  "planNumber": "01",
+  "goal": "Wire loan application to LoanProductConfig, migrate interestMethod to enum, add interest tracking fields",
+  "tasks": [
+    {
+      "name": "Add sacco-config dependency and update LoanApplication entity",
+      "files": [
+        "sacco-loan/pom.xml",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/LoanApplication.java"
+      ],
+      "action": "Add sacco-config dependency to sacco-loan pom.xml. On LoanApplication: add loanProductId (UUID), change interestMethod from String to InterestMethod enum, add totalInterestAccrued and totalInterestPaid BigDecimal fields with default ZERO.",
+      "verify": ["cd sacco-loan && mvn compile -q"]
+    },
+    {
+      "name": "Refactor LoanService and LoanServiceImpl for config-driven application",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanService.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/LoanApplicationRequest.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/RepaymentScheduleGenerator.java"
+      ],
+      "action": "Replace LoanApplicationRequest fields (remove interestRate/interestMethod, add loanProductId). Change LoanService.applyForLoan signature. In LoanServiceImpl: inject ConfigService, lookup LoanProductConfig, enforce limits, set rate/method from config. In disburseLoan: use enum comparison. Update RepaymentScheduleGenerator to accept InterestMethod enum.",
+      "verify": ["cd sacco-loan && mvn compile -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Update controller, DTOs, and fix all tests",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/controller/LoanController.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/LoanResponse.java",
+        "sacco-loan/src/test/java/com/innercircle/sacco/loan/service/LoanServiceImplTest.java",
+        "sacco-loan/src/test/java/com/innercircle/sacco/loan/service/RepaymentScheduleGeneratorTest.java",
+        "sacco-loan/src/test/java/com/innercircle/sacco/loan/controller/LoanControllerTest.java"
+      ],
+      "action": "Update LoanController.applyForLoan to pass loanProductId. Update LoanResponse to include loanProductId, totalInterestAccrued, totalInterestPaid, and InterestMethod enum. Fix all existing sacco-loan tests for new signatures.",
+      "verify": ["mvn test -pl sacco-loan -q"],
+      "blockedBy": [1]
+    }
+  ],
+  "planVerify": ["mvn test -pl sacco-loan -q", "mvn test -pl sacco-config -q"],
+  "commitMessage": "feat(loan): wire loan application to LoanProductConfig and migrate interestMethod to enum",
+  "timestamp": "2026-02-15T10:15:00Z"
+}

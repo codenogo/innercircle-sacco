@@ -1,5 +1,6 @@
 package com.innercircle.sacco.loan.dto;
 
+import com.innercircle.sacco.config.entity.InterestMethod;
 import com.innercircle.sacco.loan.entity.LoanApplication;
 import com.innercircle.sacco.loan.entity.LoanStatus;
 import lombok.AllArgsConstructor;
@@ -17,10 +18,11 @@ public class LoanResponse {
 
     private UUID id;
     private UUID memberId;
+    private UUID loanProductId;
     private BigDecimal principalAmount;
     private BigDecimal interestRate;
     private Integer termMonths;
-    private String interestMethod;
+    private InterestMethod interestMethod;
     private LoanStatus status;
     private String purpose;
     private UUID approvedBy;
@@ -28,6 +30,8 @@ public class LoanResponse {
     private Instant disbursedAt;
     private BigDecimal totalRepaid;
     private BigDecimal outstandingBalance;
+    private BigDecimal totalInterestAccrued;
+    private BigDecimal totalInterestPaid;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -35,6 +39,7 @@ public class LoanResponse {
         return LoanResponse.builder()
                 .id(loan.getId())
                 .memberId(loan.getMemberId())
+                .loanProductId(loan.getLoanProductId())
                 .principalAmount(loan.getPrincipalAmount())
                 .interestRate(loan.getInterestRate())
                 .termMonths(loan.getTermMonths())
@@ -46,6 +51,8 @@ public class LoanResponse {
                 .disbursedAt(loan.getDisbursedAt())
                 .totalRepaid(loan.getTotalRepaid())
                 .outstandingBalance(loan.getOutstandingBalance())
+                .totalInterestAccrued(loan.getTotalInterestAccrued())
+                .totalInterestPaid(loan.getTotalInterestPaid())
                 .createdAt(loan.getCreatedAt())
                 .updatedAt(loan.getUpdatedAt())
                 .build();

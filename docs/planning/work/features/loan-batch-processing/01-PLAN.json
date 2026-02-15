@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "feature": "loan-batch-processing",
+  "planNumber": "01",
+  "memoryEpicId": "cn-qztd7f",
+  "goal": "Create the BatchProcessingLog entity, Liquibase migrations, config seed data, and update the BatchProcessingResult DTO",
+  "tasks": [
+    {
+      "name": "Create BatchProcessingLog entity, enum, and repository",
+      "memoryId": "cn-qztd7f.1",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/BatchProcessingLog.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/BatchProcessingStatus.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/repository/BatchProcessingLogRepository.java"
+      ],
+      "action": "Create BatchProcessingStatus enum (STARTED, COMPLETED, FAILED). Create BatchProcessingLog entity extending BaseEntity with processingMonth (unique varchar), status, loansProcessed, interestAccrued, penalizedLoans, closedLoans, warningsSummary, startedAt, completedAt, triggeredBy. Create repository with findByProcessingMonth, existsByProcessingMonth, findTopByStatusOrderByProcessingMonthDesc.",
+      "verify": ["cd sacco-loan && mvn compile -q"],
+      "blockedBy": []
+    },
+    {
+      "name": "Create Liquibase migrations and seed config keys",
+      "memoryId": "cn-qztd7f.2",
+      "files": [
+        "sacco-loan/src/main/resources/db/changelog/loan/004-create-batch-processing-log.yaml",
+        "sacco-config/src/main/resources/db/changelog/config/003-seed-batch-config.yaml",
+        "sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml"
+      ],
+      "action": "Create batch_processing_log table migration with unique constraint on processing_month and index on status. Seed 3 config keys: loan.batch.processing_day_of_month=1, loan.batch.new_loan_threshold_day=15, loan.batch.last_processed_month=empty. Register in master changelog.",
+      "verify": ["cd sacco-app && mvn compile -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Update BatchProcessingResult DTO and LoanApplicationRepository",
+      "memoryId": "cn-qztd7f.3",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/BatchProcessingResult.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/repository/LoanApplicationRepository.java"
+      ],
+      "action": "Add List<String> warnings and String processingMonth fields to BatchProcessingResult. Add findByStatusAndDisbursedAtAfter and findByStatusAndDisbursedAtBefore queries to LoanApplicationRepository.",
+      "verify": ["cd sacco-loan && mvn compile -q"],
+      "blockedBy": []
+    }
+  ],
+  "planVerify": ["mvn compile -q"],
+  "commitMessage": "feat(loan-batch): add BatchProcessingLog entity, migrations, and config seeds",
+  "timestamp": "2026-02-15T00:00:00Z"
+}

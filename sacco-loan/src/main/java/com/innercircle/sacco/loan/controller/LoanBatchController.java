@@ -9,9 +9,12 @@ import com.innercircle.sacco.loan.service.LoanReversalService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -34,13 +38,24 @@ public class LoanBatchController {
     private final LoanReversalService reversalService;
 
     /**
-     * Trigger batch processing of all outstanding loans.
+     * Trigger batch processing of outstanding loans for a specific month.
+     * If targetMonth is not provided, auto-determines the next month to process.
      * Requires ADMIN or TREASURER role.
      */
     @PostMapping("/batch/process")
     @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
-    public ApiResponse<BatchProcessingResult> processBatch() {
-        BatchProcessingResult result = batchService.processOutstandingLoans();
+    public ApiResponse<BatchProcessingResult> processBatch(
+            @RequestParam(required = false) YearMonth targetMonth) {
+
+        String triggeredBy = getCurrentUsername();
+
+        if (targetMonth == null) {
+            // Auto-determine: delegate to processOutstandingLoans which figures out the month
+            BatchProcessingResult result = batchService.processOutstandingLoans();
+            return ApiResponse.ok(result, result.getMessage());
+        }
+
+        BatchProcessingResult result = batchService.processMonthlyLoans(targetMonth, triggeredBy);
         return ApiResponse.ok(result, result.getMessage());
     }
 
@@ -95,6 +110,12 @@ public class LoanBatchController {
             penaltyId, request.getReason(), actor);
 
         return ApiResponse.ok(response, response.getMessage());
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalState(IllegalStateException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(ex.getMessage()));
     }
 
     private String getCurrentUsername() {

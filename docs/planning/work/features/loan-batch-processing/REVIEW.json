@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "timestamp": "2026-02-15T00:00:00Z",
+  "feature": "loan-batch-processing",
+  "branch": "feat/comprehensive-test-coverage",
+  "automated": [
+    { "name": "lint", "result": "pass" },
+    { "name": "tests", "result": "pass", "details": "605 tests, 0 failures (254+128+83+84+56)" },
+    { "name": "security", "result": "pass" },
+    { "name": "types", "result": "skipped", "details": "Java - compiler handles" },
+    { "name": "deps", "result": "pass", "details": "No new dependencies added" }
+  ],
+  "verdict": "warn",
+  "blockers": [],
+  "warnings": [
+    {
+      "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchServiceImpl.java",
+      "line": 230,
+      "issue": "Magic numbers 30 and 90 for overdue/default thresholds should be configurable via ConfigService",
+      "severity": "medium"
+    },
+    {
+      "file": "sacco-loan/src/main/resources/db/changelog/loan/004-create-batch-processing-log.yaml",
+      "line": null,
+      "issue": "Migration lacks explicit rollback section for safe rollback during incidents",
+      "severity": "medium"
+    },
+    {
+      "file": "sacco-loan/src/test/java/com/innercircle/sacco/loan/service/LoanBatchServiceImplTest.java",
+      "line": 52,
+      "issue": "@MockitoSettings(strictness = Strictness.LENIENT) at class level masks unnecessary stubbings",
+      "severity": "low"
+    }
+  ]
+}

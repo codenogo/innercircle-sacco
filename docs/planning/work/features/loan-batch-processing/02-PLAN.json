@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "feature": "loan-batch-processing",
+  "planNumber": "02",
+  "memoryEpicId": "cn-qztd7f",
+  "goal": "Rewrite LoanBatchServiceImpl with all 7 safeguards (7.2-7.8) and update the controller",
+  "tasks": [
+    {
+      "name": "Implement idempotency, sequential enforcement, and batch log tracking",
+      "memoryId": "cn-qztd7f.4",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchService.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchServiceImpl.java"
+      ],
+      "action": "Add processMonthlyLoans(YearMonth, String) to interface. Implement in LoanBatchServiceImpl: inject BatchProcessingLogRepository and ConfigService. Check idempotency via existsByProcessingMonth (7.4). Enforce sequential month via last_processed_month config (7.5). Create/update BatchProcessingLog entries (7.8). Delegate existing processOutstandingLoans() cron to the new method.",
+      "verify": ["cd sacco-loan && mvn compile -q"],
+      "blockedBy": []
+    },
+    {
+      "name": "Implement loan filtering, configurable day, and pre-processing warnings",
+      "memoryId": "cn-qztd7f.5",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchServiceImpl.java"
+      ],
+      "action": "Within processMonthlyLoans: read loan.batch.processing_day_of_month for configurable day (7.2). Filter loans where disbursedAt is in target month (7.6). Read loan.batch.new_loan_threshold_day and skip loans disbursed after threshold (7.3). Call detectUnpaidLoans and include as warnings in result (7.7). Store warningsSummary in BatchProcessingLog.",
+      "verify": ["cd sacco-loan && mvn compile -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Update LoanBatchController",
+      "memoryId": "cn-qztd7f.6",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/controller/LoanBatchController.java"
+      ],
+      "action": "Accept optional @RequestParam YearMonth targetMonth in processBatch. If not provided, auto-determine next month. Pass triggeredBy from getCurrentUsername(). Handle IllegalStateException for safeguard violations with 409 response.",
+      "verify": ["cd sacco-loan && mvn compile -q"],
+      "blockedBy": [0, 1]
+    }
+  ],
+  "planVerify": ["mvn compile -q"],
+  "commitMessage": "feat(loan-batch): implement monthly processing safeguards (7.2-7.8)",
+  "timestamp": "2026-02-15T00:00:00Z"
+}

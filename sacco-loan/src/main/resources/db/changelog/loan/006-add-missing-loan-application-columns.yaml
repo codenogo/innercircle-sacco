@@ -1,0 +1,35 @@
+databaseChangeLog:
+  - changeSet:
+      id: 006-add-missing-loan-application-columns
+      author: system
+      comment: "Add loan_product_id, total_interest_accrued, total_interest_paid to loan_applications"
+      changes:
+        - addColumn:
+            tableName: loan_applications
+            columns:
+              - column:
+                  name: loan_product_id
+                  type: uuid
+              - column:
+                  name: total_interest_accrued
+                  type: decimal(19,2)
+                  defaultValueNumeric: 0.00
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total_interest_paid
+                  type: decimal(19,2)
+                  defaultValueNumeric: 0.00
+                  constraints:
+                    nullable: false
+
+      rollback:
+        - dropColumn:
+            tableName: loan_applications
+            columnName: total_interest_paid
+        - dropColumn:
+            tableName: loan_applications
+            columnName: total_interest_accrued
+        - dropColumn:
+            tableName: loan_applications
+            columnName: loan_product_id

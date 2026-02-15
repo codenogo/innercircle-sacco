@@ -46,10 +46,9 @@ public class LoanController {
     public ApiResponse<LoanResponse> applyForLoan(@Valid @RequestBody LoanApplicationRequest request) {
         LoanApplication loan = loanService.applyForLoan(
                 request.getMemberId(),
+                request.getLoanProductId(),
                 request.getPrincipalAmount(),
-                request.getInterestRate(),
                 request.getTermMonths(),
-                request.getInterestMethod(),
                 request.getPurpose()
         );
         return ApiResponse.ok(LoanResponse.from(loan), "Loan application submitted successfully");

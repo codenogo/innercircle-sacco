@@ -23,10 +23,14 @@ databaseChangeLog:
       file: db/changelog/config/001-create-config-tables.yaml
   - include:
       file: db/changelog/config/002-seed-default-config.yaml
+  - include:
+      file: db/changelog/config/003-seed-batch-config.yaml
 
   # Contribution module
   - include:
       file: db/changelog/contribution/001-create-contributions-table.yaml
+  - include:
+      file: db/changelog/contribution/002-create-contribution-categories-table.yaml
 
   # Audit module
   - include:
@@ -39,6 +43,8 @@ databaseChangeLog:
       file: db/changelog/ledger/002-seed-chart-of-accounts.yaml
   - include:
       file: db/changelog/ledger/003-create-journal-entry-seq.yaml
+  - include:
+      file: db/changelog/ledger/004-seed-interest-receivable.yaml
 
   # Loan module
   - include:
@@ -47,6 +53,12 @@ databaseChangeLog:
       file: db/changelog/loan/002-add-amount-paid-column.yaml
   - include:
       file: db/changelog/loan/003-create-loan-benefits-table.yaml
+  - include:
+      file: db/changelog/loan/004-create-batch-processing-log.yaml
+  - include:
+      file: db/changelog/loan/005-create-loan-interest-history.yaml
+  - include:
+      file: db/changelog/loan/006-add-missing-loan-application-columns.yaml
 
   # Payout module
   - include:

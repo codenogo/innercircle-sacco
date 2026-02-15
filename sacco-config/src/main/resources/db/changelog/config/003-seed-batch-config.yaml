@@ -1,0 +1,68 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-seed-batch-config
+      author: innercircle
+      changes:
+        - insert:
+            tableName: system_configs
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: config_key
+                  value: "loan.batch.processing_day_of_month"
+              - column:
+                  name: config_value
+                  value: "1"
+              - column:
+                  name: description
+                  value: "Day of month when batch loan processing runs (1-28)"
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+        - insert:
+            tableName: system_configs
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: config_key
+                  value: "loan.batch.new_loan_threshold_day"
+              - column:
+                  name: config_value
+                  value: "15"
+              - column:
+                  name: description
+                  value: "Loans disbursed after this day of month skip interest accrual for that month"
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+        - insert:
+            tableName: system_configs
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: config_key
+                  value: "loan.batch.last_processed_month"
+              - column:
+                  name: config_value
+                  value: ""
+              - column:
+                  name: description
+                  value: "Last successfully processed month (YYYY-MM format)"
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
