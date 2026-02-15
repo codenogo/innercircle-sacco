@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "feature": "sacco-critical-features",
+  "planNumber": "05",
+  "goal": "Enhance dashboard with time-series analytics and SACCO state overview",
+  "tasks": [
+    {
+      "name": "Create time-series analytics DTOs",
+      "files": [
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/dto/MonthlyDataPoint.java",
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/dto/DashboardAnalyticsResponse.java",
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/dto/SaccoStateResponse.java"
+      ],
+      "action": "Create record DTOs for monthly data points, analytics response, and SACCO state",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn compile -pl sacco-reporting -q -DskipTests"]
+    },
+    {
+      "name": "Add analytics methods to FinancialReportService",
+      "files": [
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/service/FinancialReportService.java",
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/service/FinancialReportServiceImpl.java"
+      ],
+      "action": "Add getDashboardAnalytics and getSaccoState methods with JdbcTemplate queries",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn compile -pl sacco-reporting -q -DskipTests"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Add analytics endpoints to DashboardController",
+      "files": [
+        "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/controller/DashboardController.java"
+      ],
+      "action": "Add analytics and state endpoints with ADMIN/TREASURER authorization",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn compile -pl sacco-reporting -q -DskipTests"],
+      "blockedBy": [1]
+    }
+  ],
+  "planVerify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn clean compile -q -DskipTests"],
+  "commitMessage": "feat(reporting): add enhanced dashboard analytics with time-series data",
+  "timestamp": "2026-02-15T00:00:00Z"
+}

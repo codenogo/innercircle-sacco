@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "feature": "sacco-critical-features",
+  "planNumber": "04",
+  "goal": "Add admin user account management API with search, activate/deactivate, and role management",
+  "tasks": [
+    {
+      "name": "Create UserManagementService",
+      "files": [
+        "sacco-security/src/main/java/com/innercircle/sacco/security/service/UserManagementService.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/service/UserManagementServiceImpl.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/dto/UserSearchRequest.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/dto/UpdateUserRequest.java"
+      ],
+      "action": "Create service with activate/deactivate/lock/unlock/search/roles methods and DTOs",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn compile -pl sacco-security -q -DskipTests"]
+    },
+    {
+      "name": "Create UserManagementController",
+      "files": [
+        "sacco-security/src/main/java/com/innercircle/sacco/security/controller/UserManagementController.java"
+      ],
+      "action": "REST controller with ADMIN-only endpoints for user management",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn compile -pl sacco-security -q -DskipTests"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Add user search repository methods",
+      "files": [
+        "sacco-security/src/main/java/com/innercircle/sacco/security/repository/UserAccountRepository.java"
+      ],
+      "action": "Add search and pagination query methods to repository",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn compile -pl sacco-security -q -DskipTests"]
+    }
+  ],
+  "planVerify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn clean compile -q -DskipTests"],
+  "commitMessage": "feat(security): add user account management API",
+  "timestamp": "2026-02-15T00:00:00Z"
+}

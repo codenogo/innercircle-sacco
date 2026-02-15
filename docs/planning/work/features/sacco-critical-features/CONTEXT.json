@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "feature": "sacco-critical-features",
+  "displayName": "SACCO Critical Missing Features",
+  "decisions": [
+    { "area": "loan-benefits", "decision": "Proportional distribution based on member share balance", "rationale": "Matches SACCO cooperative model" },
+    { "area": "benefits-trigger", "decision": "Calculate on loan repayment events", "rationale": "Real-time calculation when interest is received" },
+    { "area": "batch-processing", "decision": "Spring @Scheduled with configurable cron", "rationale": "Framework-native, no external scheduler" },
+    { "area": "batch-frequency", "decision": "Monthly processing configurable via system_configs", "rationale": "Standard SACCO monthly cycle" },
+    { "area": "email-provider", "decision": "Spring Mail with SMTP", "rationale": "Framework-native, easy to swap" },
+    { "area": "password-reset", "decision": "Time-limited UUID token (24h) stored in DB", "rationale": "Standard secure pattern" },
+    { "area": "loan-reversals", "decision": "Full reversal with compensating journal entries", "rationale": "Maintains audit trail integrity" },
+    { "area": "reversal-auth", "decision": "ADMIN or TREASURER role required", "rationale": "Sensitive operation" },
+    { "area": "dashboard", "decision": "JdbcTemplate with monthly aggregation", "rationale": "Consistent with existing reporting pattern" }
+  ],
+  "constraints": [
+    "All modules depend only on sacco-common",
+    "Inter-module communication via Spring Application Events",
+    "All money as BigDecimal NUMERIC(19,2)",
+    "Balanced journal entries for every financial operation",
+    "Audit trail for all state changes",
+    "ApiResponse<T> wrapper for all responses",
+    "Cursor-based pagination",
+    "UUID v7 for entity IDs"
+  ],
+  "openQuestions": [],
+  "relatedCode": [
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/LoanApplication.java",
+    "sacco-security/src/main/java/com/innercircle/sacco/security/entity/UserAccount.java",
+    "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/service/FinancialReportServiceImpl.java",
+    "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/service/LedgerServiceImpl.java"
+  ],
+  "timestamp": "2026-02-15T00:00:00Z"
+}

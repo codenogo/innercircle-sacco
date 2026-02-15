@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "timestamp": "2026-02-15T00:00:00Z",
+  "feature": "sacco-critical-features",
+  "branch": "main",
+  "automated": [
+    { "name": "lint", "result": "skipped" },
+    { "name": "tests", "result": "skipped" },
+    { "name": "security", "result": "warn" },
+    { "name": "types", "result": "skipped" },
+    { "name": "deps", "result": "pass" }
+  ],
+  "verdict": "warn",
+  "blockers": [],
+  "blockersSummary": "14/15 blockers fixed. 1 deferred (rate limiting requires infra-level solution).",
+  "fixesApplied": [
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/controller/LoanBenefitController.java", "fix": "Added @PreAuthorize to 3 endpoints" },
+    { "file": "sacco-loan/src/main/resources/db/changelog/loan/003-create-loan-benefits-table.yaml", "fix": "Added FK constraints for member_id and loan_id" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanReversalServiceImpl.java", "fix": "Fixed reversal logic and added balance validation" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/controller/LoanBatchController.java", "fix": "Replaced actor spoofing with SecurityContextHolder" },
+    { "file": "sacco-security/src/main/java/com/innercircle/sacco/security/service/PasswordResetServiceImpl.java", "fix": "SecureRandom tokens, password complexity, cleanup method" },
+    { "file": "sacco-security/src/main/java/com/innercircle/sacco/security/service/PasswordResetService.java", "fix": "Added cleanupExpiredTokens() interface method" },
+    { "file": "sacco-security/src/main/java/com/innercircle/sacco/security/repository/PasswordResetTokenRepository.java", "fix": "Added JPQL delete query for expired tokens" },
+    { "file": "sacco-security/src/main/java/com/innercircle/sacco/security/service/UserManagementServiceImpl.java", "fix": "Self-modification prevention, role protection, cursor pagination fix" },
+    { "file": "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/service/FinancialReportServiceImpl.java", "fix": "Fixed column names, loan statuses, and date columns" }
+  ],
+  "warnings": [
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBenefitServiceImpl.java", "issue": "No transaction isolation for distribution", "severity": "medium" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBenefitServiceImpl.java", "issue": "BigDecimal rounding precision not specified", "severity": "medium" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBenefitServiceImpl.java", "issue": "Double distribution risk", "severity": "medium" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchServiceImpl.java", "issue": "Hardcoded business rules", "severity": "low" },
+    { "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanReversalServiceImpl.java", "issue": "No idempotency for reversals", "severity": "medium" },
+    { "file": "sacco-security/src/main/java/com/innercircle/sacco/security/service/PasswordResetServiceImpl.java", "issue": "Token in URL query parameter", "severity": "medium" },
+    { "file": "sacco-common/src/main/java/com/innercircle/sacco/common/service/EmailServiceImpl.java", "issue": "No HTML escaping in email templates", "severity": "medium" },
+    { "file": "sacco-security/src/main/java/com/innercircle/sacco/security/service/UserManagementServiceImpl.java", "issue": "Misleading deleteUser method name", "severity": "low" },
+    { "file": "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/service/FinancialReportServiceImpl.java", "issue": "PostgreSQL-specific EXTRACT syntax", "severity": "low" }
+  ]
+}

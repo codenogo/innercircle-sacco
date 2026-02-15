@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "feature": "sacco-critical-features",
+  "planNumber": "03",
+  "goal": "Add Spring Mail integration and implement secure password reset flow",
+  "tasks": [
+    {
+      "name": "Add Spring Mail integration and EmailService",
+      "files": [
+        "sacco-common/src/main/java/com/innercircle/sacco/common/service/EmailService.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/service/EmailServiceImpl.java",
+        "sacco-app/src/main/resources/application.yml",
+        "sacco-common/pom.xml"
+      ],
+      "action": "Add mail dependency, create EmailService with SMTP support, add mail config to application.yml",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn compile -pl sacco-common -q -DskipTests"]
+    },
+    {
+      "name": "Create password reset token entity and migration",
+      "files": [
+        "sacco-security/src/main/java/com/innercircle/sacco/security/entity/PasswordResetToken.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/repository/PasswordResetTokenRepository.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/dto/ForgotPasswordRequest.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/dto/ResetPasswordRequest.java",
+        "sacco-security/src/main/resources/db/changelog/security/004-create-password-reset-tokens.yaml",
+        "sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml"
+      ],
+      "action": "Create entity, repository, DTOs, and Liquibase migration for password reset tokens",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn compile -pl sacco-security -q -DskipTests"]
+    },
+    {
+      "name": "Create password reset service and controller",
+      "files": [
+        "sacco-security/src/main/java/com/innercircle/sacco/security/service/PasswordResetService.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/service/PasswordResetServiceImpl.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/controller/AuthController.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/config/SecurityConfig.java"
+      ],
+      "action": "Create service with token generation/validation, controller with public endpoints, update security config",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn compile -pl sacco-security -q -DskipTests"],
+      "blockedBy": [0, 1]
+    }
+  ],
+  "planVerify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn clean compile -q -DskipTests"],
+  "commitMessage": "feat(security): add email integration and password reset flow",
+  "timestamp": "2026-02-15T00:00:00Z"
+}

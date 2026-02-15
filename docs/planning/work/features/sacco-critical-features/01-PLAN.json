@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "feature": "sacco-critical-features",
+  "planNumber": "01",
+  "goal": "Implement loan benefits system where members earn proportional returns from loan interest",
+  "tasks": [
+    {
+      "name": "Create LoanBenefit entity, repository, DTOs & migration",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/LoanBenefit.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/repository/LoanBenefitRepository.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/LoanBenefitResponse.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/MemberEarningsResponse.java",
+        "sacco-loan/src/main/resources/db/changelog/loan/003-create-loan-benefits-table.yaml",
+        "sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml"
+      ],
+      "action": "Create LoanBenefit entity extending BaseEntity, Liquibase migration, DTOs, and repository",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn compile -pl sacco-loan -q -DskipTests"]
+    },
+    {
+      "name": "Create LoanBenefitService with distribution logic",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBenefitService.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBenefitServiceImpl.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/event/BenefitsDistributedEvent.java"
+      ],
+      "action": "Create service with proportional distribution, event listener, and member earnings queries",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn compile -pl sacco-common,sacco-loan -q -DskipTests"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Create LoanBenefitController with endpoints",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/controller/LoanBenefitController.java"
+      ],
+      "action": "REST controller with member earnings, loan benefits, and refresh endpoints",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn compile -pl sacco-loan -q -DskipTests"],
+      "blockedBy": [1]
+    }
+  ],
+  "planVerify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn clean compile -q -DskipTests"],
+  "commitMessage": "feat(loan): add loan benefits and earnings distribution system",
+  "timestamp": "2026-02-15T00:00:00Z"
+}

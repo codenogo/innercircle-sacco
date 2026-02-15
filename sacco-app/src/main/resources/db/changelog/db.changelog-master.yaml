@@ -11,6 +11,8 @@ databaseChangeLog:
       file: db/changelog/security/002-seed-roles.yaml
   - include:
       file: db/changelog/security/003-create-oauth2-tables.yaml
+  - include:
+      file: db/changelog/security/004-create-password-reset-tokens.yaml
 
   # Member module
   - include:
@@ -43,6 +45,8 @@ databaseChangeLog:
       file: db/changelog/loan/001-create-loan-tables.yaml
   - include:
       file: db/changelog/loan/002-add-amount-paid-column.yaml
+  - include:
+      file: db/changelog/loan/003-create-loan-benefits-table.yaml
 
   # Payout module
   - include:

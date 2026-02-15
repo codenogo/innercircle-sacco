@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "feature": "sacco-critical-features",
+  "planNumber": "02",
+  "goal": "Implement batch loan processing, unpaid detection, and loan reversal system",
+  "tasks": [
+    {
+      "name": "Create LoanBatchService for monthly processing",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchService.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchServiceImpl.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/BatchProcessingResult.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/event/LoanBatchProcessedEvent.java"
+      ],
+      "action": "Create batch processing with @Scheduled, overdue detection, and penalty application",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn compile -pl sacco-common,sacco-loan -q -DskipTests"]
+    },
+    {
+      "name": "Create loan reversal system",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanReversalService.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanReversalServiceImpl.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/ReversalRequest.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/ReversalResponse.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/event/LoanReversalEvent.java"
+      ],
+      "action": "Create reversal service for repayments and penalties with compensating events",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn compile -pl sacco-common,sacco-loan -q -DskipTests"]
+    },
+    {
+      "name": "Create batch and reversal controller endpoints",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/controller/LoanBatchController.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/RepaymentStatus.java"
+      ],
+      "action": "REST controller for batch processing, unpaid detection, and reversal endpoints",
+      "verify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn compile -pl sacco-loan -q -DskipTests"],
+      "blockedBy": [0, 1]
+    }
+  ],
+  "planVerify": ["cd /Users/arnoldkizzitoh/Documents/haha/innercircle-sacco && mvn clean compile -q -DskipTests"],
+  "commitMessage": "feat(loan): add batch processing, unpaid detection, and reversal system",
+  "timestamp": "2026-02-15T00:00:00Z"
+}

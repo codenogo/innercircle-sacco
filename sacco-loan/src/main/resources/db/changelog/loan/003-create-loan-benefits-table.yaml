@@ -1,0 +1,101 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-loan-benefits-table
+      author: innercircle
+      changes:
+        - createTable:
+            tableName: loan_benefits
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: member_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: loan_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: contribution_snapshot
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: benefits_rate
+                  type: decimal(5,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: earned_amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expected_earnings
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: distributed
+                  type: boolean
+                  defaultValue: "false"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: distributed_at
+                  type: timestamp
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+              - column:
+                  name: version
+                  type: bigint
+        - createIndex:
+            tableName: loan_benefits
+            indexName: idx_loan_benefit_member_id
+            columns:
+              - column:
+                  name: member_id
+        - createIndex:
+            tableName: loan_benefits
+            indexName: idx_loan_benefit_loan_id
+            columns:
+              - column:
+                  name: loan_id
+        - createIndex:
+            tableName: loan_benefits
+            indexName: idx_loan_benefit_distributed
+            columns:
+              - column:
+                  name: distributed
+        - addForeignKeyConstraint:
+            baseTableName: loan_benefits
+            baseColumnNames: member_id
+            referencedTableName: members
+            referencedColumnNames: id
+            constraintName: fk_loan_benefit_member
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: loan_benefits
+            baseColumnNames: loan_id
+            referencedTableName: loan_applications
+            referencedColumnNames: id
+            constraintName: fk_loan_benefit_loan
+            onDelete: CASCADE
