@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Version;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -29,6 +30,9 @@ public abstract class BaseEntity {
 
     @Column(updatable = false)
     private String createdBy;
+
+    @Version
+    private Long version;
 
     @PrePersist
     protected void onCreate() {

@@ -1,0 +1,259 @@
+databaseChangeLog:
+  - changeSet:
+      id: common-001-add-version-column
+      author: innercircle
+      comment: "W7: Add optimistic locking version column to all entity tables"
+      changes:
+        - addColumn:
+            tableName: user_accounts
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: roles
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: members
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: contributions
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: contribution_penalties
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: loan_applications
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: repayment_schedules
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: loan_repayments
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: loan_guarantors
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: loan_penalties
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: payouts
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: bank_withdrawals
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: cash_disbursements
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: share_withdrawals
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: journal_entries
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: journal_lines
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: accounts
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: system_configs
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: loan_product_configs
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: contribution_schedule_configs
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: penalty_rules
+            columns:
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropColumn:
+            tableName: user_accounts
+            columnName: version
+        - dropColumn:
+            tableName: roles
+            columnName: version
+        - dropColumn:
+            tableName: members
+            columnName: version
+        - dropColumn:
+            tableName: contributions
+            columnName: version
+        - dropColumn:
+            tableName: contribution_penalties
+            columnName: version
+        - dropColumn:
+            tableName: loan_applications
+            columnName: version
+        - dropColumn:
+            tableName: repayment_schedules
+            columnName: version
+        - dropColumn:
+            tableName: loan_repayments
+            columnName: version
+        - dropColumn:
+            tableName: loan_guarantors
+            columnName: version
+        - dropColumn:
+            tableName: loan_penalties
+            columnName: version
+        - dropColumn:
+            tableName: payouts
+            columnName: version
+        - dropColumn:
+            tableName: bank_withdrawals
+            columnName: version
+        - dropColumn:
+            tableName: cash_disbursements
+            columnName: version
+        - dropColumn:
+            tableName: share_withdrawals
+            columnName: version
+        - dropColumn:
+            tableName: journal_entries
+            columnName: version
+        - dropColumn:
+            tableName: journal_lines
+            columnName: version
+        - dropColumn:
+            tableName: accounts
+            columnName: version
+        - dropColumn:
+            tableName: system_configs
+            columnName: version
+        - dropColumn:
+            tableName: loan_product_configs
+            columnName: version
+        - dropColumn:
+            tableName: contribution_schedule_configs
+            columnName: version
+        - dropColumn:
+            tableName: penalty_rules
+            columnName: version

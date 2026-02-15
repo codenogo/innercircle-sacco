@@ -12,6 +12,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.innercircle.sacco.common.util.UuidGenerator;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -139,6 +141,6 @@ public class PayoutServiceImpl implements PayoutService {
     }
 
     private String generateReferenceNumber() {
-        return "PAY-" + System.currentTimeMillis();
+        return "PAY-" + UuidGenerator.generateV7().toString().substring(0, 8).toUpperCase();
     }
 }

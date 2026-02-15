@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "feature": "innercircle-chama-fixes",
+  "planNumber": "05",
+  "outcome": "complete",
+  "changes": [
+    { "file": "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/service/ExportServiceImpl.java", "change": "Fixed escapeCsv() to prefix formula trigger characters with single quote (CSV injection prevention)" },
+    { "file": "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/service/ExportServiceImpl.java", "change": "Replaced PDF page break with proper multi-page rendering using new PDPageContentStream on overflow" }
+  ],
+  "verification": [
+    { "task": 1, "result": "pass", "details": "mvn compile -pl sacco-reporting -q" },
+    { "task": 2, "result": "pass", "details": "mvn compile -pl sacco-reporting -q" },
+    { "task": 0, "result": "pass", "details": "mvn compile -q (full project)" }
+  ],
+  "commit": { "hash": "279e3f2", "message": "fix(reporting): prevent CSV injection and fix PDF multi-page rendering" },
+  "timestamp": "2026-02-15T00:00:00Z"
+}

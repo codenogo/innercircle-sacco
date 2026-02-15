@@ -47,3 +47,9 @@ databaseChangeLog:
   # Payout module
   - include:
       file: db/changelog/payout/001-create-payout-tables.yaml
+
+  # Common cross-cutting migrations
+  - include:
+      file: db/changelog/common/001-add-version-column.yaml
+  - include:
+      file: db/changelog/common/002-add-fk-and-unique-constraints.yaml

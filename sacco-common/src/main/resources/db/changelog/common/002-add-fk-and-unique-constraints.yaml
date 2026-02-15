@@ -1,0 +1,212 @@
+databaseChangeLog:
+  - changeSet:
+      id: common-002-add-fk-constraints
+      author: innercircle
+      comment: "B8: Add ON DELETE RESTRICT foreign key constraints for all entity relationships"
+      changes:
+        # Contributions -> Members
+        - addForeignKeyConstraint:
+            baseTableName: contributions
+            baseColumnNames: member_id
+            constraintName: fk_contributions_member
+            referencedTableName: members
+            referencedColumnNames: id
+            onDelete: RESTRICT
+
+        # Contribution Penalties -> Members
+        - addForeignKeyConstraint:
+            baseTableName: contribution_penalties
+            baseColumnNames: member_id
+            constraintName: fk_contribution_penalties_member
+            referencedTableName: members
+            referencedColumnNames: id
+            onDelete: RESTRICT
+
+        # Contribution Penalties -> Contributions
+        - addForeignKeyConstraint:
+            baseTableName: contribution_penalties
+            baseColumnNames: contribution_id
+            constraintName: fk_contribution_penalties_contribution
+            referencedTableName: contributions
+            referencedColumnNames: id
+            onDelete: RESTRICT
+
+        # Loan Applications -> Members
+        - addForeignKeyConstraint:
+            baseTableName: loan_applications
+            baseColumnNames: member_id
+            constraintName: fk_loan_applications_member
+            referencedTableName: members
+            referencedColumnNames: id
+            onDelete: RESTRICT
+
+        # Repayment Schedules -> Loan Applications
+        - addForeignKeyConstraint:
+            baseTableName: repayment_schedules
+            baseColumnNames: loan_id
+            constraintName: fk_repayment_schedules_loan
+            referencedTableName: loan_applications
+            referencedColumnNames: id
+            onDelete: RESTRICT
+
+        # Loan Repayments -> Loan Applications
+        - addForeignKeyConstraint:
+            baseTableName: loan_repayments
+            baseColumnNames: loan_id
+            constraintName: fk_loan_repayments_loan
+            referencedTableName: loan_applications
+            referencedColumnNames: id
+            onDelete: RESTRICT
+
+        # Loan Repayments -> Members
+        - addForeignKeyConstraint:
+            baseTableName: loan_repayments
+            baseColumnNames: member_id
+            constraintName: fk_loan_repayments_member
+            referencedTableName: members
+            referencedColumnNames: id
+            onDelete: RESTRICT
+
+        # Loan Guarantors -> Loan Applications
+        - addForeignKeyConstraint:
+            baseTableName: loan_guarantors
+            baseColumnNames: loan_id
+            constraintName: fk_loan_guarantors_loan
+            referencedTableName: loan_applications
+            referencedColumnNames: id
+            onDelete: RESTRICT
+
+        # Loan Guarantors -> Members
+        - addForeignKeyConstraint:
+            baseTableName: loan_guarantors
+            baseColumnNames: guarantor_member_id
+            constraintName: fk_loan_guarantors_member
+            referencedTableName: members
+            referencedColumnNames: id
+            onDelete: RESTRICT
+
+        # Loan Penalties -> Loan Applications
+        - addForeignKeyConstraint:
+            baseTableName: loan_penalties
+            baseColumnNames: loan_id
+            constraintName: fk_loan_penalties_loan
+            referencedTableName: loan_applications
+            referencedColumnNames: id
+            onDelete: RESTRICT
+
+        # Loan Penalties -> Members
+        - addForeignKeyConstraint:
+            baseTableName: loan_penalties
+            baseColumnNames: member_id
+            constraintName: fk_loan_penalties_member
+            referencedTableName: members
+            referencedColumnNames: id
+            onDelete: RESTRICT
+
+        # Payouts -> Members
+        - addForeignKeyConstraint:
+            baseTableName: payouts
+            baseColumnNames: member_id
+            constraintName: fk_payouts_member
+            referencedTableName: members
+            referencedColumnNames: id
+            onDelete: RESTRICT
+
+        # Bank Withdrawals -> Members
+        - addForeignKeyConstraint:
+            baseTableName: bank_withdrawals
+            baseColumnNames: member_id
+            constraintName: fk_bank_withdrawals_member
+            referencedTableName: members
+            referencedColumnNames: id
+            onDelete: RESTRICT
+
+        # Cash Disbursements -> Members
+        - addForeignKeyConstraint:
+            baseTableName: cash_disbursements
+            baseColumnNames: member_id
+            constraintName: fk_cash_disbursements_member
+            referencedTableName: members
+            referencedColumnNames: id
+            onDelete: RESTRICT
+
+        # Share Withdrawals -> Members
+        - addForeignKeyConstraint:
+            baseTableName: share_withdrawals
+            baseColumnNames: member_id
+            constraintName: fk_share_withdrawals_member
+            referencedTableName: members
+            referencedColumnNames: id
+            onDelete: RESTRICT
+
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: contributions
+            constraintName: fk_contributions_member
+        - dropForeignKeyConstraint:
+            baseTableName: contribution_penalties
+            constraintName: fk_contribution_penalties_member
+        - dropForeignKeyConstraint:
+            baseTableName: contribution_penalties
+            constraintName: fk_contribution_penalties_contribution
+        - dropForeignKeyConstraint:
+            baseTableName: loan_applications
+            constraintName: fk_loan_applications_member
+        - dropForeignKeyConstraint:
+            baseTableName: repayment_schedules
+            constraintName: fk_repayment_schedules_loan
+        - dropForeignKeyConstraint:
+            baseTableName: loan_repayments
+            constraintName: fk_loan_repayments_loan
+        - dropForeignKeyConstraint:
+            baseTableName: loan_repayments
+            constraintName: fk_loan_repayments_member
+        - dropForeignKeyConstraint:
+            baseTableName: loan_guarantors
+            constraintName: fk_loan_guarantors_loan
+        - dropForeignKeyConstraint:
+            baseTableName: loan_guarantors
+            constraintName: fk_loan_guarantors_member
+        - dropForeignKeyConstraint:
+            baseTableName: loan_penalties
+            constraintName: fk_loan_penalties_loan
+        - dropForeignKeyConstraint:
+            baseTableName: loan_penalties
+            constraintName: fk_loan_penalties_member
+        - dropForeignKeyConstraint:
+            baseTableName: payouts
+            constraintName: fk_payouts_member
+        - dropForeignKeyConstraint:
+            baseTableName: bank_withdrawals
+            constraintName: fk_bank_withdrawals_member
+        - dropForeignKeyConstraint:
+            baseTableName: cash_disbursements
+            constraintName: fk_cash_disbursements_member
+        - dropForeignKeyConstraint:
+            baseTableName: share_withdrawals
+            constraintName: fk_share_withdrawals_member
+
+  - changeSet:
+      id: common-002-add-unique-constraints
+      author: innercircle
+      comment: "W19: Add UNIQUE constraints on reference_number columns"
+      changes:
+        # payouts.reference_number (contributions already has uk_contributions_reference_number)
+        - addUniqueConstraint:
+            tableName: payouts
+            columnNames: reference_number
+            constraintName: uk_payouts_reference_number
+
+        # bank_withdrawals.reference_number
+        - addUniqueConstraint:
+            tableName: bank_withdrawals
+            columnNames: reference_number
+            constraintName: uk_bank_withdrawals_reference_number
+
+      rollback:
+        - dropUniqueConstraint:
+            tableName: payouts
+            constraintName: uk_payouts_reference_number
+        - dropUniqueConstraint:
+            tableName: bank_withdrawals
+            constraintName: uk_bank_withdrawals_reference_number
