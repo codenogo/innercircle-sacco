@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "timestamp": "2026-02-15T00:00:00Z",
+  "feature": "loan-penalty-automation",
+  "branch": "feat/loan-interest-accrual-plan03",
+  "automated": [
+    { "name": "compile", "result": "pass" },
+    { "name": "tests", "result": "pass" },
+    { "name": "security", "result": "pass" },
+    { "name": "lint", "result": "skipped" },
+    { "name": "types", "result": "skipped" },
+    { "name": "deps", "result": "skipped" }
+  ],
+  "verdict": "warn",
+  "blockers": [],
+  "warnings": [
+    {
+      "file": "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/listener/FinancialEventListener.java",
+      "line": 150,
+      "issue": "Penalty income double-counted: handlePenaltyApplied credits Penalty Income at application, and handleLoanRepayment credits Penalty Income again at payment. One should use a Penalty Receivable intermediary.",
+      "severity": "medium"
+    },
+    {
+      "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchServiceImpl.java",
+      "line": 154,
+      "issue": "executeProcessing() is ~175 lines with mixed concerns (interest accrual, penalty application, defaulting, closing). Should be decomposed.",
+      "severity": "medium"
+    },
+    {
+      "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchServiceImpl.java",
+      "line": 375,
+      "issue": "processLoan() duplicates penalty logic from executeProcessing(). Risk of divergence if penalty rules change.",
+      "severity": "medium"
+    },
+    {
+      "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanPenaltyServiceImpl.java",
+      "line": 140,
+      "issue": "Log message reports unpaidPenalties.size() (total unpaid) rather than actual count paid.",
+      "severity": "low"
+    }
+  ]
+}

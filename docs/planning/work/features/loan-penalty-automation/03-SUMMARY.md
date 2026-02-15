@@ -34,7 +34,7 @@
 - Used `lenient()` stubs for `loanPenaltyService.payPenalties()` in `@BeforeEach` to avoid Mockito strict-stubs errors for tests that throw before reaching penalty code.
 
 ## Commit
-`pending` - feat(loan-penalty): repayment allocation with Interest -> Penalties -> Principal
+`676f3bf` - feat(loan-penalty): repayment allocation with Interest -> Penalties -> Principal
 
 ---
 *Implemented: 2026-02-15*
