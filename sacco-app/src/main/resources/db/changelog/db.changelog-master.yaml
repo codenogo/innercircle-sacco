@@ -57,6 +57,8 @@ databaseChangeLog:
       file: db/changelog/ledger/004-seed-interest-receivable.yaml
   - include:
       file: db/changelog/ledger/005-seed-bad-debt-expense.yaml
+  - include:
+      file: db/changelog/ledger/006-add-account-member-fields.yaml
 
   # Loan module
   - include:
