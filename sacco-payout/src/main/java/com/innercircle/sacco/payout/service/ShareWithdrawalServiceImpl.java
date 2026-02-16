@@ -47,6 +47,7 @@ public class ShareWithdrawalServiceImpl implements ShareWithdrawalService {
                 savedWithdrawal.getMemberId(),
                 savedWithdrawal.getAmount(),
                 withdrawalType.name(),
+                UUID.randomUUID(),
                 actor
         ));
 
@@ -91,6 +92,7 @@ public class ShareWithdrawalServiceImpl implements ShareWithdrawalService {
                 savedWithdrawal.getMemberId(),
                 savedWithdrawal.getAmount(),
                 newShareBalance,
+                UUID.randomUUID(),
                 actor
         ));
 

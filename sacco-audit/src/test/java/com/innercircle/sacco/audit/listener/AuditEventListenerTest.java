@@ -400,6 +400,11 @@ class AuditEventListenerTest {
             public String getActor() {
                 return actor;
             }
+
+            @Override
+            public UUID getCorrelationId() {
+                return UUID.randomUUID();
+            }
         };
     }
 
@@ -436,6 +441,11 @@ class AuditEventListenerTest {
         @Override
         public String getActor() {
             return actorValue;
+        }
+
+        @Override
+        public UUID getCorrelationId() {
+            return UUID.randomUUID();
         }
     }
 }

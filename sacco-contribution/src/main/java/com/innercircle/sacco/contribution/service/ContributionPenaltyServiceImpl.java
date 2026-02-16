@@ -37,6 +37,7 @@ public class ContributionPenaltyServiceImpl implements ContributionPenaltyServic
                 savedPenalty.getMemberId(),
                 savedPenalty.getAmount(),
                 "CONTRIBUTION_PENALTY",
+                UUID.randomUUID(),
                 actor
         ));
 
@@ -63,6 +64,7 @@ public class ContributionPenaltyServiceImpl implements ContributionPenaltyServic
                 waivedPenalty.getMemberId(),
                 waivedPenalty.getAmount(),
                 "Manual waiver",
+                UUID.randomUUID(),
                 actor
         ));
 

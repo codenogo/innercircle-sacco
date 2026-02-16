@@ -87,7 +87,7 @@ class FinancialEventListenerTest {
             UUID memberId = UUID.randomUUID();
             BigDecimal amount = new BigDecimal("5000.00");
             ContributionReceivedEvent event = new ContributionReceivedEvent(
-                    contributionId, memberId, amount, "REF-001", "admin"
+                    contributionId, memberId, amount, "REF-001", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("1001", cashAccount);
@@ -122,7 +122,7 @@ class FinancialEventListenerTest {
         void shouldPostJournalEntryAfterCreation() {
             UUID contributionId = UUID.randomUUID();
             ContributionReceivedEvent event = new ContributionReceivedEvent(
-                    contributionId, UUID.randomUUID(), new BigDecimal("1000.00"), "REF-002", "admin"
+                    contributionId, UUID.randomUUID(), new BigDecimal("1000.00"), "REF-002", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("1001", cashAccount);
@@ -141,7 +141,7 @@ class FinancialEventListenerTest {
         @DisplayName("should include reference number in journal line descriptions")
         void shouldIncludeReferenceInDescriptions() {
             ContributionReceivedEvent event = new ContributionReceivedEvent(
-                    UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("2000.00"), "REF-003", "admin"
+                    UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("2000.00"), "REF-003", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("1001", cashAccount);
@@ -165,7 +165,7 @@ class FinancialEventListenerTest {
         void shouldCreateBalancedEntry() {
             BigDecimal amount = new BigDecimal("7500.00");
             ContributionReceivedEvent event = new ContributionReceivedEvent(
-                    UUID.randomUUID(), UUID.randomUUID(), amount, "REF-004", "admin"
+                    UUID.randomUUID(), UUID.randomUUID(), amount, "REF-004", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("1001", cashAccount);
@@ -200,7 +200,7 @@ class FinancialEventListenerTest {
             BigDecimal principalAmount = new BigDecimal("50000.00");
             BigDecimal interestAmount = new BigDecimal("5000.00");
             LoanDisbursedEvent event = new LoanDisbursedEvent(
-                    loanId, memberId, principalAmount, interestAmount, "admin"
+                    loanId, memberId, principalAmount, interestAmount, UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("1002", loanReceivableAccount);
@@ -235,7 +235,7 @@ class FinancialEventListenerTest {
         void shouldCreateBalancedLoanDisbursementEntry() {
             BigDecimal principalAmount = new BigDecimal("100000.00");
             LoanDisbursedEvent event = new LoanDisbursedEvent(
-                    UUID.randomUUID(), UUID.randomUUID(), principalAmount, new BigDecimal("10000.00"), "admin"
+                    UUID.randomUUID(), UUID.randomUUID(), principalAmount, new BigDecimal("10000.00"), UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("1002", loanReceivableAccount);
@@ -261,7 +261,7 @@ class FinancialEventListenerTest {
         @DisplayName("should post loan disbursement entry after creation")
         void shouldPostLoanDisbursementEntry() {
             LoanDisbursedEvent event = new LoanDisbursedEvent(
-                    UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("25000.00"), new BigDecimal("2500.00"), "admin"
+                    UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("25000.00"), new BigDecimal("2500.00"), UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("1002", loanReceivableAccount);
@@ -292,7 +292,7 @@ class FinancialEventListenerTest {
             BigDecimal interestPortion = new BigDecimal("300.00");
 
             LoanRepaymentEvent event = new LoanRepaymentEvent(
-                    loanId, memberId, repaymentId, totalAmount, principalPortion, interestPortion, BigDecimal.ZERO, "admin"
+                    loanId, memberId, repaymentId, totalAmount, principalPortion, interestPortion, BigDecimal.ZERO, UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("1001", cashAccount);
@@ -338,7 +338,7 @@ class FinancialEventListenerTest {
 
             LoanRepaymentEvent event = new LoanRepaymentEvent(
                     UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                    totalAmount, principalPortion, interestPortion, BigDecimal.ZERO, "admin"
+                    totalAmount, principalPortion, interestPortion, BigDecimal.ZERO, UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("1001", cashAccount);
@@ -370,7 +370,7 @@ class FinancialEventListenerTest {
 
             LoanRepaymentEvent event = new LoanRepaymentEvent(
                     UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                    totalAmount, principalPortion, interestPortion, BigDecimal.ZERO, "admin"
+                    totalAmount, principalPortion, interestPortion, BigDecimal.ZERO, UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("1001", cashAccount);
@@ -398,7 +398,7 @@ class FinancialEventListenerTest {
 
             LoanRepaymentEvent event = new LoanRepaymentEvent(
                     UUID.randomUUID(), UUID.randomUUID(), repaymentId,
-                    totalAmount, principalPortion, interestPortion, penaltyPortion, "admin"
+                    totalAmount, principalPortion, interestPortion, penaltyPortion, UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("1001", cashAccount);
@@ -437,7 +437,7 @@ class FinancialEventListenerTest {
         void shouldPostRepaymentEntry() {
             LoanRepaymentEvent event = new LoanRepaymentEvent(
                     UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                    new BigDecimal("1000.00"), new BigDecimal("800.00"), new BigDecimal("200.00"), BigDecimal.ZERO, "admin"
+                    new BigDecimal("1000.00"), new BigDecimal("800.00"), new BigDecimal("200.00"), BigDecimal.ZERO, UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("1001", cashAccount);
@@ -465,7 +465,7 @@ class FinancialEventListenerTest {
             UUID memberId = UUID.randomUUID();
             BigDecimal amount = new BigDecimal("10000.00");
             PayoutProcessedEvent event = new PayoutProcessedEvent(
-                    payoutId, memberId, amount, "MERRY_GO_ROUND", "admin"
+                    payoutId, memberId, amount, "MERRY_GO_ROUND", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("2001", memberSharesAccount);
@@ -500,7 +500,7 @@ class FinancialEventListenerTest {
         void shouldCreateBalancedPayoutEntry() {
             BigDecimal amount = new BigDecimal("15000.00");
             PayoutProcessedEvent event = new PayoutProcessedEvent(
-                    UUID.randomUUID(), UUID.randomUUID(), amount, "AD_HOC", "admin"
+                    UUID.randomUUID(), UUID.randomUUID(), amount, "AD_HOC", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("2001", memberSharesAccount);
@@ -527,7 +527,7 @@ class FinancialEventListenerTest {
         void shouldIncludePayoutTypeInDescriptions() {
             UUID payoutId = UUID.randomUUID();
             PayoutProcessedEvent event = new PayoutProcessedEvent(
-                    payoutId, UUID.randomUUID(), new BigDecimal("3000.00"), "DIVIDEND", "admin"
+                    payoutId, UUID.randomUUID(), new BigDecimal("3000.00"), "DIVIDEND", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("2001", memberSharesAccount);
@@ -550,7 +550,7 @@ class FinancialEventListenerTest {
         @DisplayName("should post payout entry after creation")
         void shouldPostPayoutEntry() {
             PayoutProcessedEvent event = new PayoutProcessedEvent(
-                    UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("5000.00"), "MERRY_GO_ROUND", "admin"
+                    UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("5000.00"), "MERRY_GO_ROUND", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("2001", memberSharesAccount);
@@ -577,7 +577,7 @@ class FinancialEventListenerTest {
             UUID memberId = UUID.randomUUID();
             BigDecimal amount = new BigDecimal("500.00");
             PenaltyAppliedEvent event = new PenaltyAppliedEvent(
-                    penaltyId, memberId, amount, "LATE_PAYMENT", "admin"
+                    penaltyId, memberId, amount, "LATE_PAYMENT", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("2002", memberAccountAccount);
@@ -612,7 +612,7 @@ class FinancialEventListenerTest {
         void shouldCreateBalancedPenaltyEntry() {
             BigDecimal amount = new BigDecimal("750.00");
             PenaltyAppliedEvent event = new PenaltyAppliedEvent(
-                    UUID.randomUUID(), UUID.randomUUID(), amount, "LATE_CONTRIBUTION", "admin"
+                    UUID.randomUUID(), UUID.randomUUID(), amount, "LATE_CONTRIBUTION", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("2002", memberAccountAccount);
@@ -639,7 +639,7 @@ class FinancialEventListenerTest {
         void shouldIncludePenaltyTypeInDescriptions() {
             UUID penaltyId = UUID.randomUUID();
             PenaltyAppliedEvent event = new PenaltyAppliedEvent(
-                    penaltyId, UUID.randomUUID(), new BigDecimal("200.00"), "MISSED_MEETING", "admin"
+                    penaltyId, UUID.randomUUID(), new BigDecimal("200.00"), "MISSED_MEETING", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("2002", memberAccountAccount);
@@ -662,7 +662,7 @@ class FinancialEventListenerTest {
         @DisplayName("should post penalty entry after creation")
         void shouldPostPenaltyEntry() {
             PenaltyAppliedEvent event = new PenaltyAppliedEvent(
-                    UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("300.00"), "LATE_PAYMENT", "admin"
+                    UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("300.00"), "LATE_PAYMENT", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("2002", memberAccountAccount);
@@ -688,7 +688,7 @@ class FinancialEventListenerTest {
             when(accountRepository.findByAccountCode("1001")).thenReturn(Optional.empty());
 
             ContributionReceivedEvent event = new ContributionReceivedEvent(
-                    UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("1000.00"), "REF-001", "admin"
+                    UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("1000.00"), "REF-001", UUID.randomUUID(), "admin"
             );
 
             assertThrows(ResourceNotFoundException.class,
@@ -702,7 +702,7 @@ class FinancialEventListenerTest {
             when(accountRepository.findByAccountCode("2001")).thenReturn(Optional.empty());
 
             ContributionReceivedEvent event = new ContributionReceivedEvent(
-                    UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("1000.00"), "REF-001", "admin"
+                    UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("1000.00"), "REF-001", UUID.randomUUID(), "admin"
             );
 
             assertThrows(ResourceNotFoundException.class,
@@ -725,7 +725,7 @@ class FinancialEventListenerTest {
 
             LoanReversalEvent event = new LoanReversalEvent(
                     reversalId, "REPAYMENT", UUID.randomUUID(), loanId, UUID.randomUUID(),
-                    amount, principalPortion, interestPortion, BigDecimal.ZERO, "Duplicate payment", "admin"
+                    amount, principalPortion, interestPortion, BigDecimal.ZERO, "Duplicate payment", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("1002", loanReceivableAccount);
@@ -770,7 +770,7 @@ class FinancialEventListenerTest {
 
             LoanReversalEvent event = new LoanReversalEvent(
                     UUID.randomUUID(), "REPAYMENT", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                    amount, principalPortion, BigDecimal.ZERO, BigDecimal.ZERO, "error", "admin"
+                    amount, principalPortion, BigDecimal.ZERO, BigDecimal.ZERO, "error", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("1002", loanReceivableAccount);
@@ -796,7 +796,7 @@ class FinancialEventListenerTest {
 
             LoanReversalEvent event = new LoanReversalEvent(
                     UUID.randomUUID(), "REPAYMENT", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                    amount, principalPortion, interestPortion, penaltyPortion, "error", "admin"
+                    amount, principalPortion, interestPortion, penaltyPortion, "error", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("1002", loanReceivableAccount);
@@ -828,7 +828,7 @@ class FinancialEventListenerTest {
 
             LoanReversalEvent event = new LoanReversalEvent(
                     UUID.randomUUID(), "REPAYMENT", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                    amount, principalPortion, interestPortion, BigDecimal.ZERO, "error", "admin"
+                    amount, principalPortion, interestPortion, BigDecimal.ZERO, "error", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("1002", loanReceivableAccount);
@@ -857,7 +857,7 @@ class FinancialEventListenerTest {
             LoanReversalEvent event = new LoanReversalEvent(
                     UUID.randomUUID(), "REPAYMENT", UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
                     new BigDecimal("1000.00"), new BigDecimal("1000.00"), BigDecimal.ZERO, BigDecimal.ZERO,
-                    "error", "admin"
+                    "error", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("1002", loanReceivableAccount);
@@ -884,7 +884,7 @@ class FinancialEventListenerTest {
             UUID memberId = UUID.randomUUID();
             BigDecimal amount = new BigDecimal("5000.00");
             ContributionReversedEvent event = new ContributionReversedEvent(
-                    contributionId, memberId, amount, "REF-001", "admin"
+                    contributionId, memberId, amount, "REF-001", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("2001", memberSharesAccount);
@@ -919,7 +919,7 @@ class FinancialEventListenerTest {
         void shouldCreateBalancedContributionReversalEntry() {
             BigDecimal amount = new BigDecimal("7500.00");
             ContributionReversedEvent event = new ContributionReversedEvent(
-                    UUID.randomUUID(), UUID.randomUUID(), amount, "REF-002", "admin"
+                    UUID.randomUUID(), UUID.randomUUID(), amount, "REF-002", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("2001", memberSharesAccount);
@@ -946,7 +946,7 @@ class FinancialEventListenerTest {
         void shouldIncludeReferenceInDescriptions() {
             UUID contributionId = UUID.randomUUID();
             ContributionReversedEvent event = new ContributionReversedEvent(
-                    contributionId, UUID.randomUUID(), new BigDecimal("3000.00"), "REF-003", "admin"
+                    contributionId, UUID.randomUUID(), new BigDecimal("3000.00"), "REF-003", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("2001", memberSharesAccount);
@@ -969,7 +969,7 @@ class FinancialEventListenerTest {
         @DisplayName("should post contribution reversal entry after creation")
         void shouldPostContributionReversalEntry() {
             ContributionReversedEvent event = new ContributionReversedEvent(
-                    UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("2000.00"), "REF-004", "admin"
+                    UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("2000.00"), "REF-004", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("2001", memberSharesAccount);
@@ -996,7 +996,7 @@ class FinancialEventListenerTest {
             UUID memberId = UUID.randomUUID();
             BigDecimal amount = new BigDecimal("500.00");
             PenaltyWaivedEvent event = new PenaltyWaivedEvent(
-                    penaltyId, memberId, amount, "Goodwill gesture", "admin"
+                    penaltyId, memberId, amount, "Goodwill gesture", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("5003", badDebtExpenseAccount);
@@ -1031,7 +1031,7 @@ class FinancialEventListenerTest {
         void shouldCreateBalancedPenaltyWaiverEntry() {
             BigDecimal amount = new BigDecimal("750.00");
             PenaltyWaivedEvent event = new PenaltyWaivedEvent(
-                    UUID.randomUUID(), UUID.randomUUID(), amount, "Error correction", "admin"
+                    UUID.randomUUID(), UUID.randomUUID(), amount, "Error correction", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("5003", badDebtExpenseAccount);
@@ -1058,7 +1058,7 @@ class FinancialEventListenerTest {
         void shouldIncludeReasonInDescriptions() {
             UUID penaltyId = UUID.randomUUID();
             PenaltyWaivedEvent event = new PenaltyWaivedEvent(
-                    penaltyId, UUID.randomUUID(), new BigDecimal("300.00"), "First offence", "admin"
+                    penaltyId, UUID.randomUUID(), new BigDecimal("300.00"), "First offence", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("5003", badDebtExpenseAccount);
@@ -1081,7 +1081,7 @@ class FinancialEventListenerTest {
         @DisplayName("should post penalty waiver entry after creation")
         void shouldPostPenaltyWaiverEntry() {
             PenaltyWaivedEvent event = new PenaltyWaivedEvent(
-                    UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("400.00"), "waiver", "admin"
+                    UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("400.00"), "waiver", UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("5003", badDebtExpenseAccount);
@@ -1107,7 +1107,7 @@ class FinancialEventListenerTest {
             UUID loanId = UUID.randomUUID();
             BigDecimal totalInterest = new BigDecimal("10000.00");
             BenefitsDistributedEvent event = new BenefitsDistributedEvent(
-                    loanId, totalInterest, 5, "admin"
+                    loanId, totalInterest, 5, UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("4001", interestIncomeAccount);
@@ -1142,7 +1142,7 @@ class FinancialEventListenerTest {
         void shouldCreateBalancedBenefitsDistributionEntry() {
             BigDecimal totalInterest = new BigDecimal("15000.00");
             BenefitsDistributedEvent event = new BenefitsDistributedEvent(
-                    UUID.randomUUID(), totalInterest, 3, "admin"
+                    UUID.randomUUID(), totalInterest, 3, UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("4001", interestIncomeAccount);
@@ -1169,7 +1169,7 @@ class FinancialEventListenerTest {
         void shouldIncludeBeneficiaryCountInDescription() {
             UUID loanId = UUID.randomUUID();
             BenefitsDistributedEvent event = new BenefitsDistributedEvent(
-                    loanId, new BigDecimal("8000.00"), 10, "admin"
+                    loanId, new BigDecimal("8000.00"), 10, UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("4001", interestIncomeAccount);
@@ -1194,7 +1194,7 @@ class FinancialEventListenerTest {
         @DisplayName("should post benefits distribution entry after creation")
         void shouldPostBenefitsDistributionEntry() {
             BenefitsDistributedEvent event = new BenefitsDistributedEvent(
-                    UUID.randomUUID(), new BigDecimal("5000.00"), 2, "admin"
+                    UUID.randomUUID(), new BigDecimal("5000.00"), 2, UUID.randomUUID(), "admin"
             );
 
             setupAccountLookup("4001", interestIncomeAccount);

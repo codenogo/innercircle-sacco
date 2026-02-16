@@ -114,6 +114,7 @@ public class LoanReversalServiceImpl implements LoanReversalService {
                 repayment.getInterestPortion(),
                 repayment.getPenaltyPortion(),
                 reason,
+                UUID.randomUUID(),
                 actor
         ));
 

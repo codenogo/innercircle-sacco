@@ -95,6 +95,7 @@ public class LoanServiceImpl implements LoanService {
                 savedLoan.getId(),
                 savedLoan.getMemberId(),
                 "APPLIED",
+                UUID.randomUUID(),
                 memberId.toString()
         ));
 
@@ -120,6 +121,7 @@ public class LoanServiceImpl implements LoanService {
                 approved.getId(),
                 approved.getMemberId(),
                 "APPROVED",
+                UUID.randomUUID(),
                 approvedBy.toString()
         ));
 
@@ -145,6 +147,7 @@ public class LoanServiceImpl implements LoanService {
                 rejected.getId(),
                 rejected.getMemberId(),
                 "REJECTED",
+                UUID.randomUUID(),
                 rejectedBy.toString()
         ));
 
@@ -199,6 +202,7 @@ public class LoanServiceImpl implements LoanService {
                 loan.getMemberId(),
                 loan.getPrincipalAmount(),
                 totalInterest,
+                UUID.randomUUID(),
                 actor
         ));
 
@@ -322,6 +326,7 @@ public class LoanServiceImpl implements LoanService {
                 totalPrincipalPaid,
                 totalInterestPaid,
                 totalPenaltyPaid,
+                UUID.randomUUID(),
                 actor
         ));
 
@@ -345,6 +350,7 @@ public class LoanServiceImpl implements LoanService {
                 closed.getId(),
                 previousStatus,
                 "CLOSED",
+                UUID.randomUUID(),
                 "system"
         ));
 

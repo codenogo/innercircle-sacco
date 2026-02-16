@@ -38,6 +38,7 @@ public class BankWithdrawalServiceImpl implements BankWithdrawalService {
                 savedWithdrawal.getMemberId(),
                 savedWithdrawal.getAmount(),
                 savedWithdrawal.getBankName(),
+                UUID.randomUUID(),
                 actor
         ));
 
@@ -64,6 +65,7 @@ public class BankWithdrawalServiceImpl implements BankWithdrawalService {
                 savedWithdrawal.getId(),
                 savedWithdrawal.getMemberId(),
                 referenceNumber,
+                UUID.randomUUID(),
                 actor
         ));
 

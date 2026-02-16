@@ -10,6 +10,7 @@ public record CashDisbursementRecordedEvent(
         UUID memberId,
         BigDecimal amount,
         String receiptNumber,
+        UUID correlationId,
         String actor
 ) implements AuditableEvent {
 
@@ -21,5 +22,10 @@ public record CashDisbursementRecordedEvent(
     @Override
     public String getActor() {
         return actor;
+    }
+
+    @Override
+    public UUID getCorrelationId() {
+        return correlationId;
     }
 }

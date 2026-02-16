@@ -45,6 +45,7 @@ public class CashDisbursementServiceImpl implements CashDisbursementService {
                 savedDisbursement.getMemberId(),
                 savedDisbursement.getAmount(),
                 receiptNumber,
+                UUID.randomUUID(),
                 actor
         ));
 

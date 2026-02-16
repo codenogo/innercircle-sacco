@@ -106,6 +106,7 @@ public class LoanBenefitServiceImpl implements LoanBenefitService {
                 loanId,
                 interestAmount,
                 savedBenefits.size(),
+                UUID.randomUUID(),
                 actor
         ));
 

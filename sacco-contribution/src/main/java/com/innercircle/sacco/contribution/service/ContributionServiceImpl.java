@@ -72,6 +72,7 @@ public class ContributionServiceImpl implements ContributionService {
                 saved.getMemberId(),
                 saved.getAmount(),
                 saved.getReferenceNumber(),
+                UUID.randomUUID(),
                 "system"
         ));
 
@@ -112,6 +113,7 @@ public class ContributionServiceImpl implements ContributionService {
                     c.getMemberId(),
                     c.getAmount(),
                     c.getReferenceNumber(),
+                    UUID.randomUUID(),
                     "system"
             ));
         }
@@ -139,6 +141,7 @@ public class ContributionServiceImpl implements ContributionService {
                 confirmed.getMemberId(),
                 confirmed.getAmount(),
                 confirmed.getReferenceNumber(),
+                UUID.randomUUID(),
                 actor
         ));
 
@@ -162,6 +165,7 @@ public class ContributionServiceImpl implements ContributionService {
                 reversed.getMemberId(),
                 reversed.getAmount(),
                 reversed.getReferenceNumber(),
+                UUID.randomUUID(),
                 actor
         ));
 

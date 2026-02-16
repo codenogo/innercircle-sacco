@@ -14,6 +14,7 @@ public record LoanReversalEvent(
         BigDecimal interestPortion,
         BigDecimal penaltyPortion,
         String reason,
+        UUID correlationId,
         String actor
 ) implements AuditableEvent {
 
@@ -25,5 +26,10 @@ public record LoanReversalEvent(
     @Override
     public String getActor() {
         return actor;
+    }
+
+    @Override
+    public UUID getCorrelationId() {
+        return correlationId;
     }
 }
