@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "feature": "member-account-setup",
+  "planNumber": "02",
+  "goal": "Create AccountSetupService, wire MemberCreatedEvent publishing, and add event listeners for account creation",
+  "tasks": [
+    {
+      "name": "Create AccountSetupService",
+      "cwd": "sacco-ledger",
+      "files": [
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/service/AccountSetupService.java",
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/service/AccountSetupServiceImpl.java"
+      ],
+      "action": "Create `AccountSetupService` interface and `AccountSetupServiceImpl`. Methods: (1) `createMemberAccounts(UUID memberId, String memberNumber)` — creates two sub-accounts: Member Shares `2001-{memberNumber}` (LIABILITY) and Member Savings `2002-{memberNumber}` (LIABILITY). Skips if accounts already exist (idempotent via `existsByMemberIdAndParentAccountCode`). (2) `ensureLoanSubAccount(UUID memberId)` — looks up existing member accounts by `memberId` to derive the member number suffix from account code, then creates Loan Receivable `1002-{memberNumber}` (ASSET) if it doesn't exist. Use `AccountRepository` for persistence. Set `parentAccountCode` and `memberId` on created accounts. Use constructor injection.",
+      "verify": ["mvn -pl sacco-ledger compile -q"]
+    },
+    {
+      "name": "Publish MemberCreatedEvent from MemberServiceImpl",
+      "cwd": "sacco-member",
+      "files": [
+        "sacco-member/src/main/java/com/innercircle/sacco/member/service/MemberServiceImpl.java"
+      ],
+      "action": "Replace the TODO comment at lines 41-42 in `MemberServiceImpl.create()` with actual event publishing: `eventPublisher.publishEvent(new MemberCreatedEvent(savedMember.getId(), savedMember.getMemberNumber(), savedMember.getFirstName(), savedMember.getLastName(), \"system\"))`. Add the import for MemberCreatedEvent.",
+      "verify": ["mvn -pl sacco-member compile -q"]
+    },
+    {
+      "name": "Add MemberAccountListener for event handling",
+      "cwd": "sacco-ledger",
+      "files": [
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/listener/MemberAccountListener.java"
+      ],
+      "action": "Create `MemberAccountListener` in sacco-ledger listener package. (1) `@TransactionalEventListener(phase = BEFORE_COMMIT) handleMemberCreated(MemberCreatedEvent)` — calls `accountSetupService.createMemberAccounts(event.memberId(), event.memberNumber())`. (2) `@TransactionalEventListener(phase = BEFORE_COMMIT) handleLoanApplication(LoanApplicationEvent)` — calls `accountSetupService.ensureLoanSubAccount(event.memberId())`. Use `@Component`, `@RequiredArgsConstructor`, `@Slf4j`. Inject `AccountSetupService`. Follow the same pattern as `FinancialEventListener`.",
+      "verify": ["mvn -pl sacco-ledger compile -q"],
+      "blockedBy": [0]
+    }
+  ],
+  "planVerify": ["mvn -pl sacco-common,sacco-member,sacco-ledger compile -q"],
+  "commitMessage": "feat(member-account-setup): wire AccountSetupService, MemberCreatedEvent, and listeners",
+  "timestamp": "2026-02-16T03:30:00Z"
+}

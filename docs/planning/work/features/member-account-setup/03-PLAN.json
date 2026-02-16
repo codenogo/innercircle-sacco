@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "feature": "member-account-setup",
+  "planNumber": "03",
+  "goal": "Add unit tests for AccountSetupService, MemberCreatedEvent publishing, and MemberAccountListener",
+  "tasks": [
+    {
+      "name": "Unit tests for AccountSetupServiceImpl",
+      "cwd": "sacco-ledger",
+      "files": [
+        "sacco-ledger/src/test/java/com/innercircle/sacco/ledger/service/AccountSetupServiceImplTest.java"
+      ],
+      "action": "Create unit tests using `@ExtendWith(MockitoExtension.class)`. Mock `AccountRepository`. Test cases: (1) `createMemberAccounts` creates two accounts with correct codes (`2001-M001`, `2002-M001`), types (LIABILITY), parentAccountCode, and memberId. (2) `createMemberAccounts` is idempotent — skips creation when accounts already exist. (3) `ensureLoanSubAccount` creates `1002-M001` account (ASSET) when member has existing accounts but no loan account. (4) `ensureLoanSubAccount` skips when loan account already exists. (5) `ensureLoanSubAccount` throws when no existing member accounts found (can't derive member number).",
+      "verify": ["mvn -pl sacco-ledger test -q"]
+    },
+    {
+      "name": "Unit test for MemberCreatedEvent publishing",
+      "cwd": "sacco-member",
+      "files": [
+        "sacco-member/src/test/java/com/innercircle/sacco/member/service/MemberServiceImplTest.java"
+      ],
+      "action": "Add a test method in the existing `MemberServiceImplTest` nested `Create` class to verify that `MemberCreatedEvent` is published after member creation. Use `ArgumentCaptor<MemberCreatedEvent>` to capture the event passed to `eventPublisher.publishEvent()`. Assert the event contains correct `memberId`, `memberNumber`, `firstName`, `lastName`.",
+      "verify": ["mvn -pl sacco-member test -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Unit tests for MemberAccountListener",
+      "cwd": "sacco-ledger",
+      "files": [
+        "sacco-ledger/src/test/java/com/innercircle/sacco/ledger/listener/MemberAccountListenerTest.java"
+      ],
+      "action": "Create unit tests using `@ExtendWith(MockitoExtension.class)`. Mock `AccountSetupService`. Test cases: (1) `handleMemberCreated` calls `createMemberAccounts` with correct memberId and memberNumber. (2) `handleLoanApplication` calls `ensureLoanSubAccount` with correct memberId. Follow the existing test style of `FinancialEventListenerTest`.",
+      "verify": ["mvn -pl sacco-ledger test -q"],
+      "blockedBy": [0]
+    }
+  ],
+  "planVerify": ["mvn -pl sacco-member,sacco-ledger test -q"],
+  "commitMessage": "test(member-account-setup): add unit tests for account setup service, event, and listener",
+  "timestamp": "2026-02-16T03:30:00Z"
+}

@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "feature": "member-account-setup",
+  "displayName": "Member Account Setup on Registration",
+  "decisions": [
+    {
+      "area": "architecture",
+      "decision": "Per-member sub-accounts in the ledger",
+      "rationale": "Create individual ledger accounts per member instead of relying solely on consolidated accounts. Enables per-member trial balance from the ledger alone and provides a proper audit trail at the account level."
+    },
+    {
+      "area": "account-model",
+      "decision": "Shares + Savings on registration; Loan Receivable on demand",
+      "rationale": "When a member is created, auto-create two sub-accounts: Member Shares (under parent 2001) and Member Savings (under parent 2002). Loan Receivable sub-account (under 1002) is created only when the member takes their first loan, avoiding unused accounts."
+    },
+    {
+      "area": "account-codes",
+      "decision": "Parent-MemberNumber format (e.g., 2001-M001)",
+      "rationale": "Sub-account codes use the parent account code as prefix and the member number as suffix. Human-readable, easy to trace, and leverages the existing unique member number."
+    },
+    {
+      "area": "events",
+      "decision": "Publish MemberCreatedEvent from MemberServiceImpl",
+      "rationale": "Follows the existing event-driven pattern (16 events already in sacco-common). FinancialEventListener in sacco-ledger will handle MemberCreatedEvent to create the per-member sub-accounts. Decouples member module from ledger module."
+    },
+    {
+      "area": "system-accounts",
+      "decision": "Keep Liquibase-only seeding for system accounts",
+      "rationale": "Current 13 system accounts seeded via Liquibase migrations (002, 004, 005) are sufficient. No additional system accounts needed. New system accounts added as new changesets."
+    }
+  ],
+  "constraints": [
+    "Account entity needs a parentAccountCode or parentId field to link sub-accounts to their parent",
+    "Account entity needs a memberId field (nullable) to associate per-member accounts",
+    "accountCode column length is 20 chars — format '2001-M001' fits within this",
+    "MemberCreatedEvent must carry memberId and memberNumber (needed for account code generation)",
+    "Events are Java records in sacco-common/src/main/java/com/innercircle/sacco/common/event/",
+    "Existing FinancialEventListener handles 11 event types — MemberCreatedEvent listener follows same pattern",
+    "Loan sub-account creation must be triggered from LoanService when first loan is applied",
+    "members.shareBalance field must remain in sync with the per-member shares sub-account balance"
+  ],
+  "openQuestions": [
+    "Should existing members get retroactive sub-accounts via a one-time migration, or only new members going forward?",
+    "Should the per-member account balance be the source of truth, replacing members.shareBalance over time?",
+    "Should journal entries reference the per-member sub-account or continue using the consolidated parent account?"
+  ],
+  "relatedCode": [
+    "sacco-member/src/main/java/com/innercircle/sacco/member/service/MemberServiceImpl.java",
+    "sacco-member/src/main/java/com/innercircle/sacco/member/entity/Member.java",
+    "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/entity/Account.java",
+    "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/entity/AccountType.java",
+    "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/service/FinancialEventListener.java",
+    "sacco-common/src/main/java/com/innercircle/sacco/common/event/",
+    "sacco-ledger/src/main/resources/db/changelog/ledger/002-seed-chart-of-accounts.yaml",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java"
+  ],
+  "timestamp": "2026-02-16T03:00:00Z"
+}

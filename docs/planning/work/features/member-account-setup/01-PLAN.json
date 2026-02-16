@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "feature": "member-account-setup",
+  "planNumber": "01",
+  "goal": "Add schema migration, Account entity fields, and MemberCreatedEvent record to support per-member sub-accounts",
+  "tasks": [
+    {
+      "name": "Liquibase migration for account parent/member fields",
+      "cwd": "sacco-ledger",
+      "files": [
+        "sacco-ledger/src/main/resources/db/changelog/ledger/006-add-account-member-fields.yaml",
+        "sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml"
+      ],
+      "action": "Create Liquibase migration `006-add-account-member-fields.yaml` that adds two nullable columns to the `accounts` table: `parent_account_code VARCHAR(20)` and `member_id UUID`. Add indexes: `idx_account_member_id` on `member_id`, `idx_account_parent_code` on `parent_account_code`. Register the migration in `db.changelog-master.yaml` under the Ledger module section.",
+      "verify": ["mvn -pl sacco-ledger compile -q"]
+    },
+    {
+      "name": "Update Account entity and AccountRepository",
+      "cwd": "sacco-ledger",
+      "files": [
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/entity/Account.java",
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/repository/AccountRepository.java"
+      ],
+      "action": "Add `parentAccountCode` (String, nullable, length 20) and `memberId` (UUID, nullable) fields to Account entity. Add AccountRepository methods: `List<Account> findByMemberId(UUID memberId)`, `Optional<Account> findByMemberIdAndParentAccountCode(UUID memberId, String parentAccountCode)`, `boolean existsByMemberIdAndParentAccountCode(UUID memberId, String parentAccountCode)`.",
+      "verify": ["mvn -pl sacco-ledger compile -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Create MemberCreatedEvent record",
+      "cwd": "sacco-common",
+      "files": [
+        "sacco-common/src/main/java/com/innercircle/sacco/common/event/MemberCreatedEvent.java"
+      ],
+      "action": "Create `MemberCreatedEvent` as a Java record in sacco-common event package. Fields: `UUID memberId`, `String memberNumber`, `String firstName`, `String lastName`, `String actor`. Implement `AuditableEvent` with `getEventType()` returning `MEMBER_CREATED`. Follow the exact pattern of `ContributionReceivedEvent`.",
+      "verify": ["mvn -pl sacco-common compile -q"]
+    }
+  ],
+  "planVerify": ["mvn -pl sacco-common,sacco-ledger compile -q"],
+  "commitMessage": "feat(member-account-setup): add schema migration, Account entity fields, and MemberCreatedEvent",
+  "timestamp": "2026-02-16T03:30:00Z"
+}

@@ -501,7 +501,7 @@ class FinancialStatementServiceImplTest {
     // --- Helper methods ---
 
     private Account createAccount(String code, String name, AccountType type, BigDecimal balance) {
-        Account account = new Account(code, name, type, balance, name + " description", true);
+        Account account = new Account(code, name, type, balance, name + " description", true, null, null);
         account.setId(UUID.randomUUID());
         return account;
     }

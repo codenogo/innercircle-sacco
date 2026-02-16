@@ -1,11 +1,13 @@
 package com.innercircle.sacco.member.service;
 
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.event.MemberCreatedEvent;
 import com.innercircle.sacco.common.exception.BusinessException;
 import com.innercircle.sacco.common.exception.ResourceNotFoundException;
 import com.innercircle.sacco.member.entity.Member;
 import com.innercircle.sacco.member.entity.MemberStatus;
 import com.innercircle.sacco.member.repository.MemberRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -16,6 +18,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -31,6 +35,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.ArgumentCaptor;
 
 @ExtendWith(MockitoExtension.class)
 class MemberServiceImplTest {
@@ -61,6 +66,11 @@ class MemberServiceImplTest {
                 LocalDate.of(2024, 1, 1)
         );
         sampleMember.setId(memberId);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     // -------------------------------------------------------
@@ -127,6 +137,48 @@ class MemberServiceImplTest {
                     .hasMessageContaining("National ID already exists: ID12345");
 
             verify(memberRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should publish MemberCreatedEvent with authenticated actor")
+        void shouldPublishMemberCreatedEvent() {
+            SecurityContextHolder.getContext().setAuthentication(
+                    new UsernamePasswordAuthenticationToken("admin@sacco.co.ke", null, List.of()));
+
+            when(memberRepository.existsByMemberNumber("MBR-001")).thenReturn(false);
+            when(memberRepository.existsByEmail("john.doe@example.com")).thenReturn(false);
+            when(memberRepository.existsByNationalId("ID12345")).thenReturn(false);
+            when(memberRepository.save(sampleMember)).thenReturn(sampleMember);
+
+            memberService.create(sampleMember);
+
+            ArgumentCaptor<MemberCreatedEvent> eventCaptor = ArgumentCaptor.forClass(MemberCreatedEvent.class);
+            verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+            MemberCreatedEvent event = eventCaptor.getValue();
+            assertThat(event.memberId()).isEqualTo(memberId);
+            assertThat(event.memberNumber()).isEqualTo("MBR-001");
+            assertThat(event.firstName()).isEqualTo("John");
+            assertThat(event.lastName()).isEqualTo("Doe");
+            assertThat(event.actor()).isEqualTo("admin@sacco.co.ke");
+        }
+
+        @Test
+        @DisplayName("should fall back to 'system' actor when no authentication context")
+        void shouldFallBackToSystemWhenNoAuth() {
+            SecurityContextHolder.clearContext();
+
+            when(memberRepository.existsByMemberNumber("MBR-001")).thenReturn(false);
+            when(memberRepository.existsByEmail("john.doe@example.com")).thenReturn(false);
+            when(memberRepository.existsByNationalId("ID12345")).thenReturn(false);
+            when(memberRepository.save(sampleMember)).thenReturn(sampleMember);
+
+            memberService.create(sampleMember);
+
+            ArgumentCaptor<MemberCreatedEvent> eventCaptor = ArgumentCaptor.forClass(MemberCreatedEvent.class);
+            verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+            assertThat(eventCaptor.getValue().actor()).isEqualTo("system");
         }
     }
 

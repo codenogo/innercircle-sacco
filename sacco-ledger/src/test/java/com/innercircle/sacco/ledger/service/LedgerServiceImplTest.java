@@ -65,19 +65,19 @@ class LedgerServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        cashAccount = new Account("1001", "Cash", AccountType.ASSET, BigDecimal.ZERO, "Cash on hand", true);
+        cashAccount = new Account("1001", "Cash", AccountType.ASSET, BigDecimal.ZERO, "Cash on hand", true, null, null);
         cashAccount.setId(UUID.randomUUID());
 
-        memberSharesAccount = new Account("2001", "Member Shares", AccountType.LIABILITY, BigDecimal.ZERO, "Member shares", true);
+        memberSharesAccount = new Account("2001", "Member Shares", AccountType.LIABILITY, BigDecimal.ZERO, "Member shares", true, null, null);
         memberSharesAccount.setId(UUID.randomUUID());
 
-        loanReceivableAccount = new Account("1002", "Loan Receivable", AccountType.ASSET, BigDecimal.ZERO, "Loans receivable", true);
+        loanReceivableAccount = new Account("1002", "Loan Receivable", AccountType.ASSET, BigDecimal.ZERO, "Loans receivable", true, null, null);
         loanReceivableAccount.setId(UUID.randomUUID());
 
-        interestIncomeAccount = new Account("4001", "Interest Income", AccountType.REVENUE, BigDecimal.ZERO, "Interest income", true);
+        interestIncomeAccount = new Account("4001", "Interest Income", AccountType.REVENUE, BigDecimal.ZERO, "Interest income", true, null, null);
         interestIncomeAccount.setId(UUID.randomUUID());
 
-        expenseAccount = new Account("5001", "Operating Expenses", AccountType.EXPENSE, BigDecimal.ZERO, "Operating expenses", true);
+        expenseAccount = new Account("5001", "Operating Expenses", AccountType.EXPENSE, BigDecimal.ZERO, "Operating expenses", true, null, null);
         expenseAccount.setId(UUID.randomUUID());
     }
 

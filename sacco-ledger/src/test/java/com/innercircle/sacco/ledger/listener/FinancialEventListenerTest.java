@@ -1213,7 +1213,7 @@ class FinancialEventListenerTest {
     // --- Helper methods ---
 
     private Account createAccount(String code, String name, AccountType type) {
-        Account account = new Account(code, name, type, BigDecimal.ZERO, name + " account", true);
+        Account account = new Account(code, name, type, BigDecimal.ZERO, name + " account", true, null, null);
         account.setId(UUID.randomUUID());
         return account;
     }
