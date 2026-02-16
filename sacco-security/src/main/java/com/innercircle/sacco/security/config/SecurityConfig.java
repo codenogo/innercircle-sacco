@@ -69,18 +69,22 @@ public class SecurityConfig {
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                            response.getWriter().write(String.format(
-                                    "{\"error\":\"Unauthorized\",\"message\":\"%s\",\"status\":401}",
-                                    authException.getMessage()
-                            ));
+                            String escapedMessage = authException.getMessage()
+                                    .replace("\\", "\\\\")
+                                    .replace("\"", "\\\"");
+                            response.getWriter().write(
+                                    "{\"error\":\"Unauthorized\",\"message\":\"" + escapedMessage + "\",\"status\":401}"
+                            );
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
                             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                            response.getWriter().write(String.format(
-                                    "{\"error\":\"Forbidden\",\"message\":\"%s\",\"status\":403}",
-                                    accessDeniedException.getMessage()
-                            ));
+                            String escapedMessage = accessDeniedException.getMessage()
+                                    .replace("\\", "\\\\")
+                                    .replace("\"", "\\\"");
+                            response.getWriter().write(
+                                    "{\"error\":\"Forbidden\",\"message\":\"" + escapedMessage + "\",\"status\":403}"
+                            );
                         })
                 )
                 .sessionManagement(session -> session

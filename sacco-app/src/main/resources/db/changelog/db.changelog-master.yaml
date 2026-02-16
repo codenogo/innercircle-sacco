@@ -13,6 +13,12 @@ databaseChangeLog:
       file: db/changelog/security/003-create-oauth2-tables.yaml
   - include:
       file: db/changelog/security/004-create-password-reset-tokens.yaml
+  - include:
+      file: db/changelog/security/005-seed-admin-user.yaml
+  - include:
+      file: db/changelog/security/006-add-member-id-to-users.yaml
+  - include:
+      file: db/changelog/security/007-create-refresh-tokens.yaml
 
   # Member module
   - include:

@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "feature": "auth-hardening",
+  "displayName": "Auth Hardening: Migrations, RBAC, Code Fixes, Tests",
+  "decisions": [
+    {
+      "area": "migrations",
+      "decision": "Register 005, 006, 007 security migrations in db.changelog-master.yaml",
+      "rationale": "Without these, refresh_tokens table, admin seed user, and member_id FK don't exist in production. Login/refresh will fail."
+    },
+    {
+      "area": "rbac-strategy",
+      "decision": "Add @PreAuthorize annotations per controller class or method",
+      "rationale": "Consistent with existing pattern in LoanBatchController, DashboardController, UserManagementController. Per-controller is more explicit and auditable than centralized URL patterns."
+    },
+    {
+      "area": "rbac-member",
+      "decision": "MemberController: reads=ADMIN,TREASURER,MEMBER; writes/suspend/reactivate=ADMIN",
+      "rationale": "Members should view their own data. Admin manages member lifecycle. Treasurer needs read access for financial operations."
+    },
+    {
+      "area": "rbac-contribution",
+      "decision": "ContributionController: record/bulk=ADMIN,TREASURER; reads=ADMIN,TREASURER,MEMBER. ContributionCategoryController: all=ADMIN",
+      "rationale": "Treasurer records contributions. Members view their own. Category management is admin-only config."
+    },
+    {
+      "area": "rbac-payout",
+      "decision": "PayoutController: create/approve=ADMIN,TREASURER; process=ADMIN,TREASURER; reads=ADMIN,TREASURER,MEMBER. CashDisbursement/BankWithdrawal/ShareWithdrawal: writes=ADMIN,TREASURER; reads=ADMIN,TREASURER,MEMBER",
+      "rationale": "Financial operations need treasurer or admin. Members can view their own payout history."
+    },
+    {
+      "area": "rbac-ledger",
+      "decision": "LedgerController: all=ADMIN,TREASURER",
+      "rationale": "Ledger is internal accounting. Only admin and treasurer should access journal entries and account balances."
+    },
+    {
+      "area": "rbac-audit",
+      "decision": "AuditController: all=ADMIN",
+      "rationale": "Audit trail is admin-only. Sensitive operational data."
+    },
+    {
+      "area": "rbac-config",
+      "decision": "ConfigController: all=ADMIN",
+      "rationale": "System configuration (loan products, schedules, penalties) is admin-only."
+    },
+    {
+      "area": "rbac-reporting",
+      "decision": "No changes needed — DashboardController already has @PreAuthorize. ExportController: ADMIN,TREASURER",
+      "rationale": "Dashboard is already secured. Export endpoints should match dashboard access."
+    },
+    {
+      "area": "code-fix-json",
+      "decision": "Fix SecurityConfig JSON string interpolation by escaping exception messages",
+      "rationale": "REVIEW.md warning: authException.getMessage() in String.format can produce malformed JSON if message contains quotes."
+    },
+    {
+      "area": "code-fix-refresh",
+      "decision": "Use generic error message in refresh endpoint instead of e.getMessage()",
+      "rationale": "REVIEW.md warning: leaks internal error details. Login endpoint already uses static messages."
+    },
+    {
+      "area": "legacy-cleanup",
+      "decision": "Remove unused OAuth2 config properties from application.yml",
+      "rationale": "oauth2.client.web-app.secret and oauth2.client.batch-client.secret are dead config after removing AuthorizationServerConfig."
+    },
+    {
+      "area": "testing",
+      "decision": "Add unit tests for AuthService, JwtService, MeController, UserAdminController",
+      "rationale": "Project requires unit tests for all service implementations and controllers. These 4 new components have zero test coverage."
+    }
+  ],
+  "constraints": [
+    "Must not break existing @PreAuthorize annotations in LoanBatchController, LoanBenefitController, DashboardController",
+    "Must not modify already-applied Liquibase changesets (only register them in master)",
+    "Member self-service (viewing own data) requires IDOR protection — defer to follow-up if complex",
+    "@EnableMethodSecurity already present in SecurityConfig — no config change needed for @PreAuthorize",
+    "Modules that don't depend on spring-security need the dependency added to their pom.xml for @PreAuthorize",
+    "Controller tests using @WebMvcTest will need security config adjusted (@WithMockUser or SecurityMockMvcConfigurers)"
+  ],
+  "openQuestions": [
+    "Should MEMBER role access be restricted to own data (IDOR protection) or deferred to a follow-up? Recommendation: add class-level @PreAuthorize for role gating now, defer per-resource IDOR checks to a separate feature.",
+    "Should ExportController in sacco-reporting get @PreAuthorize? Currently no annotations. Recommendation: yes, ADMIN,TREASURER."
+  ],
+  "relatedCode": [
+    "sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml",
+    "sacco-security/src/main/java/com/innercircle/sacco/security/config/SecurityConfig.java",
+    "sacco-security/src/main/java/com/innercircle/sacco/security/controller/AuthController.java",
+    "sacco-security/src/main/java/com/innercircle/sacco/security/service/JwtService.java",
+    "sacco-security/src/main/java/com/innercircle/sacco/security/service/AuthService.java",
+    "sacco-security/src/main/java/com/innercircle/sacco/security/controller/MeController.java",
+    "sacco-security/src/main/java/com/innercircle/sacco/security/controller/UserAdminController.java",
+    "sacco-member/src/main/java/com/innercircle/sacco/member/controller/MemberController.java",
+    "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/controller/ContributionController.java",
+    "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/controller/ContributionCategoryController.java",
+    "sacco-payout/src/main/java/com/innercircle/sacco/payout/controller/PayoutController.java",
+    "sacco-payout/src/main/java/com/innercircle/sacco/payout/controller/CashDisbursementController.java",
+    "sacco-payout/src/main/java/com/innercircle/sacco/payout/controller/BankWithdrawalController.java",
+    "sacco-payout/src/main/java/com/innercircle/sacco/payout/controller/ShareWithdrawalController.java",
+    "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/controller/LedgerController.java",
+    "sacco-audit/src/main/java/com/innercircle/sacco/audit/controller/AuditController.java",
+    "sacco-config/src/main/java/com/innercircle/sacco/config/controller/ConfigController.java",
+    "sacco-reporting/src/main/java/com/innercircle/sacco/reporting/controller/ExportController.java",
+    "sacco-app/src/main/resources/application.yml"
+  ],
+  "timestamp": "2026-02-16T01:10:00Z"
+}

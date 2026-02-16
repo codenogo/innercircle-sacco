@@ -46,11 +46,6 @@ springdoc:
     enabled: true
 
 oauth2:
-  client:
-    web-app:
-      secret: ${OAUTH2_WEB_SECRET:changeme}
-    batch-client:
-      secret: ${OAUTH2_BATCH_SECRET:changeme}
   jwt:
     rsa:
       public-key: ${OAUTH2_RSA_PUBLIC_KEY:}

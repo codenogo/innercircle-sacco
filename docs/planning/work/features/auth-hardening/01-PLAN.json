@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "feature": "auth-hardening",
+  "planNumber": "01",
+  "goal": "Register missing security migrations and fix code warnings from review",
+  "tasks": [
+    {
+      "name": "Register 3 missing security migrations in master changelog",
+      "files": [
+        "sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml"
+      ],
+      "action": "Add includes for security/005-seed-admin-user.yaml, security/006-add-member-id-to-users.yaml, security/007-create-refresh-tokens.yaml after the existing security/004 entry. Order matters: 005 seeds admin user (depends on user_accounts), 006 adds member_id FK (depends on members table), 007 creates refresh_tokens (depends on user_accounts).",
+      "verify": [
+        "grep '005-seed-admin-user' sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml",
+        "grep '006-add-member-id-to-users' sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml",
+        "grep '007-create-refresh-tokens' sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml"
+      ]
+    },
+    {
+      "name": "Fix SecurityConfig JSON interpolation and refresh endpoint error leaking",
+      "files": [
+        "sacco-security/src/main/java/com/innercircle/sacco/security/config/SecurityConfig.java",
+        "sacco-security/src/main/java/com/innercircle/sacco/security/controller/AuthController.java"
+      ],
+      "action": "In SecurityConfig: replace String.format JSON templates with Jackson ObjectMapper or manually escape authException.getMessage() and accessDeniedException.getMessage() (replace quotes with \\\\\" before interpolation). In AuthController refresh endpoint: replace e.getMessage() with a generic 'Invalid or expired refresh token' message, matching the static-message pattern used in the login endpoint.",
+      "verify": [
+        "mvn -pl sacco-security compile -q"
+      ],
+      "blockedBy": []
+    },
+    {
+      "name": "Remove unused OAuth2 config from application.yml",
+      "files": [
+        "sacco-app/src/main/resources/application.yml"
+      ],
+      "action": "Remove the oauth2.client.web-app.secret and oauth2.client.batch-client.secret properties. Keep oauth2.jwt.rsa.* properties (still used by JwtService).",
+      "verify": [
+        "! grep 'web-app' sacco-app/src/main/resources/application.yml",
+        "! grep 'batch-client' sacco-app/src/main/resources/application.yml",
+        "grep 'rsa' sacco-app/src/main/resources/application.yml"
+      ],
+      "blockedBy": []
+    }
+  ],
+  "planVerify": [
+    "mvn -pl sacco-security test -q"
+  ],
+  "commitMessage": "fix(auth-hardening): register missing migrations and fix security code warnings",
+  "timestamp": "2026-02-16T01:20:00Z"
+}

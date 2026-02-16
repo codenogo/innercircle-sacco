@@ -9,6 +9,7 @@ import com.innercircle.sacco.reporting.service.FinancialReportService;
 import com.innercircle.sacco.reporting.service.MemberStatementService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,6 +22,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/reports")
+@PreAuthorize("hasAnyRole('ADMIN','TREASURER','MEMBER')")
 public class ReportController {
 
     private final MemberStatementService memberStatementService;
@@ -48,6 +50,7 @@ public class ReportController {
     }
 
     @GetMapping("/financial-summary")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ResponseEntity<ApiResponse<FinancialSummaryResponse>> financialSummary(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {

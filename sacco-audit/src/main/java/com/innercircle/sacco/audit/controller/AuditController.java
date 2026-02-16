@@ -8,6 +8,7 @@ import com.innercircle.sacco.audit.service.AuditService;
 import com.innercircle.sacco.common.dto.ApiResponse;
 import com.innercircle.sacco.common.dto.CursorPage;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +29,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v1/audit")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
 public class AuditController {
 
     private final AuditService auditService;

@@ -2,6 +2,7 @@ package com.innercircle.sacco.payout.service;
 
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.event.PayoutProcessedEvent;
+import com.innercircle.sacco.common.event.PayoutStatusChangeEvent;
 import com.innercircle.sacco.payout.entity.Payout;
 import com.innercircle.sacco.payout.entity.PayoutStatus;
 import com.innercircle.sacco.payout.entity.PayoutType;
@@ -50,6 +51,9 @@ class PayoutServiceImplTest {
 
     @Captor
     private ArgumentCaptor<PayoutProcessedEvent> eventCaptor;
+
+    @Captor
+    private ArgumentCaptor<PayoutStatusChangeEvent> statusChangeEventCaptor;
 
     private UUID memberId;
     private UUID payoutId;
@@ -128,6 +132,22 @@ class PayoutServiceImplTest {
         }
 
         @Test
+        @DisplayName("should publish PayoutStatusChangeEvent with CREATED action")
+        void shouldPublishPayoutStatusChangeEventOnCreate() {
+            Payout expectedPayout = createTestPayout(PayoutStatus.PENDING);
+            when(payoutRepository.save(any(Payout.class))).thenReturn(expectedPayout);
+
+            payoutService.createPayout(memberId, amount, PayoutType.MERRY_GO_ROUND, "admin");
+
+            verify(eventPublisher).publishEvent(statusChangeEventCaptor.capture());
+            PayoutStatusChangeEvent event = statusChangeEventCaptor.getValue();
+            assertThat(event.payoutId()).isEqualTo(expectedPayout.getId());
+            assertThat(event.memberId()).isEqualTo(expectedPayout.getMemberId());
+            assertThat(event.action()).isEqualTo("CREATED");
+            assertThat(event.actor()).isEqualTo("admin");
+        }
+
+        @Test
         @DisplayName("should set createdBy to the actor parameter")
         void shouldSetCreatedByToActor() {
             when(payoutRepository.save(any(Payout.class))).thenReturn(createTestPayout(PayoutStatus.PENDING));
@@ -164,6 +184,26 @@ class PayoutServiceImplTest {
             assertThat(capturedPayout.getStatus()).isEqualTo(PayoutStatus.APPROVED);
             assertThat(capturedPayout.getApprovedBy()).isEqualTo("admin");
             assertThat(result.getStatus()).isEqualTo(PayoutStatus.APPROVED);
+        }
+
+        @Test
+        @DisplayName("should publish PayoutStatusChangeEvent with APPROVED action")
+        void shouldPublishPayoutStatusChangeEventOnApprove() {
+            Payout pendingPayout = createTestPayout(PayoutStatus.PENDING);
+            when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(pendingPayout));
+
+            Payout approvedPayout = createTestPayout(PayoutStatus.APPROVED);
+            approvedPayout.setApprovedBy("treasurer");
+            when(payoutRepository.save(any(Payout.class))).thenReturn(approvedPayout);
+
+            payoutService.approvePayout(payoutId, "treasurer");
+
+            verify(eventPublisher).publishEvent(statusChangeEventCaptor.capture());
+            PayoutStatusChangeEvent event = statusChangeEventCaptor.getValue();
+            assertThat(event.payoutId()).isEqualTo(approvedPayout.getId());
+            assertThat(event.memberId()).isEqualTo(approvedPayout.getMemberId());
+            assertThat(event.action()).isEqualTo("APPROVED");
+            assertThat(event.actor()).isEqualTo("treasurer");
         }
 
         @Test

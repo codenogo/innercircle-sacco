@@ -9,6 +9,7 @@ import com.innercircle.sacco.payout.service.CashDisbursementService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,12 +27,14 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/cash-disbursements")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN','TREASURER','MEMBER')")
 public class CashDisbursementController {
 
     private final CashDisbursementService cashDisbursementService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<CashDisbursementResponse> recordDisbursement(
             @Valid @RequestBody CashDisbursementRequest request,
             @RequestParam(defaultValue = "system") String actor
@@ -49,6 +52,7 @@ public class CashDisbursementController {
     }
 
     @PutMapping("/{disbursementId}/signoff")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<CashDisbursementResponse> signoff(
             @PathVariable UUID disbursementId,
             @RequestParam String signoffBy

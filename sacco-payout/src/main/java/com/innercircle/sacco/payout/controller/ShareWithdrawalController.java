@@ -10,6 +10,7 @@ import com.innercircle.sacco.payout.service.ShareWithdrawalService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,12 +26,14 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/share-withdrawals")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN','TREASURER','MEMBER')")
 public class ShareWithdrawalController {
 
     private final ShareWithdrawalService shareWithdrawalService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<ShareWithdrawalResponse> requestWithdrawal(
             @Valid @RequestBody ShareWithdrawalRequest request,
             @RequestParam(defaultValue = "system") String actor
@@ -46,6 +49,7 @@ public class ShareWithdrawalController {
     }
 
     @PutMapping("/{withdrawalId}/approve")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<ShareWithdrawalResponse> approveWithdrawal(
             @PathVariable UUID withdrawalId,
             @RequestParam(defaultValue = "system") String actor
@@ -55,6 +59,7 @@ public class ShareWithdrawalController {
     }
 
     @PutMapping("/{withdrawalId}/process")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<ShareWithdrawalResponse> processWithdrawal(
             @PathVariable UUID withdrawalId,
             @RequestParam(defaultValue = "system") String actor

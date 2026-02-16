@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,6 +41,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v1/loans")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN','TREASURER','MEMBER')")
 public class LoanController {
 
     private final LoanService loanService;
@@ -48,6 +50,7 @@ public class LoanController {
 
     @PostMapping("/apply")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<LoanResponse> applyForLoan(@Valid @RequestBody LoanApplicationRequest request) {
         LoanApplication loan = loanService.applyForLoan(
                 request.getMemberId(),
@@ -60,6 +63,7 @@ public class LoanController {
     }
 
     @PatchMapping("/{id}/approve")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<LoanResponse> approveLoan(
             @PathVariable UUID id,
             @RequestParam UUID approvedBy) {
@@ -68,6 +72,7 @@ public class LoanController {
     }
 
     @PatchMapping("/{id}/reject")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<LoanResponse> rejectLoan(
             @PathVariable UUID id,
             @RequestParam UUID rejectedBy) {
@@ -76,6 +81,7 @@ public class LoanController {
     }
 
     @PatchMapping("/{id}/disburse")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<LoanResponse> disburseLoan(
             @PathVariable UUID id,
             @RequestParam String actor) {
@@ -84,6 +90,7 @@ public class LoanController {
     }
 
     @PostMapping("/{id}/repay")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<Void> recordRepayment(
             @PathVariable UUID id,
             @Valid @RequestBody RepaymentRequest request,
