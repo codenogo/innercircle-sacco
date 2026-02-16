@@ -1,6 +1,7 @@
 package com.innercircle.sacco.member.service;
 
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.event.MemberCreatedEvent;
 import com.innercircle.sacco.common.exception.BusinessException;
 import com.innercircle.sacco.common.exception.ResourceNotFoundException;
 import com.innercircle.sacco.member.entity.Member;
@@ -38,8 +39,12 @@ public class MemberServiceImpl implements MemberService {
 
         Member savedMember = memberRepository.save(member);
 
-        // TODO: Publish MemberCreatedEvent when event is defined
-        // eventPublisher.publishEvent(new MemberCreatedEvent(savedMember.getId(), ...));
+        eventPublisher.publishEvent(new MemberCreatedEvent(
+                savedMember.getId(),
+                savedMember.getMemberNumber(),
+                savedMember.getFirstName(),
+                savedMember.getLastName(),
+                "system"));
 
         return savedMember;
     }
