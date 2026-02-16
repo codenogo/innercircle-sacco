@@ -12,6 +12,7 @@ import com.innercircle.sacco.contribution.service.ContributionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -34,6 +35,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/contributions")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN','TREASURER','MEMBER')")
 public class ContributionController {
 
     private final ContributionService contributionService;
@@ -44,6 +46,7 @@ public class ContributionController {
      */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ResponseEntity<ApiResponse<ContributionResponse>> recordContribution(
             @Valid @RequestBody RecordContributionRequest request) {
 
@@ -57,6 +60,7 @@ public class ContributionController {
      * POST /api/v1/contributions/bulk
      */
     @PostMapping("/bulk")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ResponseEntity<ApiResponse<List<ContributionResponse>>> recordBulk(
             @Valid @RequestBody BulkContributionRequest request) {
 
@@ -73,6 +77,7 @@ public class ContributionController {
      * PATCH /api/v1/contributions/{id}/confirm
      */
     @PatchMapping("/{id}/confirm")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<ContributionResponse> confirmContribution(
             @PathVariable UUID id,
             @RequestParam(required = false, defaultValue = "SYSTEM") String actor) {
@@ -86,6 +91,7 @@ public class ContributionController {
      * PATCH /api/v1/contributions/{id}/reverse
      */
     @PatchMapping("/{id}/reverse")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<ContributionResponse> reverseContribution(
             @PathVariable UUID id,
             @RequestParam(required = false, defaultValue = "SYSTEM") String actor) {

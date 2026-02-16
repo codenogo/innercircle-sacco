@@ -11,6 +11,7 @@ import com.innercircle.sacco.member.service.MemberService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,6 +28,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/members")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN','TREASURER','MEMBER')")
 public class MemberController {
 
     private final MemberService memberService;
@@ -34,6 +36,7 @@ public class MemberController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<MemberResponse> create(@Valid @RequestBody CreateMemberRequest request) {
         Member member = memberMapper.toEntity(request);
         Member created = memberService.create(member);
@@ -63,6 +66,7 @@ public class MemberController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<MemberResponse> update(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateMemberRequest request) {
@@ -73,12 +77,14 @@ public class MemberController {
     }
 
     @PatchMapping("/{id}/suspend")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<MemberResponse> suspend(@PathVariable UUID id) {
         Member suspended = memberService.suspend(id);
         return ApiResponse.ok(memberMapper.toResponse(suspended), "Member suspended successfully");
     }
 
     @PatchMapping("/{id}/reactivate")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<MemberResponse> reactivate(@PathVariable UUID id) {
         Member reactivated = memberService.reactivate(id);
         return ApiResponse.ok(memberMapper.toResponse(reactivated), "Member reactivated successfully");

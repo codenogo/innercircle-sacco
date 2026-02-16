@@ -108,7 +108,7 @@ public class AuthController {
             log.warn("Token refresh failed: {}", e.getMessage());
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(e.getMessage()));
+                    .body(ApiResponse.error("Invalid or expired refresh token"));
         } catch (Exception e) {
             log.error("Error processing token refresh request", e);
             return ResponseEntity

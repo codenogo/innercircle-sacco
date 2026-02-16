@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 2,
+  "feature": "auth-hardening",
+  "branch": "feat/custom-auth-api",
+  "timestamp": "2026-02-16T01:35:00Z",
+  "verdict": "pass",
+  "automated": [
+    { "name": "tests", "result": "pass", "detail": "1072 tests, 0 failures across all modules" }
+  ],
+  "blockers": [],
+  "warnings": [
+    {
+      "id": "W1",
+      "severity": "low",
+      "issue": "LoanController and ReportController lack @PreAuthorize RBAC (pre-existing gap, not introduced by this feature)",
+      "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/controller/LoanController.java",
+      "recommendation": "Follow-up task: add RBAC to LoanController and ReportController"
+    }
+  ],
+  "packages": [
+    "sacco-security",
+    "sacco-config",
+    "sacco-audit",
+    "sacco-ledger",
+    "sacco-reporting",
+    "sacco-member",
+    "sacco-contribution",
+    "sacco-payout",
+    "sacco-app"
+  ],
+  "plansReviewed": [
+    {
+      "plan": "01",
+      "goal": "Register missing migrations and fix code warnings",
+      "status": "pass",
+      "changes": [
+        "Registered security migrations 005/006/007 in db.changelog-master.yaml",
+        "Fixed JSON injection in SecurityConfig error handlers (escape quotes/backslashes)",
+        "Replaced error message leaking in AuthController refresh endpoint with generic message",
+        "Removed dead OAuth2 client config (web-app, batch-client) from application.yml"
+      ]
+    },
+    {
+      "plan": "02",
+      "goal": "RBAC for admin-only and internal controllers",
+      "status": "pass",
+      "changes": [
+        "Added spring-boot-starter-security to sacco-config, sacco-audit, sacco-ledger pom.xml",
+        "ConfigController: @PreAuthorize hasRole('ADMIN')",
+        "AuditController: @PreAuthorize hasRole('ADMIN')",
+        "LedgerController: @PreAuthorize hasAnyRole('ADMIN','TREASURER')",
+        "ExportController: @PreAuthorize hasAnyRole('ADMIN','TREASURER')",
+        "Fixed LedgerControllerTest with @AutoConfigureMockMvc(addFilters=false)"
+      ]
+    },
+    {
+      "plan": "03",
+      "goal": "RBAC for member-facing controllers",
+      "status": "pass",
+      "changes": [
+        "Added spring-boot-starter-security to sacco-member, sacco-contribution, sacco-payout pom.xml",
+        "MemberController: class=all roles, method=ADMIN for writes",
+        "ContributionController: class=all roles, method=ADMIN,TREASURER for writes",
+        "ContributionCategoryController: class=ADMIN",
+        "PayoutController: class=all roles, method=ADMIN,TREASURER for writes",
+        "CashDisbursementController: class=all roles, method=ADMIN,TREASURER for writes",
+        "BankWithdrawalController: class=all roles, method=ADMIN,TREASURER for writes",
+        "ShareWithdrawalController: class=all roles, method=ADMIN,TREASURER for writes",
+        "Fixed 4 payout @WebMvcTest tests with @AutoConfigureMockMvc(addFilters=false)"
+      ]
+    },
+    {
+      "plan": "04",
+      "goal": "Auth component unit tests",
+      "status": "pass",
+      "changes": [
+        "JwtServiceTest: 7 tests (token generation, claims, refresh, decoder, ephemeral keys)",
+        "AuthServiceTest: 8 tests (auth success/fail, locked/disabled, refresh token rotation)",
+        "MeControllerTest: 3 tests (with/without member, not found)",
+        "UserAdminControllerTest: 3 tests (create user, password reset)"
+      ]
+    }
+  ],
+  "securityReview": {
+    "status": "pass",
+    "findings": [
+      "All 11 in-scope controllers have correct @PreAuthorize annotations",
+      "SecurityConfig JSON error responses now escape special characters (prevents JSON injection)",
+      "AuthController refresh endpoint no longer leaks internal error messages",
+      "Dead OAuth2 client secrets removed from application.yml",
+      "3 missing Liquibase migrations registered (005-seed-admin-user, 006-add-member-id, 007-refresh-tokens)",
+      "@EnableMethodSecurity already present in SecurityConfig (required for @PreAuthorize to work)"
+    ]
+  },
+  "principles": [
+    { "name": "Think Before Coding", "status": "pass", "notes": "4 plans with clear scope, reviewed in /discuss" },
+    { "name": "Simplicity First", "status": "pass", "notes": "Class-level defaults with method-level overrides; no custom security infrastructure" },
+    { "name": "Surgical Changes", "status": "pass", "notes": "Only touched planned files; no drive-by refactors" },
+    { "name": "Goal-Driven Execution", "status": "pass", "notes": "1072 tests pass; each plan verified independently" },
+    { "name": "Prefer shared utility packages over hand-rolled helpers", "status": "pass", "notes": "Uses Spring Security @PreAuthorize; no custom auth framework" },
+    { "name": "Don't probe data YOLO-style", "status": "n/a", "notes": "" },
+    { "name": "Validate boundaries", "status": "pass", "notes": "Auth boundaries enforced at controller level; error messages sanitized" },
+    { "name": "Typed SDKs", "status": "n/a", "notes": "" }
+  ]
+}

@@ -10,6 +10,7 @@ import com.innercircle.sacco.payout.service.BankWithdrawalService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,12 +26,14 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/bank-withdrawals")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN','TREASURER','MEMBER')")
 public class BankWithdrawalController {
 
     private final BankWithdrawalService bankWithdrawalService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<BankWithdrawalResponse> initiateWithdrawal(
             @Valid @RequestBody BankWithdrawalRequest request,
             @RequestParam(defaultValue = "system") String actor
@@ -46,6 +49,7 @@ public class BankWithdrawalController {
     }
 
     @PutMapping("/{withdrawalId}/confirm")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<BankWithdrawalResponse> confirmWithdrawal(
             @PathVariable UUID withdrawalId,
             @RequestParam String referenceNumber,
@@ -56,6 +60,7 @@ public class BankWithdrawalController {
     }
 
     @PutMapping("/{withdrawalId}/reconcile")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<BankWithdrawalResponse> markReconciled(
             @PathVariable UUID withdrawalId,
             @RequestParam(defaultValue = "system") String actor

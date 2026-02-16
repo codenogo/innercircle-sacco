@@ -10,6 +10,7 @@ import com.innercircle.sacco.payout.service.PayoutService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,12 +26,14 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/payouts")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN','TREASURER','MEMBER')")
 public class PayoutController {
 
     private final PayoutService payoutService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<PayoutResponse> createPayout(
             @Valid @RequestBody PayoutRequest request,
             @RequestParam(defaultValue = "system") String actor
@@ -45,6 +48,7 @@ public class PayoutController {
     }
 
     @PutMapping("/{payoutId}/approve")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<PayoutResponse> approvePayout(
             @PathVariable UUID payoutId,
             @RequestParam(defaultValue = "system") String actor
@@ -54,6 +58,7 @@ public class PayoutController {
     }
 
     @PutMapping("/{payoutId}/process")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<PayoutResponse> processPayout(
             @PathVariable UUID payoutId,
             @RequestParam(defaultValue = "system") String actor
