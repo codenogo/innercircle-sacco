@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "003",
+  "slug": "rbac-loan-report",
+  "outcome": "Added @PreAuthorize RBAC to LoanController and ReportController, closing the W1 gap from auth-hardening review",
+  "changes": [
+    "LoanController: class-level hasAnyRole('ADMIN','TREASURER','MEMBER') for reads; method-level hasAnyRole('ADMIN','TREASURER') on apply, approve, reject, disburse, repay",
+    "ReportController: class-level hasAnyRole('ADMIN','TREASURER','MEMBER') for reads; method-level hasAnyRole('ADMIN','TREASURER') on financial-summary"
+  ],
+  "verification": [
+    "sacco-reporting: 84 tests, 0 failures, BUILD SUCCESS",
+    "sacco-loan: pre-existing compile error in LoanBatchServiceImpl (unrelated); LoanControllerTest uses @ExtendWith(MockitoExtension.class) so @PreAuthorize annotations are invisible to tests"
+  ],
+  "commit": "fix(auth): add RBAC to LoanController and ReportController",
+  "timestamp": "2026-02-16T02:05:00Z"
+}
