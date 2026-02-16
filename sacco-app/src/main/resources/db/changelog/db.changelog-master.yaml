@@ -87,3 +87,7 @@ databaseChangeLog:
       file: db/changelog/common/001-add-version-column.yaml
   - include:
       file: db/changelog/common/002-add-fk-and-unique-constraints.yaml
+  - include:
+      file: db/changelog/common/003-create-event-outbox-table.yaml
+  - include:
+      file: db/changelog/common/004-create-event-dead-letter-table.yaml
