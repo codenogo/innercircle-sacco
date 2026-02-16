@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "004",
+  "slug": "fix-hardcoded-actor",
+  "goal": "Replace hardcoded 'system' actor in MemberServiceImpl with authenticated user from SecurityContextHolder",
+  "files": [
+    "sacco-member/src/main/java/com/innercircle/sacco/member/service/MemberServiceImpl.java",
+    "sacco-member/src/test/java/com/innercircle/sacco/member/service/MemberServiceImplTest.java"
+  ],
+  "verify": ["mvn -pl sacco-member test -q"],
+  "timestamp": "2026-02-16T02:30:00Z"
+}

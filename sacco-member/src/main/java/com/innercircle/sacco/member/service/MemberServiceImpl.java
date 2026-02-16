@@ -10,6 +10,8 @@ import com.innercircle.sacco.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,7 +46,7 @@ public class MemberServiceImpl implements MemberService {
                 savedMember.getMemberNumber(),
                 savedMember.getFirstName(),
                 savedMember.getLastName(),
-                "system"));
+                getCurrentActor()));
 
         return savedMember;
     }
@@ -165,5 +167,10 @@ public class MemberServiceImpl implements MemberService {
         // TODO: Publish MemberReactivatedEvent when event is defined
 
         return reactivatedMember;
+    }
+
+    private String getCurrentActor() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null ? auth.getName() : "system";
     }
 }

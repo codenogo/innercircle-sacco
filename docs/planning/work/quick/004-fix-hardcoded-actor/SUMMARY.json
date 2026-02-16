@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "004",
+  "slug": "fix-hardcoded-actor",
+  "outcome": "Replaced hardcoded 'system' actor with SecurityContextHolder-based lookup, with 'system' fallback for unauthenticated contexts",
+  "changes": [
+    "sacco-member/src/main/java/com/innercircle/sacco/member/service/MemberServiceImpl.java",
+    "sacco-member/src/test/java/com/innercircle/sacco/member/service/MemberServiceImplTest.java"
+  ],
+  "verification": [
+    { "command": "mvn -pl sacco-member test -q", "result": "pass", "tests": 58 }
+  ],
+  "timestamp": "2026-02-16T02:35:00Z"
+}
