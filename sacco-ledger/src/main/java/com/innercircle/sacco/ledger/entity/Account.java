@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Entity
 @Table(name = "accounts")
@@ -39,4 +40,10 @@ public class Account extends BaseEntity {
 
     @Column(nullable = false)
     private boolean active = true;
+
+    @Column(length = 20)
+    private String parentAccountCode;
+
+    @Column
+    private UUID memberId;
 }
