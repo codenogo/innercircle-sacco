@@ -10,6 +10,7 @@ public record ShareWithdrawalRequestedEvent(
         UUID memberId,
         BigDecimal amount,
         String withdrawalType,
+        UUID correlationId,
         String actor
 ) implements AuditableEvent {
 
@@ -21,5 +22,10 @@ public record ShareWithdrawalRequestedEvent(
     @Override
     public String getActor() {
         return actor;
+    }
+
+    @Override
+    public UUID getCorrelationId() {
+        return correlationId;
     }
 }

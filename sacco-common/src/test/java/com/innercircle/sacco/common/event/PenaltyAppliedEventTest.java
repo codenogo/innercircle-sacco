@@ -16,7 +16,7 @@ class PenaltyAppliedEventTest {
         BigDecimal amount = new BigDecimal("500.00");
 
         PenaltyAppliedEvent event = new PenaltyAppliedEvent(
-                penaltyId, memberId, amount, "LATE_PAYMENT", "system"
+                penaltyId, memberId, amount, "LATE_PAYMENT", UUID.randomUUID(), "system"
         );
 
         assertThat(event.penaltyId()).isEqualTo(penaltyId);
@@ -29,7 +29,7 @@ class PenaltyAppliedEventTest {
     @Test
     void getEventType_shouldReturnPenaltyApplied() {
         PenaltyAppliedEvent event = new PenaltyAppliedEvent(
-                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.ONE, "OVERDUE", "actor"
+                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.ONE, "OVERDUE", UUID.randomUUID(), "actor"
         );
 
         assertThat(event.getEventType()).isEqualTo("PENALTY_APPLIED");
@@ -38,7 +38,7 @@ class PenaltyAppliedEventTest {
     @Test
     void getActor_shouldReturnActorValue() {
         PenaltyAppliedEvent event = new PenaltyAppliedEvent(
-                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.ONE, "OVERDUE", "batch-processor"
+                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.ONE, "OVERDUE", UUID.randomUUID(), "batch-processor"
         );
 
         assertThat(event.getActor()).isEqualTo("batch-processor");
@@ -47,7 +47,7 @@ class PenaltyAppliedEventTest {
     @Test
     void shouldImplementAuditableEvent() {
         PenaltyAppliedEvent event = new PenaltyAppliedEvent(
-                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.ONE, "OVERDUE", "actor"
+                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.ONE, "OVERDUE", UUID.randomUUID(), "actor"
         );
 
         assertThat(event).isInstanceOf(AuditableEvent.class);
@@ -57,9 +57,10 @@ class PenaltyAppliedEventTest {
     void equals_shouldBeBasedOnAllFields() {
         UUID pId = UUID.randomUUID();
         UUID mId = UUID.randomUUID();
+        UUID cId = UUID.randomUUID();
 
-        PenaltyAppliedEvent event1 = new PenaltyAppliedEvent(pId, mId, BigDecimal.TEN, "LATE", "actor");
-        PenaltyAppliedEvent event2 = new PenaltyAppliedEvent(pId, mId, BigDecimal.TEN, "LATE", "actor");
+        PenaltyAppliedEvent event1 = new PenaltyAppliedEvent(pId, mId, BigDecimal.TEN, "LATE", cId, "actor");
+        PenaltyAppliedEvent event2 = new PenaltyAppliedEvent(pId, mId, BigDecimal.TEN, "LATE", cId, "actor");
 
         assertThat(event1).isEqualTo(event2);
         assertThat(event1.hashCode()).isEqualTo(event2.hashCode());
@@ -68,7 +69,7 @@ class PenaltyAppliedEventTest {
     @Test
     void toString_shouldContainFieldValues() {
         PenaltyAppliedEvent event = new PenaltyAppliedEvent(
-                UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("750"), "MISSED_PAYMENT", "actor"
+                UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("750"), "MISSED_PAYMENT", UUID.randomUUID(), "actor"
         );
 
         String str = event.toString();
@@ -81,9 +82,10 @@ class PenaltyAppliedEventTest {
     void notEquals_withDifferentPenaltyType_shouldNotBeEqual() {
         UUID pId = UUID.randomUUID();
         UUID mId = UUID.randomUUID();
+        UUID cId = UUID.randomUUID();
 
-        PenaltyAppliedEvent event1 = new PenaltyAppliedEvent(pId, mId, BigDecimal.TEN, "LATE", "actor");
-        PenaltyAppliedEvent event2 = new PenaltyAppliedEvent(pId, mId, BigDecimal.TEN, "OVERDUE", "actor");
+        PenaltyAppliedEvent event1 = new PenaltyAppliedEvent(pId, mId, BigDecimal.TEN, "LATE", cId, "actor");
+        PenaltyAppliedEvent event2 = new PenaltyAppliedEvent(pId, mId, BigDecimal.TEN, "OVERDUE", cId, "actor");
 
         assertThat(event1).isNotEqualTo(event2);
     }

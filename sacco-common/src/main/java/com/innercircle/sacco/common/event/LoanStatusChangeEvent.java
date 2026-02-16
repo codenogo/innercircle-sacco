@@ -6,6 +6,7 @@ public record LoanStatusChangeEvent(
         UUID loanId,
         String previousStatus,
         String newStatus,
+        UUID correlationId,
         String actor
 ) implements AuditableEvent {
 
@@ -17,5 +18,10 @@ public record LoanStatusChangeEvent(
     @Override
     public String getActor() {
         return actor;
+    }
+
+    @Override
+    public UUID getCorrelationId() {
+        return correlationId;
     }
 }

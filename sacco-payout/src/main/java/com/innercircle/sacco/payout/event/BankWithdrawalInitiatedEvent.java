@@ -10,6 +10,7 @@ public record BankWithdrawalInitiatedEvent(
         UUID memberId,
         BigDecimal amount,
         String bankName,
+        UUID correlationId,
         String actor
 ) implements AuditableEvent {
 
@@ -21,5 +22,10 @@ public record BankWithdrawalInitiatedEvent(
     @Override
     public String getActor() {
         return actor;
+    }
+
+    @Override
+    public UUID getCorrelationId() {
+        return correlationId;
     }
 }

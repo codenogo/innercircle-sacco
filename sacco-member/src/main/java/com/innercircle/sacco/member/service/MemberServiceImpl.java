@@ -46,6 +46,7 @@ public class MemberServiceImpl implements MemberService {
                 savedMember.getMemberNumber(),
                 savedMember.getFirstName(),
                 savedMember.getLastName(),
+                UUID.randomUUID(),
                 getCurrentActor()));
 
         return savedMember;

@@ -38,6 +38,7 @@ public class PayoutServiceImpl implements PayoutService {
                 saved.getId(),
                 saved.getMemberId(),
                 "CREATED",
+                UUID.randomUUID(),
                 actor
         ));
 
@@ -63,6 +64,7 @@ public class PayoutServiceImpl implements PayoutService {
                 approved.getId(),
                 approved.getMemberId(),
                 "APPROVED",
+                UUID.randomUUID(),
                 actor
         ));
 
@@ -90,6 +92,7 @@ public class PayoutServiceImpl implements PayoutService {
                 savedPayout.getMemberId(),
                 savedPayout.getAmount(),
                 savedPayout.getType().name(),
+                UUID.randomUUID(),
                 actor
         ));
 

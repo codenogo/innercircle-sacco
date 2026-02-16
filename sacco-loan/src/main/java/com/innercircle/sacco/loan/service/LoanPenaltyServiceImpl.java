@@ -62,6 +62,7 @@ public class LoanPenaltyServiceImpl implements LoanPenaltyService {
                 memberId,
                 amount,
                 "LOAN_LATE_REPAYMENT",
+                UUID.randomUUID(),
                 actor
         ));
 
@@ -114,6 +115,7 @@ public class LoanPenaltyServiceImpl implements LoanPenaltyService {
                 penaltyId,
                 penalty.getMemberId(),
                 penalty.getAmount(),
+                UUID.randomUUID(),
                 actor
         ));
 

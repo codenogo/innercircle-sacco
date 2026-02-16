@@ -17,7 +17,7 @@ class LoanDisbursedEventTest {
         BigDecimal interest = new BigDecimal("15000.00");
 
         LoanDisbursedEvent event = new LoanDisbursedEvent(
-                loanId, memberId, principal, interest, "officer"
+                loanId, memberId, principal, interest, UUID.randomUUID(), "officer"
         );
 
         assertThat(event.loanId()).isEqualTo(loanId);
@@ -30,7 +30,7 @@ class LoanDisbursedEventTest {
     @Test
     void getEventType_shouldReturnLoanDisbursed() {
         LoanDisbursedEvent event = new LoanDisbursedEvent(
-                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.TEN, BigDecimal.ONE, "actor"
+                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.TEN, BigDecimal.ONE, UUID.randomUUID(), "actor"
         );
 
         assertThat(event.getEventType()).isEqualTo("LOAN_DISBURSED");
@@ -39,7 +39,7 @@ class LoanDisbursedEventTest {
     @Test
     void getActor_shouldReturnActorValue() {
         LoanDisbursedEvent event = new LoanDisbursedEvent(
-                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.TEN, BigDecimal.ONE, "loan-officer"
+                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.TEN, BigDecimal.ONE, UUID.randomUUID(), "loan-officer"
         );
 
         assertThat(event.getActor()).isEqualTo("loan-officer");
@@ -48,7 +48,7 @@ class LoanDisbursedEventTest {
     @Test
     void shouldImplementAuditableEvent() {
         LoanDisbursedEvent event = new LoanDisbursedEvent(
-                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.TEN, BigDecimal.ONE, "actor"
+                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.TEN, BigDecimal.ONE, UUID.randomUUID(), "actor"
         );
 
         assertThat(event).isInstanceOf(AuditableEvent.class);
@@ -58,11 +58,12 @@ class LoanDisbursedEventTest {
     void equals_shouldBeBasedOnAllFields() {
         UUID lId = UUID.randomUUID();
         UUID mId = UUID.randomUUID();
+        UUID cId = UUID.randomUUID();
         BigDecimal p = new BigDecimal("50000");
         BigDecimal i = new BigDecimal("5000");
 
-        LoanDisbursedEvent event1 = new LoanDisbursedEvent(lId, mId, p, i, "actor");
-        LoanDisbursedEvent event2 = new LoanDisbursedEvent(lId, mId, p, i, "actor");
+        LoanDisbursedEvent event1 = new LoanDisbursedEvent(lId, mId, p, i, cId, "actor");
+        LoanDisbursedEvent event2 = new LoanDisbursedEvent(lId, mId, p, i, cId, "actor");
 
         assertThat(event1).isEqualTo(event2);
         assertThat(event1.hashCode()).isEqualTo(event2.hashCode());
@@ -72,7 +73,7 @@ class LoanDisbursedEventTest {
     void toString_shouldContainFieldValues() {
         LoanDisbursedEvent event = new LoanDisbursedEvent(
                 UUID.randomUUID(), UUID.randomUUID(),
-                new BigDecimal("75000"), new BigDecimal("7500"), "admin"
+                new BigDecimal("75000"), new BigDecimal("7500"), UUID.randomUUID(), "admin"
         );
 
         String str = event.toString();

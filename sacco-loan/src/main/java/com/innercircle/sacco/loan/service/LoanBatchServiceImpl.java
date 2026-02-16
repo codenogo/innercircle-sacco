@@ -134,6 +134,7 @@ public class LoanBatchServiceImpl implements LoanBatchService {
                     result.getPenalizedLoans(),
                     result.getClosedLoans(),
                     result.getProcessedAt(),
+                    UUID.randomUUID(),
                     triggeredBy
             ));
 
@@ -461,6 +462,7 @@ public class LoanBatchServiceImpl implements LoanBatchService {
                 monthlyInterest,
                 outstandingBalance,
                 accrualDate,
+                UUID.randomUUID(),
                 "SYSTEM"
         ));
 

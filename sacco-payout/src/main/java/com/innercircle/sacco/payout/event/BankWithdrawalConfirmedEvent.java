@@ -8,6 +8,7 @@ public record BankWithdrawalConfirmedEvent(
         UUID withdrawalId,
         UUID memberId,
         String referenceNumber,
+        UUID correlationId,
         String actor
 ) implements AuditableEvent {
 
@@ -19,5 +20,10 @@ public record BankWithdrawalConfirmedEvent(
     @Override
     public String getActor() {
         return actor;
+    }
+
+    @Override
+    public UUID getCorrelationId() {
+        return correlationId;
     }
 }

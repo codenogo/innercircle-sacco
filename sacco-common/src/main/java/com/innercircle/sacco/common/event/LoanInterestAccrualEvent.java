@@ -10,6 +10,7 @@ public record LoanInterestAccrualEvent(
         BigDecimal interestAmount,
         BigDecimal outstandingBalance,
         LocalDate accrualDate,
+        UUID correlationId,
         String actor
 ) implements AuditableEvent {
 
@@ -21,5 +22,10 @@ public record LoanInterestAccrualEvent(
     @Override
     public String getActor() {
         return actor;
+    }
+
+    @Override
+    public UUID getCorrelationId() {
+        return correlationId;
     }
 }

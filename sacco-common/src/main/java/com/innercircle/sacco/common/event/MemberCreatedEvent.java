@@ -7,6 +7,7 @@ public record MemberCreatedEvent(
         String memberNumber,
         String firstName,
         String lastName,
+        UUID correlationId,
         String actor
 ) implements AuditableEvent {
 
@@ -18,5 +19,10 @@ public record MemberCreatedEvent(
     @Override
     public String getActor() {
         return actor;
+    }
+
+    @Override
+    public UUID getCorrelationId() {
+        return correlationId;
     }
 }

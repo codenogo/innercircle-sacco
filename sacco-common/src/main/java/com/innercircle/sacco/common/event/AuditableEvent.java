@@ -12,7 +12,5 @@ public interface AuditableEvent {
 
     String getActor();
 
-    default UUID getCorrelationId() {
-        return null;
-    }
+    UUID getCorrelationId();
 }

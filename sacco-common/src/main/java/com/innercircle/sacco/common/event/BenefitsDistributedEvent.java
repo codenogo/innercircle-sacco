@@ -7,6 +7,7 @@ public record BenefitsDistributedEvent(
         UUID loanId,
         BigDecimal totalInterestAmount,
         int beneficiaryCount,
+        UUID correlationId,
         String actor
 ) implements AuditableEvent {
 
@@ -18,5 +19,10 @@ public record BenefitsDistributedEvent(
     @Override
     public String getActor() {
         return actor;
+    }
+
+    @Override
+    public UUID getCorrelationId() {
+        return correlationId;
     }
 }
