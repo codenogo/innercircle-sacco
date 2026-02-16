@@ -62,12 +62,12 @@ class LedgerControllerTest {
 
     @BeforeEach
     void setUp() {
-        cashAccount = new Account("1001", "Cash", AccountType.ASSET, new BigDecimal("50000.00"), "Cash on hand", true);
+        cashAccount = new Account("1001", "Cash", AccountType.ASSET, new BigDecimal("50000.00"), "Cash on hand", true, null, null);
         cashAccount.setId(UUID.randomUUID());
         cashAccount.setCreatedAt(Instant.now());
         cashAccount.setUpdatedAt(Instant.now());
 
-        memberSharesAccount = new Account("2001", "Member Shares", AccountType.LIABILITY, new BigDecimal("40000.00"), "Member shares", true);
+        memberSharesAccount = new Account("2001", "Member Shares", AccountType.LIABILITY, new BigDecimal("40000.00"), "Member shares", true, null, null);
         memberSharesAccount.setId(UUID.randomUUID());
         memberSharesAccount.setCreatedAt(Instant.now());
         memberSharesAccount.setUpdatedAt(Instant.now());

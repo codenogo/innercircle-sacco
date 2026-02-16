@@ -1,6 +1,7 @@
 package com.innercircle.sacco.member.service;
 
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.event.MemberCreatedEvent;
 import com.innercircle.sacco.common.exception.BusinessException;
 import com.innercircle.sacco.common.exception.ResourceNotFoundException;
 import com.innercircle.sacco.member.entity.Member;
@@ -31,6 +32,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.ArgumentCaptor;
 
 @ExtendWith(MockitoExtension.class)
 class MemberServiceImplTest {
@@ -127,6 +129,26 @@ class MemberServiceImplTest {
                     .hasMessageContaining("National ID already exists: ID12345");
 
             verify(memberRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should publish MemberCreatedEvent after member creation")
+        void shouldPublishMemberCreatedEvent() {
+            when(memberRepository.existsByMemberNumber("MBR-001")).thenReturn(false);
+            when(memberRepository.existsByEmail("john.doe@example.com")).thenReturn(false);
+            when(memberRepository.existsByNationalId("ID12345")).thenReturn(false);
+            when(memberRepository.save(sampleMember)).thenReturn(sampleMember);
+
+            memberService.create(sampleMember);
+
+            ArgumentCaptor<MemberCreatedEvent> eventCaptor = ArgumentCaptor.forClass(MemberCreatedEvent.class);
+            verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+            MemberCreatedEvent event = eventCaptor.getValue();
+            assertThat(event.memberId()).isEqualTo(memberId);
+            assertThat(event.memberNumber()).isEqualTo("MBR-001");
+            assertThat(event.firstName()).isEqualTo("John");
+            assertThat(event.lastName()).isEqualTo("Doe");
         }
     }
 
