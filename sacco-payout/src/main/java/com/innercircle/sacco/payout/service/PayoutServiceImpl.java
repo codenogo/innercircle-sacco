@@ -6,6 +6,7 @@ import com.innercircle.sacco.common.event.PayoutStatusChangeEvent;
 import com.innercircle.sacco.payout.entity.Payout;
 import com.innercircle.sacco.payout.entity.PayoutStatus;
 import com.innercircle.sacco.payout.entity.PayoutType;
+import com.innercircle.sacco.payout.guard.PayoutTransitionGuards;
 import com.innercircle.sacco.payout.repository.PayoutRepository;
 import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import lombok.RequiredArgsConstructor;
@@ -51,9 +52,7 @@ public class PayoutServiceImpl implements PayoutService {
         Payout payout = payoutRepository.findById(payoutId)
                 .orElseThrow(() -> new IllegalArgumentException("Payout not found: " + payoutId));
 
-        if (payout.getStatus() != PayoutStatus.PENDING) {
-            throw new IllegalStateException("Only pending payouts can be approved");
-        }
+        PayoutTransitionGuards.PAYOUT.validate(payout.getStatus(), PayoutStatus.APPROVED);
 
         payout.setStatus(PayoutStatus.APPROVED);
         payout.setApprovedBy(actor);
@@ -77,9 +76,7 @@ public class PayoutServiceImpl implements PayoutService {
         Payout payout = payoutRepository.findById(payoutId)
                 .orElseThrow(() -> new IllegalArgumentException("Payout not found: " + payoutId));
 
-        if (payout.getStatus() != PayoutStatus.APPROVED) {
-            throw new IllegalStateException("Only approved payouts can be processed");
-        }
+        PayoutTransitionGuards.PAYOUT.validate(payout.getStatus(), PayoutStatus.PROCESSED);
 
         payout.setStatus(PayoutStatus.PROCESSED);
         payout.setProcessedAt(Instant.now());

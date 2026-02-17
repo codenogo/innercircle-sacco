@@ -15,6 +15,7 @@ import com.innercircle.sacco.loan.entity.LoanRepayment;
 import com.innercircle.sacco.loan.entity.LoanStatus;
 import com.innercircle.sacco.loan.entity.RepaymentSchedule;
 import com.innercircle.sacco.loan.entity.RepaymentStatus;
+import com.innercircle.sacco.loan.guard.LoanTransitionGuards;
 import com.innercircle.sacco.loan.repository.LoanApplicationRepository;
 import com.innercircle.sacco.loan.repository.LoanInterestHistoryRepository;
 import com.innercircle.sacco.loan.repository.LoanRepaymentRepository;
@@ -107,9 +108,7 @@ public class LoanServiceImpl implements LoanService {
     public LoanApplication approveLoan(UUID loanId, UUID approvedBy) {
         LoanApplication loan = getLoanById(loanId);
 
-        if (loan.getStatus() != LoanStatus.PENDING) {
-            throw new IllegalStateException("Only pending loans can be approved");
-        }
+        LoanTransitionGuards.LOAN.validate(loan.getStatus(), LoanStatus.APPROVED);
 
         loan.setStatus(LoanStatus.APPROVED);
         loan.setApprovedBy(approvedBy);
@@ -133,9 +132,7 @@ public class LoanServiceImpl implements LoanService {
     public LoanApplication rejectLoan(UUID loanId, UUID rejectedBy) {
         LoanApplication loan = getLoanById(loanId);
 
-        if (loan.getStatus() != LoanStatus.PENDING) {
-            throw new IllegalStateException("Only pending loans can be rejected");
-        }
+        LoanTransitionGuards.LOAN.validate(loan.getStatus(), LoanStatus.REJECTED);
 
         loan.setStatus(LoanStatus.REJECTED);
         loan.setApprovedBy(rejectedBy);
@@ -159,9 +156,7 @@ public class LoanServiceImpl implements LoanService {
     public LoanApplication disburseLoan(UUID loanId, String actor) {
         LoanApplication loan = getLoanById(loanId);
 
-        if (loan.getStatus() != LoanStatus.APPROVED) {
-            throw new IllegalStateException("Only approved loans can be disbursed");
-        }
+        LoanTransitionGuards.LOAN.validate(loan.getStatus(), LoanStatus.DISBURSED);
 
         Instant now = Instant.now();
         LocalDate disbursementDate = LocalDate.ofInstant(now, ZoneId.systemDefault());

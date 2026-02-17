@@ -13,6 +13,7 @@ import com.innercircle.sacco.contribution.dto.RecordContributionRequest;
 import com.innercircle.sacco.contribution.entity.Contribution;
 import com.innercircle.sacco.contribution.entity.ContributionCategory;
 import com.innercircle.sacco.contribution.entity.ContributionStatus;
+import com.innercircle.sacco.contribution.guard.ContributionTransitionGuards;
 import com.innercircle.sacco.contribution.repository.ContributionCategoryRepository;
 import com.innercircle.sacco.contribution.repository.ContributionPenaltyRepository;
 import com.innercircle.sacco.contribution.repository.ContributionRepository;
@@ -126,12 +127,7 @@ public class ContributionServiceImpl implements ContributionService {
     public Contribution confirmContribution(UUID contributionId, String actor) {
         Contribution contribution = findById(contributionId);
 
-        if (contribution.getStatus() == ContributionStatus.CONFIRMED) {
-            throw new BusinessException("Contribution is already confirmed");
-        }
-        if (contribution.getStatus() == ContributionStatus.REVERSED) {
-            throw new BusinessException("Cannot confirm a reversed contribution");
-        }
+        ContributionTransitionGuards.CONTRIBUTION.validate(contribution.getStatus(), ContributionStatus.CONFIRMED);
 
         contribution.setStatus(ContributionStatus.CONFIRMED);
         Contribution confirmed = contributionRepository.save(contribution);
@@ -153,9 +149,7 @@ public class ContributionServiceImpl implements ContributionService {
     public Contribution reverseContribution(UUID contributionId, String actor) {
         Contribution contribution = findById(contributionId);
 
-        if (contribution.getStatus() == ContributionStatus.REVERSED) {
-            throw new BusinessException("Contribution is already reversed");
-        }
+        ContributionTransitionGuards.CONTRIBUTION.validate(contribution.getStatus(), ContributionStatus.REVERSED);
 
         contribution.setStatus(ContributionStatus.REVERSED);
         Contribution reversed = contributionRepository.save(contribution);

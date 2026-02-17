@@ -2,6 +2,7 @@ package com.innercircle.sacco.loan.service;
 
 import com.innercircle.sacco.common.event.LoanDisbursedEvent;
 import com.innercircle.sacco.common.event.LoanRepaymentEvent;
+import com.innercircle.sacco.common.exception.InvalidStateTransitionException;
 import com.innercircle.sacco.config.entity.InterestMethod;
 import com.innercircle.sacco.config.entity.LoanProductConfig;
 import com.innercircle.sacco.config.service.ConfigService;
@@ -260,8 +261,7 @@ class LoanServiceImplTest {
             when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
 
             assertThatThrownBy(() -> loanService.approveLoan(loanId, approverId))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Only pending loans can be approved");
+                    .isInstanceOf(InvalidStateTransitionException.class);
         }
 
         @Test
@@ -281,7 +281,7 @@ class LoanServiceImplTest {
             when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
 
             assertThatThrownBy(() -> loanService.approveLoan(loanId, approverId))
-                    .isInstanceOf(IllegalStateException.class);
+                    .isInstanceOf(InvalidStateTransitionException.class);
         }
 
         @Test
@@ -291,7 +291,7 @@ class LoanServiceImplTest {
             when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
 
             assertThatThrownBy(() -> loanService.approveLoan(loanId, approverId))
-                    .isInstanceOf(IllegalStateException.class);
+                    .isInstanceOf(InvalidStateTransitionException.class);
         }
     }
 
@@ -323,8 +323,7 @@ class LoanServiceImplTest {
             when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
 
             assertThatThrownBy(() -> loanService.rejectLoan(loanId, approverId))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Only pending loans can be rejected");
+                    .isInstanceOf(InvalidStateTransitionException.class);
         }
 
         @Test
@@ -404,8 +403,7 @@ class LoanServiceImplTest {
             when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
 
             assertThatThrownBy(() -> loanService.disburseLoan(loanId, "admin"))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Only approved loans can be disbursed");
+                    .isInstanceOf(InvalidStateTransitionException.class);
         }
 
         @Test
@@ -415,7 +413,7 @@ class LoanServiceImplTest {
             when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
 
             assertThatThrownBy(() -> loanService.disburseLoan(loanId, "admin"))
-                    .isInstanceOf(IllegalStateException.class);
+                    .isInstanceOf(InvalidStateTransitionException.class);
         }
 
         @Test

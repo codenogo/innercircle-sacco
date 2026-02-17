@@ -6,6 +6,7 @@ import com.innercircle.sacco.common.exception.BusinessException;
 import com.innercircle.sacco.common.exception.ResourceNotFoundException;
 import com.innercircle.sacco.member.entity.Member;
 import com.innercircle.sacco.member.entity.MemberStatus;
+import com.innercircle.sacco.member.guard.MemberTransitionGuards;
 import com.innercircle.sacco.member.repository.MemberRepository;
 import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import lombok.RequiredArgsConstructor;
@@ -137,9 +138,7 @@ public class MemberServiceImpl implements MemberService {
     public Member suspend(UUID id) {
         Member member = findById(id);
 
-        if (member.getStatus() == MemberStatus.SUSPENDED) {
-            throw new BusinessException("Member is already suspended");
-        }
+        MemberTransitionGuards.MEMBER.validate(member.getStatus(), MemberStatus.SUSPENDED);
 
         member.setStatus(MemberStatus.SUSPENDED);
         Member suspendedMember = memberRepository.save(member);
@@ -154,13 +153,7 @@ public class MemberServiceImpl implements MemberService {
     public Member reactivate(UUID id) {
         Member member = findById(id);
 
-        if (member.getStatus() == MemberStatus.ACTIVE) {
-            throw new BusinessException("Member is already active");
-        }
-
-        if (member.getStatus() == MemberStatus.DEACTIVATED) {
-            throw new BusinessException("Cannot reactivate a deactivated member");
-        }
+        MemberTransitionGuards.MEMBER.validate(member.getStatus(), MemberStatus.ACTIVE);
 
         member.setStatus(MemberStatus.ACTIVE);
         Member reactivatedMember = memberRepository.save(member);

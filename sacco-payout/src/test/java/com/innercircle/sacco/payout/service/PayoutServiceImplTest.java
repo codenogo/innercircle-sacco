@@ -3,6 +3,7 @@ package com.innercircle.sacco.payout.service;
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.event.PayoutProcessedEvent;
 import com.innercircle.sacco.common.event.PayoutStatusChangeEvent;
+import com.innercircle.sacco.common.exception.InvalidStateTransitionException;
 import com.innercircle.sacco.payout.entity.Payout;
 import com.innercircle.sacco.payout.entity.PayoutStatus;
 import com.innercircle.sacco.payout.entity.PayoutType;
@@ -224,8 +225,7 @@ class PayoutServiceImplTest {
             when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(approvedPayout));
 
             assertThatThrownBy(() -> payoutService.approvePayout(payoutId, "admin"))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Only pending payouts can be approved");
+                    .isInstanceOf(InvalidStateTransitionException.class);
 
             verify(payoutRepository, never()).save(any());
         }
@@ -237,8 +237,7 @@ class PayoutServiceImplTest {
             when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(processedPayout));
 
             assertThatThrownBy(() -> payoutService.approvePayout(payoutId, "admin"))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Only pending payouts can be approved");
+                    .isInstanceOf(InvalidStateTransitionException.class);
 
             verify(payoutRepository, never()).save(any());
         }
@@ -250,8 +249,7 @@ class PayoutServiceImplTest {
             when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(failedPayout));
 
             assertThatThrownBy(() -> payoutService.approvePayout(payoutId, "admin"))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Only pending payouts can be approved");
+                    .isInstanceOf(InvalidStateTransitionException.class);
         }
     }
 
@@ -323,8 +321,7 @@ class PayoutServiceImplTest {
             when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(pendingPayout));
 
             assertThatThrownBy(() -> payoutService.processPayout(payoutId, "admin"))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Only approved payouts can be processed");
+                    .isInstanceOf(InvalidStateTransitionException.class);
 
             verify(payoutRepository, never()).save(any());
             verify(outboxWriter, never()).write(any(), any(), any());
@@ -337,8 +334,7 @@ class PayoutServiceImplTest {
             when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(processedPayout));
 
             assertThatThrownBy(() -> payoutService.processPayout(payoutId, "admin"))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Only approved payouts can be processed");
+                    .isInstanceOf(InvalidStateTransitionException.class);
         }
 
         @Test
@@ -348,8 +344,7 @@ class PayoutServiceImplTest {
             when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(failedPayout));
 
             assertThatThrownBy(() -> payoutService.processPayout(payoutId, "admin"))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Only approved payouts can be processed");
+                    .isInstanceOf(InvalidStateTransitionException.class);
         }
 
         @Test

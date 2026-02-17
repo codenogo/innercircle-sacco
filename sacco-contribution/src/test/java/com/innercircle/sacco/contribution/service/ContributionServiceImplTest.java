@@ -3,6 +3,7 @@ package com.innercircle.sacco.contribution.service;
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.event.ContributionReceivedEvent;
 import com.innercircle.sacco.common.exception.BusinessException;
+import com.innercircle.sacco.common.exception.InvalidStateTransitionException;
 import com.innercircle.sacco.common.exception.ResourceNotFoundException;
 import com.innercircle.sacco.contribution.dto.BulkContributionItemRequest;
 import com.innercircle.sacco.contribution.dto.BulkContributionRequest;
@@ -317,8 +318,7 @@ class ContributionServiceImplTest {
                     .thenReturn(Optional.of(sampleContribution));
 
             assertThatThrownBy(() -> contributionService.confirmContribution(contributionId, "actor"))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("already confirmed");
+                    .isInstanceOf(InvalidStateTransitionException.class);
 
             verify(outboxWriter, never()).write(any(), any(), any());
         }
@@ -332,8 +332,7 @@ class ContributionServiceImplTest {
                     .thenReturn(Optional.of(sampleContribution));
 
             assertThatThrownBy(() -> contributionService.confirmContribution(contributionId, "actor"))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("Cannot confirm a reversed contribution");
+                    .isInstanceOf(InvalidStateTransitionException.class);
         }
 
         @Test
@@ -380,8 +379,7 @@ class ContributionServiceImplTest {
                     .thenReturn(Optional.of(sampleContribution));
 
             assertThatThrownBy(() -> contributionService.reverseContribution(contributionId, "admin"))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("already reversed");
+                    .isInstanceOf(InvalidStateTransitionException.class);
         }
     }
 
