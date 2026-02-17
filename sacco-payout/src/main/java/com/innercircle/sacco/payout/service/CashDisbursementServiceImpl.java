@@ -4,8 +4,8 @@ import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.payout.entity.CashDisbursement;
 import com.innercircle.sacco.payout.event.CashDisbursementRecordedEvent;
 import com.innercircle.sacco.payout.repository.CashDisbursementRepository;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +20,7 @@ import java.util.UUID;
 public class CashDisbursementServiceImpl implements CashDisbursementService {
 
     private final CashDisbursementRepository disbursementRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final EventOutboxWriter outboxWriter;
 
     @Override
     @Transactional
@@ -40,14 +40,14 @@ public class CashDisbursementServiceImpl implements CashDisbursementService {
 
         CashDisbursement savedDisbursement = disbursementRepository.save(disbursement);
 
-        eventPublisher.publishEvent(new CashDisbursementRecordedEvent(
+        outboxWriter.write(new CashDisbursementRecordedEvent(
                 savedDisbursement.getId(),
                 savedDisbursement.getMemberId(),
                 savedDisbursement.getAmount(),
                 receiptNumber,
                 UUID.randomUUID(),
                 actor
-        ));
+        ), "CashDisbursement", savedDisbursement.getId());
 
         return savedDisbursement;
     }

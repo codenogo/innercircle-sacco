@@ -7,8 +7,8 @@ import com.innercircle.sacco.common.exception.ResourceNotFoundException;
 import com.innercircle.sacco.member.entity.Member;
 import com.innercircle.sacco.member.entity.MemberStatus;
 import com.innercircle.sacco.member.repository.MemberRepository;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,7 +23,7 @@ import java.util.UUID;
 public class MemberServiceImpl implements MemberService {
 
     private final MemberRepository memberRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final EventOutboxWriter outboxWriter;
 
     @Override
     @Transactional
@@ -41,13 +41,13 @@ public class MemberServiceImpl implements MemberService {
 
         Member savedMember = memberRepository.save(member);
 
-        eventPublisher.publishEvent(new MemberCreatedEvent(
+        outboxWriter.write(new MemberCreatedEvent(
                 savedMember.getId(),
                 savedMember.getMemberNumber(),
                 savedMember.getFirstName(),
                 savedMember.getLastName(),
                 UUID.randomUUID(),
-                getCurrentActor()));
+                getCurrentActor()), "Member", savedMember.getId());
 
         return savedMember;
     }

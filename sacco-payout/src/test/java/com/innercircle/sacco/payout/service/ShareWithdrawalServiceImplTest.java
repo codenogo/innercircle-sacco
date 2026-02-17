@@ -4,6 +4,7 @@ import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.payout.entity.ShareWithdrawal;
 import com.innercircle.sacco.payout.entity.ShareWithdrawal.ShareWithdrawalStatus;
 import com.innercircle.sacco.payout.entity.ShareWithdrawal.ShareWithdrawalType;
+import com.innercircle.sacco.common.event.AuditableEvent;
 import com.innercircle.sacco.payout.event.ShareWithdrawalProcessedEvent;
 import com.innercircle.sacco.payout.event.ShareWithdrawalRequestedEvent;
 import com.innercircle.sacco.payout.repository.ShareWithdrawalRepository;
@@ -17,7 +18,7 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
@@ -30,6 +31,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -41,7 +43,7 @@ class ShareWithdrawalServiceImplTest {
     private ShareWithdrawalRepository withdrawalRepository;
 
     @Mock
-    private ApplicationEventPublisher eventPublisher;
+    private EventOutboxWriter outboxWriter;
 
     @InjectMocks
     private ShareWithdrawalServiceImpl shareWithdrawalService;
@@ -50,7 +52,7 @@ class ShareWithdrawalServiceImplTest {
     private ArgumentCaptor<ShareWithdrawal> withdrawalCaptor;
 
     @Captor
-    private ArgumentCaptor<Object> eventCaptor;
+    private ArgumentCaptor<AuditableEvent> eventCaptor;
 
     private UUID memberId;
     private UUID withdrawalId;
@@ -129,8 +131,8 @@ class ShareWithdrawalServiceImplTest {
                     memberId, amount, ShareWithdrawalType.PARTIAL, currentShareBalance, "admin"
             );
 
-            verify(eventPublisher).publishEvent(eventCaptor.capture());
-            Object event = eventCaptor.getValue();
+            verify(outboxWriter).write(eventCaptor.capture(), eq("ShareWithdrawal"), any(UUID.class));
+            AuditableEvent event = eventCaptor.getValue();
             assertThat(event).isInstanceOf(ShareWithdrawalRequestedEvent.class);
             ShareWithdrawalRequestedEvent requestedEvent = (ShareWithdrawalRequestedEvent) event;
             assertThat(requestedEvent.withdrawalId()).isEqualTo(saved.getId());
@@ -152,7 +154,7 @@ class ShareWithdrawalServiceImplTest {
                     .hasMessageContaining("Withdrawal amount exceeds current share balance");
 
             verify(withdrawalRepository, never()).save(any());
-            verify(eventPublisher, never()).publishEvent(any());
+            verify(outboxWriter, never()).write(any(), any(), any());
         }
 
         @Test
@@ -302,8 +304,8 @@ class ShareWithdrawalServiceImplTest {
 
             shareWithdrawalService.processWithdrawal(withdrawalId, "admin");
 
-            verify(eventPublisher).publishEvent(eventCaptor.capture());
-            Object event = eventCaptor.getValue();
+            verify(outboxWriter).write(eventCaptor.capture(), eq("ShareWithdrawal"), any(UUID.class));
+            AuditableEvent event = eventCaptor.getValue();
             assertThat(event).isInstanceOf(ShareWithdrawalProcessedEvent.class);
             ShareWithdrawalProcessedEvent processedEvent = (ShareWithdrawalProcessedEvent) event;
             assertThat(processedEvent.withdrawalId()).isEqualTo(processedWithdrawal.getId());
@@ -333,7 +335,7 @@ class ShareWithdrawalServiceImplTest {
                     .hasMessageContaining("Only approved withdrawals can be processed");
 
             verify(withdrawalRepository, never()).save(any());
-            verify(eventPublisher, never()).publishEvent(any());
+            verify(outboxWriter, never()).write(any(), any(), any());
         }
 
         @Test

@@ -16,8 +16,8 @@ import com.innercircle.sacco.contribution.entity.ContributionStatus;
 import com.innercircle.sacco.contribution.repository.ContributionCategoryRepository;
 import com.innercircle.sacco.contribution.repository.ContributionPenaltyRepository;
 import com.innercircle.sacco.contribution.repository.ContributionRepository;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -40,7 +40,7 @@ public class ContributionServiceImpl implements ContributionService {
     private final ContributionRepository contributionRepository;
     private final ContributionPenaltyRepository penaltyRepository;
     private final ContributionCategoryRepository categoryRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final EventOutboxWriter outboxWriter;
 
     @Override
     @Transactional
@@ -67,14 +67,14 @@ public class ContributionServiceImpl implements ContributionService {
 
         Contribution saved = contributionRepository.save(contribution);
 
-        eventPublisher.publishEvent(new ContributionCreatedEvent(
+        outboxWriter.write(new ContributionCreatedEvent(
                 saved.getId(),
                 saved.getMemberId(),
                 saved.getAmount(),
                 saved.getReferenceNumber(),
                 UUID.randomUUID(),
                 "system"
-        ));
+        ), "Contribution", saved.getId());
 
         return saved;
     }
@@ -108,14 +108,14 @@ public class ContributionServiceImpl implements ContributionService {
         List<Contribution> saved = contributionRepository.saveAll(contributions);
 
         for (Contribution c : saved) {
-            eventPublisher.publishEvent(new ContributionCreatedEvent(
+            outboxWriter.write(new ContributionCreatedEvent(
                     c.getId(),
                     c.getMemberId(),
                     c.getAmount(),
                     c.getReferenceNumber(),
                     UUID.randomUUID(),
                     "system"
-            ));
+            ), "Contribution", c.getId());
         }
 
         return saved;
@@ -136,14 +136,14 @@ public class ContributionServiceImpl implements ContributionService {
         contribution.setStatus(ContributionStatus.CONFIRMED);
         Contribution confirmed = contributionRepository.save(contribution);
 
-        eventPublisher.publishEvent(new ContributionReceivedEvent(
+        outboxWriter.write(new ContributionReceivedEvent(
                 confirmed.getId(),
                 confirmed.getMemberId(),
                 confirmed.getAmount(),
                 confirmed.getReferenceNumber(),
                 UUID.randomUUID(),
                 actor
-        ));
+        ), "Contribution", confirmed.getId());
 
         return confirmed;
     }
@@ -160,14 +160,14 @@ public class ContributionServiceImpl implements ContributionService {
         contribution.setStatus(ContributionStatus.REVERSED);
         Contribution reversed = contributionRepository.save(contribution);
 
-        eventPublisher.publishEvent(new ContributionReversedEvent(
+        outboxWriter.write(new ContributionReversedEvent(
                 reversed.getId(),
                 reversed.getMemberId(),
                 reversed.getAmount(),
                 reversed.getReferenceNumber(),
                 UUID.randomUUID(),
                 actor
-        ));
+        ), "Contribution", reversed.getId());
 
         return reversed;
     }

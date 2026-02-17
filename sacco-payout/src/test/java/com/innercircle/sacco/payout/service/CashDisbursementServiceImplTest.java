@@ -2,6 +2,7 @@ package com.innercircle.sacco.payout.service;
 
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.payout.entity.CashDisbursement;
+import com.innercircle.sacco.common.event.AuditableEvent;
 import com.innercircle.sacco.payout.event.CashDisbursementRecordedEvent;
 import com.innercircle.sacco.payout.repository.CashDisbursementRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,7 +15,7 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
@@ -40,7 +41,7 @@ class CashDisbursementServiceImplTest {
     private CashDisbursementRepository disbursementRepository;
 
     @Mock
-    private ApplicationEventPublisher eventPublisher;
+    private EventOutboxWriter outboxWriter;
 
     @InjectMocks
     private CashDisbursementServiceImpl cashDisbursementService;
@@ -49,7 +50,7 @@ class CashDisbursementServiceImplTest {
     private ArgumentCaptor<CashDisbursement> disbursementCaptor;
 
     @Captor
-    private ArgumentCaptor<Object> eventCaptor;
+    private ArgumentCaptor<AuditableEvent> eventCaptor;
 
     private UUID memberId;
     private UUID disbursementId;
@@ -122,8 +123,8 @@ class CashDisbursementServiceImplTest {
                     memberId, amount, receivedBy, disbursedBy, receiptNumber, disbursementDate, "admin"
             );
 
-            verify(eventPublisher).publishEvent(eventCaptor.capture());
-            Object event = eventCaptor.getValue();
+            verify(outboxWriter).write(eventCaptor.capture(), eq("CashDisbursement"), any(UUID.class));
+            AuditableEvent event = eventCaptor.getValue();
             assertThat(event).isInstanceOf(CashDisbursementRecordedEvent.class);
             CashDisbursementRecordedEvent recordedEvent = (CashDisbursementRecordedEvent) event;
             assertThat(recordedEvent.disbursementId()).isEqualTo(saved.getId());
@@ -148,7 +149,7 @@ class CashDisbursementServiceImplTest {
                     .hasMessageContaining(receiptNumber);
 
             verify(disbursementRepository, never()).save(any());
-            verify(eventPublisher, never()).publishEvent(any());
+            verify(outboxWriter, never()).write(any(), any(), any());
         }
     }
 

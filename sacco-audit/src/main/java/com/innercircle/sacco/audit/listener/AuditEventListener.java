@@ -8,8 +8,7 @@ import com.innercircle.sacco.common.event.AuditableEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.context.event.EventListener;
 
 import java.lang.reflect.Field;
 import java.util.HashMap;
@@ -18,7 +17,7 @@ import java.util.UUID;
 
 /**
  * Event listener that captures all AuditableEvent subtypes and persists them to the audit trail.
- * Uses @TransactionalEventListener to ensure audit events are only persisted after successful transaction commit.
+ * Uses @EventListener to process audit events synchronously within the outbox transaction.
  */
 @Component
 @RequiredArgsConstructor
@@ -30,11 +29,11 @@ public class AuditEventListener {
 
     /**
      * Listen for all AuditableEvent subtypes and create audit entries.
-     * Fires after the transaction commits to ensure data consistency.
+     * Fires synchronously as events are now published via outbox pattern.
      *
      * @param event The auditable domain event
      */
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     public void handleAuditableEvent(AuditableEvent event) {
         try {
             String actor = event.getActor();

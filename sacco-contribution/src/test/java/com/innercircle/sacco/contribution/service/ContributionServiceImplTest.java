@@ -25,7 +25,7 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -59,7 +59,7 @@ class ContributionServiceImplTest {
     private ContributionCategoryRepository categoryRepository;
 
     @Mock
-    private ApplicationEventPublisher eventPublisher;
+    private EventOutboxWriter outboxWriter;
 
     @InjectMocks
     private ContributionServiceImpl contributionService;
@@ -299,7 +299,7 @@ class ContributionServiceImplTest {
             Contribution result = contributionService.confirmContribution(contributionId, "treasurer");
 
             assertThat(result.getStatus()).isEqualTo(ContributionStatus.CONFIRMED);
-            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            verify(outboxWriter).write(eventCaptor.capture(), eq("Contribution"), any(UUID.class));
 
             ContributionReceivedEvent event = eventCaptor.getValue();
             assertThat(event.contributionId()).isEqualTo(contributionId);
@@ -320,7 +320,7 @@ class ContributionServiceImplTest {
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("already confirmed");
 
-            verify(eventPublisher, never()).publishEvent(any());
+            verify(outboxWriter, never()).write(any(), any(), any());
         }
 
         @Test

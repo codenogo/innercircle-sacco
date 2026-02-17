@@ -6,8 +6,7 @@ import com.innercircle.sacco.ledger.service.AccountSetupService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.context.event.EventListener;
 
 @Component
 @RequiredArgsConstructor
@@ -16,13 +15,13 @@ public class MemberAccountListener {
 
     private final AccountSetupService accountSetupService;
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    @EventListener
     public void handleMemberCreated(MemberCreatedEvent event) {
         log.info("Creating member accounts for member {} ({})", event.memberId(), event.memberNumber());
         accountSetupService.createMemberAccounts(event.memberId(), event.memberNumber());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    @EventListener
     public void handleLoanApplication(LoanApplicationEvent event) {
         log.info("Ensuring loan sub-account for member {}", event.memberId());
         accountSetupService.ensureLoanSubAccount(event.memberId());

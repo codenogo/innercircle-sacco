@@ -16,7 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -44,7 +44,7 @@ class MemberServiceImplTest {
     private MemberRepository memberRepository;
 
     @Mock
-    private ApplicationEventPublisher eventPublisher;
+    private EventOutboxWriter outboxWriter;
 
     @InjectMocks
     private MemberServiceImpl memberService;
@@ -153,7 +153,7 @@ class MemberServiceImplTest {
             memberService.create(sampleMember);
 
             ArgumentCaptor<MemberCreatedEvent> eventCaptor = ArgumentCaptor.forClass(MemberCreatedEvent.class);
-            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            verify(outboxWriter).write(eventCaptor.capture(), eq("Member"), any(UUID.class));
 
             MemberCreatedEvent event = eventCaptor.getValue();
             assertThat(event.memberId()).isEqualTo(memberId);
@@ -176,7 +176,7 @@ class MemberServiceImplTest {
             memberService.create(sampleMember);
 
             ArgumentCaptor<MemberCreatedEvent> eventCaptor = ArgumentCaptor.forClass(MemberCreatedEvent.class);
-            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            verify(outboxWriter).write(eventCaptor.capture(), eq("Member"), any(UUID.class));
 
             assertThat(eventCaptor.getValue().actor()).isEqualTo("system");
         }

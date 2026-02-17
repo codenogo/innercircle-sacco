@@ -6,8 +6,8 @@ import com.innercircle.sacco.payout.entity.WithdrawalStatus;
 import com.innercircle.sacco.payout.event.BankWithdrawalConfirmedEvent;
 import com.innercircle.sacco.payout.event.BankWithdrawalInitiatedEvent;
 import com.innercircle.sacco.payout.repository.BankWithdrawalRepository;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +22,7 @@ import java.util.UUID;
 public class BankWithdrawalServiceImpl implements BankWithdrawalService {
 
     private final BankWithdrawalRepository withdrawalRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final EventOutboxWriter outboxWriter;
 
     @Override
     @Transactional
@@ -33,14 +33,14 @@ public class BankWithdrawalServiceImpl implements BankWithdrawalService {
 
         BankWithdrawal savedWithdrawal = withdrawalRepository.save(withdrawal);
 
-        eventPublisher.publishEvent(new BankWithdrawalInitiatedEvent(
+        outboxWriter.write(new BankWithdrawalInitiatedEvent(
                 savedWithdrawal.getId(),
                 savedWithdrawal.getMemberId(),
                 savedWithdrawal.getAmount(),
                 savedWithdrawal.getBankName(),
                 UUID.randomUUID(),
                 actor
-        ));
+        ), "BankWithdrawal", savedWithdrawal.getId());
 
         return savedWithdrawal;
     }
@@ -61,13 +61,13 @@ public class BankWithdrawalServiceImpl implements BankWithdrawalService {
 
         BankWithdrawal savedWithdrawal = withdrawalRepository.save(withdrawal);
 
-        eventPublisher.publishEvent(new BankWithdrawalConfirmedEvent(
+        outboxWriter.write(new BankWithdrawalConfirmedEvent(
                 savedWithdrawal.getId(),
                 savedWithdrawal.getMemberId(),
                 referenceNumber,
                 UUID.randomUUID(),
                 actor
-        ));
+        ), "BankWithdrawal", savedWithdrawal.getId());
 
         return savedWithdrawal;
     }

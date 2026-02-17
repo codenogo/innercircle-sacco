@@ -7,8 +7,8 @@ import com.innercircle.sacco.payout.entity.Payout;
 import com.innercircle.sacco.payout.entity.PayoutStatus;
 import com.innercircle.sacco.payout.entity.PayoutType;
 import com.innercircle.sacco.payout.repository.PayoutRepository;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +25,7 @@ import java.util.UUID;
 public class PayoutServiceImpl implements PayoutService {
 
     private final PayoutRepository payoutRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final EventOutboxWriter outboxWriter;
 
     @Override
     @Transactional
@@ -34,13 +34,13 @@ public class PayoutServiceImpl implements PayoutService {
         payout.setCreatedBy(actor);
         Payout saved = payoutRepository.save(payout);
 
-        eventPublisher.publishEvent(new PayoutStatusChangeEvent(
+        outboxWriter.write(new PayoutStatusChangeEvent(
                 saved.getId(),
                 saved.getMemberId(),
                 "CREATED",
                 UUID.randomUUID(),
                 actor
-        ));
+        ), "Payout", saved.getId());
 
         return saved;
     }
@@ -60,13 +60,13 @@ public class PayoutServiceImpl implements PayoutService {
 
         Payout approved = payoutRepository.save(payout);
 
-        eventPublisher.publishEvent(new PayoutStatusChangeEvent(
+        outboxWriter.write(new PayoutStatusChangeEvent(
                 approved.getId(),
                 approved.getMemberId(),
                 "APPROVED",
                 UUID.randomUUID(),
                 actor
-        ));
+        ), "Payout", approved.getId());
 
         return approved;
     }
@@ -87,14 +87,14 @@ public class PayoutServiceImpl implements PayoutService {
 
         Payout savedPayout = payoutRepository.save(payout);
 
-        eventPublisher.publishEvent(new PayoutProcessedEvent(
+        outboxWriter.write(new PayoutProcessedEvent(
                 savedPayout.getId(),
                 savedPayout.getMemberId(),
                 savedPayout.getAmount(),
                 savedPayout.getType().name(),
                 UUID.randomUUID(),
                 actor
-        ));
+        ), "Payout", savedPayout.getId());
 
         return savedPayout;
     }

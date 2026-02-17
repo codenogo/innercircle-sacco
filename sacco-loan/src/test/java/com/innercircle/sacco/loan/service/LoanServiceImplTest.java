@@ -24,7 +24,7 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -64,7 +64,7 @@ class LoanServiceImplTest {
     private RepaymentScheduleGenerator scheduleGenerator;
 
     @Mock
-    private ApplicationEventPublisher eventPublisher;
+    private EventOutboxWriter outboxWriter;
 
     @Mock
     private ConfigService configService;
@@ -368,7 +368,7 @@ class LoanServiceImplTest {
             assertThat(result.getOutstandingBalance()).isEqualByComparingTo(new BigDecimal("112000"));
 
             verify(scheduleRepository).saveAll(any());
-            verify(eventPublisher).publishEvent(any(LoanDisbursedEvent.class));
+            verify(outboxWriter).write(any(LoanDisbursedEvent.class), eq("LoanApplication"), any(UUID.class));
         }
 
         @Test
@@ -437,7 +437,7 @@ class LoanServiceImplTest {
             loanService.disburseLoan(loanId, "treasurer");
 
             ArgumentCaptor<LoanDisbursedEvent> eventCaptor = ArgumentCaptor.forClass(LoanDisbursedEvent.class);
-            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            verify(outboxWriter).write(eventCaptor.capture(), eq("LoanApplication"), any(UUID.class));
 
             LoanDisbursedEvent event = eventCaptor.getValue();
             assertThat(event.loanId()).isEqualTo(loanId);
@@ -704,7 +704,7 @@ class LoanServiceImplTest {
             loanService.recordRepayment(loanId, new BigDecimal("10000"), "REF001", "cashier");
 
             ArgumentCaptor<LoanRepaymentEvent> eventCaptor = ArgumentCaptor.forClass(LoanRepaymentEvent.class);
-            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            verify(outboxWriter).write(eventCaptor.capture(), eq("LoanApplication"), any(UUID.class));
 
             LoanRepaymentEvent event = eventCaptor.getValue();
             assertThat(event.loanId()).isEqualTo(loanId);

@@ -16,7 +16,7 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -50,7 +50,7 @@ class LoanBenefitServiceImplTest {
     private JdbcTemplate jdbcTemplate;
 
     @Mock
-    private ApplicationEventPublisher eventPublisher;
+    private EventOutboxWriter outboxWriter;
 
     @InjectMocks
     private LoanBenefitServiceImpl benefitService;
@@ -95,7 +95,7 @@ class LoanBenefitServiceImplTest {
             benefitService.handleLoanRepayment(event);
 
             verify(benefitRepository).saveAll(anyList());
-            verify(eventPublisher).publishEvent(any(BenefitsDistributedEvent.class));
+            verify(outboxWriter).write(any(BenefitsDistributedEvent.class), eq("LoanApplication"), any(UUID.class));
         }
 
         @Test
@@ -248,7 +248,7 @@ class LoanBenefitServiceImplTest {
 
             ArgumentCaptor<BenefitsDistributedEvent> eventCaptor =
                     ArgumentCaptor.forClass(BenefitsDistributedEvent.class);
-            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            verify(outboxWriter).write(eventCaptor.capture(), eq("LoanApplication"), any(UUID.class));
 
             BenefitsDistributedEvent event = eventCaptor.getValue();
             assertThat(event.loanId()).isEqualTo(loanId);

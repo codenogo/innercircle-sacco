@@ -1,6 +1,7 @@
 package com.innercircle.sacco.loan.service;
 
 import com.innercircle.sacco.common.event.LoanReversalEvent;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import com.innercircle.sacco.loan.dto.ReversalResponse;
 import com.innercircle.sacco.loan.entity.LoanApplication;
 import com.innercircle.sacco.loan.entity.LoanRepayment;
@@ -12,7 +13,6 @@ import com.innercircle.sacco.loan.repository.LoanRepaymentRepository;
 import com.innercircle.sacco.loan.repository.RepaymentScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +30,7 @@ public class LoanReversalServiceImpl implements LoanReversalService {
     private final LoanRepaymentRepository repaymentRepository;
     private final LoanApplicationRepository loanRepository;
     private final RepaymentScheduleRepository scheduleRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final EventOutboxWriter outboxWriter;
 
     @Override
     @Transactional
@@ -103,7 +103,7 @@ public class LoanReversalServiceImpl implements LoanReversalService {
         Instant reversedAt = Instant.now();
 
         // Publish reversal event for ledger compensation
-        eventPublisher.publishEvent(new LoanReversalEvent(
+        outboxWriter.write(new LoanReversalEvent(
                 UUID.randomUUID(), // Generate a reversal ID
                 "REPAYMENT",
                 repaymentId,
@@ -116,7 +116,7 @@ public class LoanReversalServiceImpl implements LoanReversalService {
                 reason,
                 UUID.randomUUID(),
                 actor
-        ));
+        ), "LoanApplication", loan.getId());
 
         log.info("Repayment {} reversed successfully", repaymentId);
 
