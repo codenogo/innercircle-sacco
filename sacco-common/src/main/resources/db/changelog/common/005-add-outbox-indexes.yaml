@@ -1,0 +1,29 @@
+databaseChangeLog:
+  - changeSet:
+      id: common-005-add-outbox-indexes
+      author: innercircle
+      changes:
+        - createIndex:
+            tableName: event_outbox
+            indexName: idx_event_outbox_status_created
+            columns:
+              - column:
+                  name: status
+              - column:
+                  name: created_at
+        - createIndex:
+            tableName: event_dead_letter
+            indexName: idx_event_dead_letter_status_retry
+            columns:
+              - column:
+                  name: status
+              - column:
+                  name: next_retry_at
+        - modifyDataType:
+            tableName: event_outbox
+            columnName: event_type
+            newDataType: varchar(255)
+        - modifyDataType:
+            tableName: event_dead_letter
+            columnName: event_type
+            newDataType: varchar(255)

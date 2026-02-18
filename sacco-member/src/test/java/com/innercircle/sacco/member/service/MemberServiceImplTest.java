@@ -2,6 +2,7 @@ package com.innercircle.sacco.member.service;
 
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.event.MemberCreatedEvent;
+import com.innercircle.sacco.common.event.MemberStatusChangeEvent;
 import com.innercircle.sacco.common.exception.BusinessException;
 import com.innercircle.sacco.common.exception.InvalidStateTransitionException;
 import com.innercircle.sacco.common.exception.ResourceNotFoundException;
@@ -576,6 +577,13 @@ class MemberServiceImplTest {
 
             assertThat(result.getStatus()).isEqualTo(MemberStatus.SUSPENDED);
             verify(memberRepository).save(sampleMember);
+
+            ArgumentCaptor<MemberStatusChangeEvent> eventCaptor = ArgumentCaptor.forClass(MemberStatusChangeEvent.class);
+            verify(outboxWriter).write(eventCaptor.capture(), eq("Member"), any(UUID.class));
+            MemberStatusChangeEvent event = eventCaptor.getValue();
+            assertThat(event.memberId()).isEqualTo(memberId);
+            assertThat(event.previousStatus()).isEqualTo("ACTIVE");
+            assertThat(event.newStatus()).isEqualTo("SUSPENDED");
         }
 
         @Test
@@ -632,6 +640,13 @@ class MemberServiceImplTest {
 
             assertThat(result.getStatus()).isEqualTo(MemberStatus.ACTIVE);
             verify(memberRepository).save(sampleMember);
+
+            ArgumentCaptor<MemberStatusChangeEvent> eventCaptor = ArgumentCaptor.forClass(MemberStatusChangeEvent.class);
+            verify(outboxWriter).write(eventCaptor.capture(), eq("Member"), any(UUID.class));
+            MemberStatusChangeEvent event = eventCaptor.getValue();
+            assertThat(event.memberId()).isEqualTo(memberId);
+            assertThat(event.previousStatus()).isEqualTo("SUSPENDED");
+            assertThat(event.newStatus()).isEqualTo("ACTIVE");
         }
 
         @Test

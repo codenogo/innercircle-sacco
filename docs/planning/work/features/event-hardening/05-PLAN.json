@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "feature": "event-hardening",
+  "planNumber": "05",
+  "goal": "Refactor all services to use EventOutboxWriter instead of ApplicationEventPublisher.publishEvent()",
+  "tasks": [
+    {
+      "name": "Refactor loan module services to use EventOutboxWriter",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchServiceImpl.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanReversalServiceImpl.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBenefitServiceImpl.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanPenaltyServiceImpl.java"
+      ],
+      "action": "Replace ApplicationEventPublisher.publishEvent(event) with EventOutboxWriter.write(event, aggregateType, aggregateId) in all loan module services. Inject EventOutboxWriter via constructor. Remove ApplicationEventPublisher injection where it is no longer used. The aggregate type should be the entity class simple name (e.g., 'LoanApplication') and aggregate ID is the entity UUID. Update corresponding test files to mock EventOutboxWriter instead of ApplicationEventPublisher.",
+      "verify": [
+        "mvn -pl sacco-loan compile -q",
+        "mvn -pl sacco-loan test -q"
+      ]
+    },
+    {
+      "name": "Refactor contribution, payout, and member services to use EventOutboxWriter",
+      "files": [
+        "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/service/ContributionServiceImpl.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/PayoutServiceImpl.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/BankWithdrawalServiceImpl.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/ShareWithdrawalServiceImpl.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/CashDisbursementServiceImpl.java",
+        "sacco-member/src/main/java/com/innercircle/sacco/member/service/MemberServiceImpl.java"
+      ],
+      "action": "Same refactoring as task 1 but for contribution, payout, and member modules. Replace eventPublisher.publishEvent() with outboxWriter.write(). Inject EventOutboxWriter. Update corresponding test files.",
+      "verify": [
+        "mvn -pl sacco-contribution,sacco-payout,sacco-member compile -q",
+        "mvn -pl sacco-contribution,sacco-payout,sacco-member test -q"
+      ]
+    },
+    {
+      "name": "Change event listeners from @TransactionalEventListener to @EventListener",
+      "files": [
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/listener/FinancialEventListener.java",
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/listener/MemberAccountListener.java",
+        "sacco-audit/src/main/java/com/innercircle/sacco/audit/listener/AuditEventListener.java"
+      ],
+      "action": "Change all @TransactionalEventListener annotations to @EventListener in FinancialEventListener (10 handlers), MemberAccountListener, and AuditEventListener. Remove TransactionPhase imports. Events now come from the outbox processor (not the original transaction), so transaction phase binding is no longer needed. Each handler method should remain @Transactional (handler creates its own transaction). Update corresponding test files if they reference @TransactionalEventListener.",
+      "verify": [
+        "mvn -pl sacco-ledger,sacco-audit compile -q",
+        "mvn -pl sacco-ledger,sacco-audit test -q"
+      ],
+      "blockedBy": [0, 1]
+    }
+  ],
+  "planVerify": [
+    "mvn -pl sacco-common,sacco-member,sacco-contribution,sacco-loan,sacco-payout,sacco-ledger,sacco-audit compile -q",
+    "mvn -pl sacco-common,sacco-member,sacco-contribution,sacco-loan,sacco-payout,sacco-ledger,sacco-audit test -q"
+  ],
+  "commitMessage": "feat(event-hardening): refactor all services to use outbox writer and change listeners to @EventListener",
+  "timestamp": "2026-02-16T00:00:00Z"
+}

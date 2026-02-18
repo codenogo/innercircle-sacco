@@ -3,6 +3,7 @@ package com.innercircle.sacco.contribution.service;
 import com.innercircle.sacco.common.event.PenaltyAppliedEvent;
 import com.innercircle.sacco.common.exception.BusinessException;
 import com.innercircle.sacco.common.exception.ResourceNotFoundException;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import com.innercircle.sacco.contribution.entity.ContributionPenalty;
 import com.innercircle.sacco.contribution.repository.ContributionPenaltyRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,7 +16,6 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -27,6 +27,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -38,7 +39,7 @@ class ContributionPenaltyServiceImplTest {
     private ContributionPenaltyRepository penaltyRepository;
 
     @Mock
-    private ApplicationEventPublisher eventPublisher;
+    private EventOutboxWriter outboxWriter;
 
     @InjectMocks
     private ContributionPenaltyServiceImpl penaltyService;
@@ -87,7 +88,7 @@ class ContributionPenaltyServiceImplTest {
             assertThat(result.getReason()).isEqualTo("Late contribution penalty");
 
             verify(penaltyRepository).save(samplePenalty);
-            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            verify(outboxWriter).write(eventCaptor.capture(), eq("ContributionPenalty"), any(UUID.class));
 
             PenaltyAppliedEvent event = eventCaptor.getValue();
             assertThat(event.penaltyId()).isEqualTo(penaltyId);
@@ -116,7 +117,7 @@ class ContributionPenaltyServiceImplTest {
 
             penaltyService.applyPenalty(samplePenalty, "SYSTEM");
 
-            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            verify(outboxWriter).write(eventCaptor.capture(), eq("ContributionPenalty"), any(UUID.class));
             assertThat(eventCaptor.getValue().actor()).isEqualTo("SYSTEM");
         }
 
@@ -162,6 +163,7 @@ class ContributionPenaltyServiceImplTest {
             assertThat(result.getWaivedBy()).isEqualTo("treasurer");
             assertThat(result.getWaivedAt()).isNotNull();
             verify(penaltyRepository).save(samplePenalty);
+            verify(outboxWriter).write(any(), eq("ContributionPenalty"), eq(penaltyId));
         }
 
         @Test

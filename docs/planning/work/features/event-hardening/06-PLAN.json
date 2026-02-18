@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "feature": "event-hardening",
+  "planNumber": "06",
+  "goal": "Refactor all services to use TransitionGuard.validate() instead of ad-hoc status checks",
+  "tasks": [
+    {
+      "name": "Refactor loan module to use TransitionGuard for all status transitions",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchServiceImpl.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanReversalServiceImpl.java"
+      ],
+      "action": "Replace all ad-hoc 'if (status != X) throw IllegalStateException(...)' checks with TransitionGuard.LOAN.validate(currentStatus, targetStatus) calls. In LoanServiceImpl: approveLoan, rejectLoan, disburseLoan, recordRepayment (REPAYING transition), closeLoan. In LoanBatchServiceImpl: batch status transitions (DEFAULTED, CLOSED). In LoanReversalServiceImpl: reversal status checks. Inject or reference TransitionGuards.LOAN. Update test expectations: InvalidStateTransitionException instead of IllegalStateException.",
+      "verify": [
+        "mvn -pl sacco-loan compile -q",
+        "mvn -pl sacco-loan test -q"
+      ]
+    },
+    {
+      "name": "Refactor payout and contribution services to use TransitionGuard",
+      "files": [
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/PayoutServiceImpl.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/BankWithdrawalServiceImpl.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/ShareWithdrawalServiceImpl.java",
+        "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/CashDisbursementServiceImpl.java",
+        "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/service/ContributionServiceImpl.java"
+      ],
+      "action": "Replace ad-hoc status checks with TransitionGuards.PAYOUT.validate() and TransitionGuards.CONTRIBUTION.validate() respectively. In PayoutServiceImpl/BankWithdrawal/ShareWithdrawal/CashDisbursement: approve and process transitions. In ContributionServiceImpl: confirm and reverse transitions. Update test expectations.",
+      "verify": [
+        "mvn -pl sacco-payout,sacco-contribution compile -q",
+        "mvn -pl sacco-payout,sacco-contribution test -q"
+      ]
+    },
+    {
+      "name": "Refactor member service to use TransitionGuard and add GlobalExceptionHandler mapping",
+      "files": [
+        "sacco-member/src/main/java/com/innercircle/sacco/member/service/MemberServiceImpl.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/exception/GlobalExceptionHandler.java"
+      ],
+      "action": "Replace ad-hoc member status checks with TransitionGuards.MEMBER.validate() in MemberServiceImpl (suspend, reactivate, deactivate methods). Add InvalidStateTransitionException handler to GlobalExceptionHandler that returns 409 Conflict with message containing current state, target state, and entity type. Update test expectations.",
+      "verify": [
+        "mvn -pl sacco-member,sacco-common compile -q",
+        "mvn -pl sacco-member,sacco-common test -q"
+      ],
+      "blockedBy": [0, 1]
+    }
+  ],
+  "planVerify": [
+    "mvn -pl sacco-common,sacco-member,sacco-contribution,sacco-loan,sacco-payout compile -q",
+    "mvn -pl sacco-common,sacco-member,sacco-contribution,sacco-loan,sacco-payout test -q"
+  ],
+  "commitMessage": "feat(event-hardening): replace ad-hoc status checks with TransitionGuard across all modules",
+  "timestamp": "2026-02-16T00:00:00Z"
+}

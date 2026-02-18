@@ -2,6 +2,7 @@ package com.innercircle.sacco.member.service;
 
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.event.MemberCreatedEvent;
+import com.innercircle.sacco.common.event.MemberStatusChangeEvent;
 import com.innercircle.sacco.common.exception.BusinessException;
 import com.innercircle.sacco.common.exception.ResourceNotFoundException;
 import com.innercircle.sacco.member.entity.Member;
@@ -90,8 +91,6 @@ public class MemberServiceImpl implements MemberService {
 
         Member updatedMember = memberRepository.save(existing);
 
-        // TODO: Publish MemberUpdatedEvent when event is defined
-
         return updatedMember;
     }
 
@@ -137,13 +136,20 @@ public class MemberServiceImpl implements MemberService {
     @Transactional
     public Member suspend(UUID id) {
         Member member = findById(id);
+        String previousStatus = member.getStatus().name();
 
         MemberTransitionGuards.MEMBER.validate(member.getStatus(), MemberStatus.SUSPENDED);
 
         member.setStatus(MemberStatus.SUSPENDED);
         Member suspendedMember = memberRepository.save(member);
 
-        // TODO: Publish MemberSuspendedEvent when event is defined
+        outboxWriter.write(new MemberStatusChangeEvent(
+                suspendedMember.getId(),
+                suspendedMember.getMemberNumber(),
+                previousStatus,
+                MemberStatus.SUSPENDED.name(),
+                UUID.randomUUID(),
+                getCurrentActor()), "Member", suspendedMember.getId());
 
         return suspendedMember;
     }
@@ -152,13 +158,20 @@ public class MemberServiceImpl implements MemberService {
     @Transactional
     public Member reactivate(UUID id) {
         Member member = findById(id);
+        String previousStatus = member.getStatus().name();
 
         MemberTransitionGuards.MEMBER.validate(member.getStatus(), MemberStatus.ACTIVE);
 
         member.setStatus(MemberStatus.ACTIVE);
         Member reactivatedMember = memberRepository.save(member);
 
-        // TODO: Publish MemberReactivatedEvent when event is defined
+        outboxWriter.write(new MemberStatusChangeEvent(
+                reactivatedMember.getId(),
+                reactivatedMember.getMemberNumber(),
+                previousStatus,
+                MemberStatus.ACTIVE.name(),
+                UUID.randomUUID(),
+                getCurrentActor()), "Member", reactivatedMember.getId());
 
         return reactivatedMember;
     }

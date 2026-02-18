@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "feature": "event-hardening",
+  "planNumber": "01",
+  "goal": "Create outbox and dead letter database tables, JPA entities, repositories, and EventOutboxWriter in sacco-common",
+  "tasks": [
+    {
+      "name": "Create Liquibase migrations for event_outbox and event_dead_letter tables",
+      "files": [
+        "sacco-common/src/main/resources/db/changelog/common/003-create-event-outbox-table.yaml",
+        "sacco-common/src/main/resources/db/changelog/common/004-create-event-dead-letter-table.yaml",
+        "sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml"
+      ],
+      "action": "Create Liquibase YAML migrations for event_outbox (id UUID PK, event_type VARCHAR(100), aggregate_type VARCHAR(100), aggregate_id UUID, correlation_id UUID, idempotency_key VARCHAR(255) UNIQUE, payload TEXT, status VARCHAR(20) DEFAULT 'PENDING', created_at TIMESTAMP, processed_at TIMESTAMP, version BIGINT) and event_dead_letter (id UUID PK, outbox_id UUID UNIQUE FK, event_type VARCHAR(100), correlation_id UUID, payload TEXT, error_message TEXT, retries INT DEFAULT 0, max_retries INT DEFAULT 5, next_retry_at TIMESTAMP, status VARCHAR(20) DEFAULT 'PENDING_RETRY', created_at TIMESTAMP, last_retry_at TIMESTAMP, version BIGINT). Register both in db.changelog-master.yaml under Common cross-cutting migrations section.",
+      "verify": [
+        "mvn -pl sacco-app liquibase:validate -DskipTests 2>&1 || echo 'Liquibase plugin not configured, verify via compile'",
+        "mvn -pl sacco-common compile -q"
+      ]
+    },
+    {
+      "name": "Create EventOutbox and EventDeadLetter JPA entities with enums",
+      "files": [
+        "sacco-common/src/main/java/com/innercircle/sacco/common/outbox/EventOutbox.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/outbox/EventOutboxStatus.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/outbox/EventDeadLetter.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/outbox/EventDeadLetterStatus.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/outbox/EventOutboxRepository.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/outbox/EventDeadLetterRepository.java"
+      ],
+      "action": "Create EventOutbox entity extending BaseEntity with fields matching the event_outbox table. EventOutboxStatus enum: PENDING, PROCESSING, PROCESSED, FAILED. EventDeadLetter entity extending BaseEntity with fields matching event_dead_letter table. EventDeadLetterStatus enum: PENDING_RETRY, RETRYING, RESOLVED, FAILED. Create Spring Data JPA repositories: EventOutboxRepository (findByStatusOrderByCreatedAtAsc) and EventDeadLetterRepository (findByStatusAndNextRetryAtBeforeAndRetriesLessThan).",
+      "verify": [
+        "mvn -pl sacco-common compile -q"
+      ],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Create EventOutboxWriter service for writing events to outbox",
+      "files": [
+        "sacco-common/src/main/java/com/innercircle/sacco/common/outbox/EventOutboxWriter.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/outbox/EventSerializer.java"
+      ],
+      "action": "Create EventSerializer utility class that serializes AuditableEvent records to JSON using Jackson ObjectMapper (handle UUID, BigDecimal, Instant, LocalDate, enums) and deserializes JSON back to event objects. Create EventOutboxWriter @Service that accepts an AuditableEvent, serializes it via EventSerializer, generates an idempotency_key (eventType + aggregateId + timestamp hash), and persists an EventOutbox entity with status PENDING. The writer participates in the caller's transaction (no new @Transactional).",
+      "verify": [
+        "mvn -pl sacco-common compile -q"
+      ],
+      "blockedBy": [1]
+    }
+  ],
+  "planVerify": [
+    "mvn -pl sacco-common compile -q",
+    "mvn -pl sacco-common test -q"
+  ],
+  "commitMessage": "feat(event-hardening): add outbox and dead letter infrastructure (entities, migrations, writer)",
+  "timestamp": "2026-02-16T00:00:00Z"
+}

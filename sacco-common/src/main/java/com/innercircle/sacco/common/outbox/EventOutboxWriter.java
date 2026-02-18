@@ -19,7 +19,7 @@ public class EventOutboxWriter {
 
     public void write(AuditableEvent event, String aggregateType, UUID aggregateId) {
         String payload = eventSerializer.serialize(event);
-        String idempotencyKey = event.getEventType() + ":" + aggregateId + ":" + Instant.now().toEpochMilli();
+        String idempotencyKey = event.getEventType() + ":" + aggregateId + ":" + Instant.now().toEpochMilli() + ":" + UUID.randomUUID();
 
         EventOutbox outbox = new EventOutbox();
         outbox.setEventType(event.getClass().getName());

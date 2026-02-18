@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "feature": "event-hardening",
+  "planNumber": "04",
+  "goal": "Create TransitionGuard utility and register all 4 status enum state machines",
+  "tasks": [
+    {
+      "name": "Create TransitionGuard utility and InvalidStateTransitionException",
+      "files": [
+        "sacco-common/src/main/java/com/innercircle/sacco/common/guard/TransitionGuard.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/exception/InvalidStateTransitionException.java"
+      ],
+      "action": "Create InvalidStateTransitionException extending BusinessException with fields: currentState, targetState, entityType. Create TransitionGuard<S extends Enum<S>> class with: (1) a Builder pattern to register allowed transitions: allow(S from, S to), (2) validate(S current, S target) that throws InvalidStateTransitionException if transition is not registered, (3) isAllowed(S current, S target) boolean check, (4) getAllowedTargets(S current) returns Set<S>. The class should be immutable after build.",
+      "verify": [
+        "mvn -pl sacco-common compile -q"
+      ]
+    },
+    {
+      "name": "Register TransitionGuard instances for all 4 status enums",
+      "files": [
+        "sacco-common/src/main/java/com/innercircle/sacco/common/guard/TransitionGuards.java"
+      ],
+      "action": "Create TransitionGuards final class with static TransitionGuard instances for: (1) LOAN: PENDING->APPROVED, PENDING->REJECTED, APPROVED->DISBURSED, DISBURSED->REPAYING, REPAYING->CLOSED, REPAYING->DEFAULTED. (2) PAYOUT: PENDING->APPROVED, APPROVED->PROCESSED, APPROVED->FAILED, PENDING->FAILED. (3) CONTRIBUTION: PENDING->CONFIRMED, CONFIRMED->REVERSED. (4) MEMBER: ACTIVE->SUSPENDED, SUSPENDED->ACTIVE, ACTIVE->DEACTIVATED, SUSPENDED->DEACTIVATED. Each guard is a public static final field. Import the status enums from their respective modules — if cross-module dependency is an issue, use String-based keys instead and adapt the guard to work with enum names.",
+      "verify": [
+        "mvn -pl sacco-common compile -q"
+      ],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Add comprehensive unit tests for TransitionGuard and all 4 registrations",
+      "files": [
+        "sacco-common/src/test/java/com/innercircle/sacco/common/guard/TransitionGuardTest.java",
+        "sacco-common/src/test/java/com/innercircle/sacco/common/guard/TransitionGuardsTest.java"
+      ],
+      "action": "TransitionGuardTest: (1) valid transition passes, (2) invalid transition throws InvalidStateTransitionException, (3) getAllowedTargets returns correct set, (4) isAllowed returns correct boolean. TransitionGuardsTest: test each of the 4 registered guards with (a) every valid transition succeeds, (b) at least one invalid transition per guard throws. Note: since sacco-common cannot import module-specific enums, if TransitionGuards uses String-based approach, test with String state names.",
+      "verify": [
+        "mvn -pl sacco-common test -q"
+      ],
+      "blockedBy": [0, 1]
+    }
+  ],
+  "planVerify": [
+    "mvn -pl sacco-common compile -q",
+    "mvn -pl sacco-common test -q"
+  ],
+  "commitMessage": "feat(event-hardening): add TransitionGuard utility with registrations for all 4 status enums",
+  "timestamp": "2026-02-16T00:00:00Z"
+}

@@ -91,3 +91,5 @@ databaseChangeLog:
       file: db/changelog/common/003-create-event-outbox-table.yaml
   - include:
       file: db/changelog/common/004-create-event-dead-letter-table.yaml
+  - include:
+      file: db/changelog/common/005-add-outbox-indexes.yaml

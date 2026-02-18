@@ -1,0 +1,58 @@
+# Plan 07: Fix all review blockers and warnings: outbox consistency, indexes, locking, idempotency, column sizing, and member state events
+
+## Goal
+Fix all review blockers and warnings: outbox consistency, indexes, locking, idempotency, column sizing, and member state events
+
+## Tasks
+
+### Task 1: Fix ContributionPenaltyServiceImpl + outbox infrastructure hardening
+**Files:** `sacco-contribution/src/main/java/com/innercircle/sacco/contribution/service/ContributionPenaltyServiceImpl.java`, `sacco-contribution/src/test/java/com/innercircle/sacco/contribution/service/ContributionPenaltyServiceImplTest.java`, `sacco-common/src/main/java/com/innercircle/sacco/common/outbox/EventOutboxWriter.java`, `sacco-common/src/main/java/com/innercircle/sacco/common/outbox/EventOutboxRepository.java`, `sacco-common/src/main/java/com/innercircle/sacco/common/outbox/EventDeadLetterRepository.java`
+**Action:**
+1) Replace ApplicationEventPublisher with EventOutboxWriter in ContributionPenaltyServiceImpl: inject EventOutboxWriter, call outboxWriter.write(event, 'ContributionPenalty', penaltyId) for both applyPenalty and waivePenalty. Update test to mock EventOutboxWriter instead of ApplicationEventPublisher. 2) Fix idempotency key in EventOutboxWriter: change from Instant.now().toEpochMilli() to include UUID.randomUUID() suffix. 3) Add @Lock(PESSIMISTIC_WRITE) and @QueryHints({@QueryHint(name='jakarta.persistence.lock.timeout', value='-2')}) on EventOutboxRepository.findByStatusOrderByCreatedAtAsc for SKIP LOCKED behavior. 4) Add same locking on EventDeadLetterRepository query.
+
+**Verify:**
+```bash
+mvn -pl sacco-contribution compile -q
+mvn -pl sacco-contribution test -q
+mvn -pl sacco-common compile -q
+```
+
+**Done when:** [Observable outcome]
+
+### Task 2: Add Liquibase migrations for indexes and column resize
+**Files:** `sacco-common/src/main/resources/db/changelog/common/005-add-outbox-indexes.yaml`, `sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml`
+**Action:**
+Create new changeset 005-add-outbox-indexes.yaml with: 1) createIndex on event_outbox(status, created_at) named idx_event_outbox_status_created. 2) createIndex on event_dead_letter(status, next_retry_at) named idx_event_dead_letter_status_retry. 3) modifyDataType on event_outbox.event_type from varchar(100) to varchar(255). 4) modifyDataType on event_dead_letter.event_type from varchar(100) to varchar(255). Register in db.changelog-master.yaml.
+
+**Verify:**
+```bash
+mvn -pl sacco-app compile -q
+```
+
+**Done when:** [Observable outcome]
+
+### Task 3: Add member state change events and wire via outbox
+**Files:** `sacco-common/src/main/java/com/innercircle/sacco/common/event/MemberStatusChangeEvent.java`, `sacco-member/src/main/java/com/innercircle/sacco/member/service/MemberServiceImpl.java`, `sacco-member/src/test/java/com/innercircle/sacco/member/service/MemberServiceImplTest.java`
+**Action:**
+1) Create MemberStatusChangeEvent record in sacco-common implementing AuditableEvent with fields: memberId (UUID), memberNumber (String), previousStatus (String), newStatus (String), correlationId (UUID), actor (String). eventType='MEMBER_STATUS_CHANGE'. 2) In MemberServiceImpl: publish MemberStatusChangeEvent via outboxWriter.write() in suspend(), reactivate(), and update() methods. Remove the TODO comments. 3) Update MemberServiceImplTest to verify outboxWriter.write() is called in suspend and reactivate tests.
+
+**Verify:**
+```bash
+mvn -pl sacco-common,sacco-member compile -q
+mvn -pl sacco-member test -q
+```
+
+**Done when:** [Observable outcome]
+
+## Verification
+
+After all tasks:
+```bash
+mvn -pl sacco-common,sacco-member,sacco-contribution,sacco-loan,sacco-payout compile -q
+mvn -pl sacco-common,sacco-member,sacco-contribution,sacco-loan,sacco-payout test -q
+```
+
+## Commit Message
+```
+fix(event-hardening): address review findings — outbox consistency, indexes, locking, member events
+```
