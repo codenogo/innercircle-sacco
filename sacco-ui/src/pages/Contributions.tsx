@@ -112,16 +112,49 @@ export function Contributions() {
     return { collected, confirmed, pending, reversed, total: monthContributions.length }
   }, [monthContributions])
 
+  const loadMembers = useCallback(async () => {
+    try {
+      const page = await request<CursorPage<MemberResponse>>('/api/v1/members?size=200')
+      setMembers(page.items)
+    } catch {
+      // Members will remain empty; modal member dropdown will be empty
+    }
+  }, [request])
+
+  useEffect(() => {
+    void loadMembers()
+  }, [loadMembers])
+
+  const memberMap = useMemo(() => {
+    const map = new Map<string, string>()
+    members.forEach(m => map.set(m.id, `${m.firstName} ${m.lastName}`.trim()))
+    return map
+  }, [members])
+
   const memberList = useMemo(
-    () => contributions
-      .reduce<{ id: string; name: string }[]>((acc, c) => {
-        if (!acc.some(m => m.id === c.memberId)) {
-          acc.push({ id: c.memberId, name: c.memberId })
-        }
-        return acc
-      }, []),
-    [contributions],
+    () => members.map(m => ({ id: m.id, name: `${m.firstName} ${m.lastName}`.trim() })),
+    [members],
   )
+
+  async function handleRecordContribution(payload: RecordContributionRequest) {
+    setRecordingContribution(true)
+    setFeedback(null)
+    try {
+      const created = await request<ContributionResponse>('/api/v1/contributions', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      })
+      setContributions(prev => [created, ...prev])
+      setShowModal(false)
+      setFeedback({ type: 'success', text: 'Contribution recorded successfully.' })
+    } catch (error) {
+      const message = toErrorMessage(error, 'Unable to record contribution.')
+      setFeedback({ type: 'error', text: message })
+      throw error instanceof Error ? error : new Error(message)
+    } finally {
+      setRecordingContribution(false)
+    }
+  }
 
   return (
     <div className="contributions-page">
@@ -184,7 +217,7 @@ export function Contributions() {
             <tr><td colSpan={5} className="table-empty">No contributions for the selected month.</td></tr>
           ) : monthContributions.map((c, i) => (
             <tr key={c.id} className={i % 2 === 1 ? 'ledger-row--alt' : ''}>
-              <td>{c.memberId}</td>
+              <td>{memberMap.get(c.memberId) ?? c.memberId}</td>
               <td className="ledger-date">{c.category}</td>
               <td className="data ledger-date">{c.contributionDate ? fmtDate(c.contributionDate) : '\u2014'}</td>
               <td><span className={`badge ${statusClass[c.status]}`}>{c.status}</span></td>
@@ -211,7 +244,13 @@ export function Contributions() {
 
       <hr className="rule rule--strong" />
 
-      <RecordContributionModal open={showModal} onClose={() => setShowModal(false)} members={memberList} />
+      <RecordContributionModal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        members={memberList}
+        onSubmit={handleRecordContribution}
+        isSubmitting={recordingContribution}
+      />
     </div>
   )
 }
