@@ -68,6 +68,31 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getBody().getPath()).isEqualTo("/api/v1/members/999");
     }
 
+    // --- InvalidStateTransitionException handling ---
+
+    @Test
+    void handleInvalidStateTransition_shouldReturnConflictStatus() {
+        InvalidStateTransitionException ex = new InvalidStateTransitionException("Loan", "PENDING", "CLOSED");
+
+        ResponseEntity<ApiResponse<Void>> response = handler.handleInvalidStateTransition(ex, request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void handleInvalidStateTransition_shouldReturnErrorBody() {
+        InvalidStateTransitionException ex = new InvalidStateTransitionException("Member", "ACTIVE", "ACTIVE");
+
+        ResponseEntity<ApiResponse<Void>> response = handler.handleInvalidStateTransition(ex, request);
+
+        ApiResponse<Void> body = response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.isSuccess()).isFalse();
+        assertThat(body.getMessage()).contains("Member");
+        assertThat(body.getMessage()).contains("ACTIVE");
+        assertThat(body.getPath()).isEqualTo("/api/v1/test");
+    }
+
     // --- BusinessException handling ---
 
     @Test

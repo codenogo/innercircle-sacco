@@ -3,6 +3,7 @@ package com.innercircle.sacco.contribution.service;
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.event.ContributionReceivedEvent;
 import com.innercircle.sacco.common.exception.BusinessException;
+import com.innercircle.sacco.common.exception.InvalidStateTransitionException;
 import com.innercircle.sacco.common.exception.ResourceNotFoundException;
 import com.innercircle.sacco.contribution.dto.BulkContributionItemRequest;
 import com.innercircle.sacco.contribution.dto.BulkContributionRequest;
@@ -25,7 +26,7 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -59,7 +60,7 @@ class ContributionServiceImplTest {
     private ContributionCategoryRepository categoryRepository;
 
     @Mock
-    private ApplicationEventPublisher eventPublisher;
+    private EventOutboxWriter outboxWriter;
 
     @InjectMocks
     private ContributionServiceImpl contributionService;
@@ -299,7 +300,7 @@ class ContributionServiceImplTest {
             Contribution result = contributionService.confirmContribution(contributionId, "treasurer");
 
             assertThat(result.getStatus()).isEqualTo(ContributionStatus.CONFIRMED);
-            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            verify(outboxWriter).write(eventCaptor.capture(), eq("Contribution"), any(UUID.class));
 
             ContributionReceivedEvent event = eventCaptor.getValue();
             assertThat(event.contributionId()).isEqualTo(contributionId);
@@ -317,10 +318,9 @@ class ContributionServiceImplTest {
                     .thenReturn(Optional.of(sampleContribution));
 
             assertThatThrownBy(() -> contributionService.confirmContribution(contributionId, "actor"))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("already confirmed");
+                    .isInstanceOf(InvalidStateTransitionException.class);
 
-            verify(eventPublisher, never()).publishEvent(any());
+            verify(outboxWriter, never()).write(any(), any(), any());
         }
 
         @Test
@@ -332,8 +332,7 @@ class ContributionServiceImplTest {
                     .thenReturn(Optional.of(sampleContribution));
 
             assertThatThrownBy(() -> contributionService.confirmContribution(contributionId, "actor"))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("Cannot confirm a reversed contribution");
+                    .isInstanceOf(InvalidStateTransitionException.class);
         }
 
         @Test
@@ -380,8 +379,7 @@ class ContributionServiceImplTest {
                     .thenReturn(Optional.of(sampleContribution));
 
             assertThatThrownBy(() -> contributionService.reverseContribution(contributionId, "admin"))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("already reversed");
+                    .isInstanceOf(InvalidStateTransitionException.class);
         }
     }
 

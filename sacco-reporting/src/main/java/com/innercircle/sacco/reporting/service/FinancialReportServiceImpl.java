@@ -58,7 +58,7 @@ public class FinancialReportServiceImpl implements FinancialReportService {
         long activeMemberCount = queryCount("SELECT COUNT(*) FROM members WHERE status = 'ACTIVE'");
 
         long activeLoansCount = queryCount(
-                "SELECT COUNT(*) FROM loan_applications WHERE status = 'DISBURSED'");
+                "SELECT COUNT(*) FROM loan_applications WHERE status IN ('DISBURSED','REPAYING')");
 
         BigDecimal outstandingLoanBalance = querySum(
                 "SELECT COALESCE(SUM(principal_amount - COALESCE((SELECT SUM(lr.amount) FROM loan_repayments lr WHERE lr.loan_id = la.id), 0)), 0) " +

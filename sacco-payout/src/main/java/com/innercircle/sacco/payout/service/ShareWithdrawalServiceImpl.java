@@ -7,8 +7,8 @@ import com.innercircle.sacco.payout.entity.ShareWithdrawal.ShareWithdrawalType;
 import com.innercircle.sacco.payout.event.ShareWithdrawalProcessedEvent;
 import com.innercircle.sacco.payout.event.ShareWithdrawalRequestedEvent;
 import com.innercircle.sacco.payout.repository.ShareWithdrawalRepository;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +22,7 @@ import java.util.UUID;
 public class ShareWithdrawalServiceImpl implements ShareWithdrawalService {
 
     private final ShareWithdrawalRepository withdrawalRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final EventOutboxWriter outboxWriter;
 
     @Override
     @Transactional
@@ -42,13 +42,14 @@ public class ShareWithdrawalServiceImpl implements ShareWithdrawalService {
 
         ShareWithdrawal savedWithdrawal = withdrawalRepository.save(withdrawal);
 
-        eventPublisher.publishEvent(new ShareWithdrawalRequestedEvent(
+        outboxWriter.write(new ShareWithdrawalRequestedEvent(
                 savedWithdrawal.getId(),
                 savedWithdrawal.getMemberId(),
                 savedWithdrawal.getAmount(),
                 withdrawalType.name(),
+                UUID.randomUUID(),
                 actor
-        ));
+        ), "ShareWithdrawal", savedWithdrawal.getId());
 
         return savedWithdrawal;
     }
@@ -86,13 +87,14 @@ public class ShareWithdrawalServiceImpl implements ShareWithdrawalService {
 
         ShareWithdrawal savedWithdrawal = withdrawalRepository.save(withdrawal);
 
-        eventPublisher.publishEvent(new ShareWithdrawalProcessedEvent(
+        outboxWriter.write(new ShareWithdrawalProcessedEvent(
                 savedWithdrawal.getId(),
                 savedWithdrawal.getMemberId(),
                 savedWithdrawal.getAmount(),
                 newShareBalance,
+                UUID.randomUUID(),
                 actor
-        ));
+        ), "ShareWithdrawal", savedWithdrawal.getId());
 
         return savedWithdrawal;
     }

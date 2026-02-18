@@ -2,6 +2,7 @@ package com.innercircle.sacco.payout.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.security.MemberAccessHelper;
 import com.innercircle.sacco.payout.dto.PayoutRequest;
 import com.innercircle.sacco.payout.entity.Payout;
 import com.innercircle.sacco.payout.entity.PayoutStatus;
@@ -48,6 +49,9 @@ class PayoutControllerTest {
     @MockitoBean
     private PayoutService payoutService;
 
+    @MockitoBean
+    private MemberAccessHelper memberAccessHelper;
+
     private UUID memberId;
     private UUID payoutId;
     private Payout testPayout;
@@ -61,6 +65,8 @@ class PayoutControllerTest {
         testPayout.setStatus(PayoutStatus.PENDING);
         testPayout.setCreatedAt(Instant.now());
         testPayout.setUpdatedAt(Instant.now());
+
+        when(memberAccessHelper.currentActor(any())).thenReturn("admin");
     }
 
     @Nested
@@ -77,8 +83,7 @@ class PayoutControllerTest {
 
             mockMvc.perform(post("/api/v1/payouts")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
-                            .param("actor", "admin"))
+                            .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.id").value(payoutId.toString()))
@@ -92,7 +97,7 @@ class PayoutControllerTest {
         @Test
         @DisplayName("should use default actor when not provided")
         void shouldUseDefaultActorWhenNotProvided() throws Exception {
-            when(payoutService.createPayout(any(UUID.class), any(BigDecimal.class), any(PayoutType.class), eq("system")))
+            when(payoutService.createPayout(any(UUID.class), any(BigDecimal.class), any(PayoutType.class), eq("admin")))
                     .thenReturn(testPayout);
 
             PayoutRequest request = new PayoutRequest(memberId, new BigDecimal("5000.00"), PayoutType.MERRY_GO_ROUND);
@@ -115,8 +120,7 @@ class PayoutControllerTest {
             testPayout.setApprovedBy("admin");
             when(payoutService.approvePayout(eq(payoutId), eq("admin"))).thenReturn(testPayout);
 
-            mockMvc.perform(put("/api/v1/payouts/{payoutId}/approve", payoutId)
-                            .param("actor", "admin"))
+            mockMvc.perform(put("/api/v1/payouts/{payoutId}/approve", payoutId))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.status").value("APPROVED"))
@@ -136,8 +140,7 @@ class PayoutControllerTest {
             testPayout.setReferenceNumber("PAY-12345678");
             when(payoutService.processPayout(eq(payoutId), eq("admin"))).thenReturn(testPayout);
 
-            mockMvc.perform(put("/api/v1/payouts/{payoutId}/process", payoutId)
-                            .param("actor", "admin"))
+            mockMvc.perform(put("/api/v1/payouts/{payoutId}/process", payoutId))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.status").value("PROCESSED"))

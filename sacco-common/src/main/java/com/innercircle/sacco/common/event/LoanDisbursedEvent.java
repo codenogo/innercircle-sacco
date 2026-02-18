@@ -8,6 +8,7 @@ public record LoanDisbursedEvent(
         UUID memberId,
         BigDecimal principalAmount,
         BigDecimal interestAmount,
+        UUID correlationId,
         String actor
 ) implements AuditableEvent {
 
@@ -19,5 +20,10 @@ public record LoanDisbursedEvent(
     @Override
     public String getActor() {
         return actor;
+    }
+
+    @Override
+    public UUID getCorrelationId() {
+        return correlationId;
     }
 }

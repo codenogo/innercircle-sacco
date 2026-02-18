@@ -2,6 +2,7 @@ package com.innercircle.sacco.payout.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.security.MemberAccessHelper;
 import com.innercircle.sacco.payout.dto.BankWithdrawalRequest;
 import com.innercircle.sacco.payout.entity.BankWithdrawal;
 import com.innercircle.sacco.payout.entity.WithdrawalStatus;
@@ -48,6 +49,9 @@ class BankWithdrawalControllerTest {
     @MockitoBean
     private BankWithdrawalService bankWithdrawalService;
 
+    @MockitoBean
+    private MemberAccessHelper memberAccessHelper;
+
     private UUID memberId;
     private UUID withdrawalId;
     private BankWithdrawal testWithdrawal;
@@ -61,6 +65,8 @@ class BankWithdrawalControllerTest {
         testWithdrawal.setStatus(WithdrawalStatus.PENDING);
         testWithdrawal.setCreatedAt(Instant.now());
         testWithdrawal.setUpdatedAt(Instant.now());
+
+        when(memberAccessHelper.currentActor(any())).thenReturn("admin");
     }
 
     @Nested
@@ -80,8 +86,7 @@ class BankWithdrawalControllerTest {
 
             mockMvc.perform(post("/api/v1/bank-withdrawals")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
-                            .param("actor", "admin"))
+                            .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.id").value(withdrawalId.toString()))
@@ -95,7 +100,7 @@ class BankWithdrawalControllerTest {
         @DisplayName("should use default actor when not provided")
         void shouldUseDefaultActor() throws Exception {
             when(bankWithdrawalService.initiateWithdrawal(
-                    any(UUID.class), any(BigDecimal.class), anyString(), anyString(), eq("system")
+                    any(UUID.class), any(BigDecimal.class), anyString(), anyString(), eq("admin")
             )).thenReturn(testWithdrawal);
 
             BankWithdrawalRequest request = new BankWithdrawalRequest(
@@ -123,8 +128,7 @@ class BankWithdrawalControllerTest {
                     .thenReturn(testWithdrawal);
 
             mockMvc.perform(put("/api/v1/bank-withdrawals/{withdrawalId}/confirm", withdrawalId)
-                            .param("referenceNumber", "REF-001")
-                            .param("actor", "admin"))
+                            .param("referenceNumber", "REF-001"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.status").value("COMPLETED"))
@@ -143,8 +147,7 @@ class BankWithdrawalControllerTest {
             testWithdrawal.setReconciled(true);
             when(bankWithdrawalService.markReconciled(eq(withdrawalId), eq("admin"))).thenReturn(testWithdrawal);
 
-            mockMvc.perform(put("/api/v1/bank-withdrawals/{withdrawalId}/reconcile", withdrawalId)
-                            .param("actor", "admin"))
+            mockMvc.perform(put("/api/v1/bank-withdrawals/{withdrawalId}/reconcile", withdrawalId))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.reconciled").value(true))

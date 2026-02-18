@@ -40,13 +40,13 @@ def load_json(path: Path) -> Any:
 def write_json(path: Path, data: Any) -> None:
     """Write data to a JSON file with 2-space indent and trailing newline."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def load_workflow() -> dict[str, Any]:
-    """Load docs/planning/WORKFLOW.json relative to repo root."""
-    root = repo_root()
-    p = root / "docs" / "planning" / "WORKFLOW.json"
+def load_workflow(root: Path | None = None) -> dict[str, Any]:
+    """Load docs/planning/WORKFLOW.json relative to repo root or explicit root."""
+    resolved_root = root.resolve() if isinstance(root, Path) else repo_root()
+    p = resolved_root / "docs" / "planning" / "WORKFLOW.json"
     if not p.exists():
         return {}
     try:

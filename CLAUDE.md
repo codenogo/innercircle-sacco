@@ -9,23 +9,30 @@ InnerCircle SACCO is a Kenyan SACCO/Chama management system built as a Java 21 m
 ## Quick Reference
 
 ```bash
-# Build (all modules)
+# Build (all Java modules)
 mvn clean install
 
 # Build (skip tests)
 mvn clean install -DskipTests
 
-# Test (all modules)
+# Test (all Java modules)
 mvn test
 
 # Test (single module)
 mvn -pl sacco-loan test
 
-# Run locally
+# Run backend locally
 mvn -pl sacco-app spring-boot:run
 
 # Start PostgreSQL
 docker compose up -d
+
+# ─── Frontend (sacco-ui) ───
+cd sacco-ui
+npm run dev          # Vite dev server
+npm run build        # tsc + vite build
+npm run lint         # ESLint
+npm run test         # Vitest
 ```
 
 ## Code Organisation
@@ -42,10 +49,11 @@ innercircle-sacco/
 ├── sacco-reporting/       # Reports, dashboards, analytics, PDF/CSV export
 ├── sacco-audit/           # Audit events, entity trail tracking
 ├── sacco-config/          # System config, loan products, contribution schedules, penalties
-└── sacco-app/             # Boot app, application.yml, Liquibase master changelog
+├── sacco-app/             # Boot app, application.yml, Liquibase master changelog
+└── sacco-ui/              # React 19 + TypeScript frontend (Vite, React Router, Lucide icons)
 ```
 
-Each module follows the same internal structure:
+Each Java module follows the same internal structure:
 ```
 sacco-<module>/src/main/java/com/innercircle/sacco/<module>/
 ├── controller/    # REST controllers (@RestController)
@@ -54,6 +62,24 @@ sacco-<module>/src/main/java/com/innercircle/sacco/<module>/
 ├── repository/    # Spring Data JPA repositories
 └── service/       # Service interfaces and implementations
 ```
+
+Frontend structure:
+```
+sacco-ui/src/
+├── components/    # Reusable UI components (Modal, Select, DatePicker, Sidebar)
+├── data/          # Mock data (members, contributions, loans, etc.)
+├── layouts/       # AppShell (sidebar + main), AuthLayout
+├── pages/         # Route pages (Dashboard, Members, Contributions, Loans, etc.)
+├── styles/        # Global CSS: tokens.css, global.css, auth.css, components.css
+└── utils/         # Shared helpers (date formatting, etc.)
+```
+
+### Monorepo Quick Reference
+
+| Package | Language | Build | Test | Lint |
+|---------|----------|-------|------|------|
+| `.` (root) | Java 21 | `mvn -q -DskipTests package` | `mvn -q test -DskipITs` | `mvn -q spotless:check` |
+| `sacco-ui` | TypeScript | `npm run build` | `npm run test` | `npm run lint` |
 
 ## Conventions
 

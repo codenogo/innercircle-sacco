@@ -2,6 +2,7 @@ package com.innercircle.sacco.loan.controller;
 
 import com.innercircle.sacco.common.dto.ApiResponse;
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.security.MemberAccessHelper;
 import com.innercircle.sacco.config.entity.InterestMethod;
 import com.innercircle.sacco.loan.dto.LoanApplicationRequest;
 import com.innercircle.sacco.loan.dto.LoanResponse;
@@ -14,6 +15,7 @@ import com.innercircle.sacco.loan.entity.LoanStatus;
 import com.innercircle.sacco.loan.entity.RepaymentSchedule;
 import com.innercircle.sacco.loan.entity.RepaymentStatus;
 import com.innercircle.sacco.loan.repository.LoanApplicationRepository;
+import com.innercircle.sacco.loan.service.InterestReportingService;
 import com.innercircle.sacco.loan.service.LoanService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -25,6 +27,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -36,6 +39,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -47,6 +51,15 @@ class LoanControllerTest {
 
     @Mock
     private LoanApplicationRepository loanRepository;
+
+    @Mock
+    private InterestReportingService interestReportingService;
+
+    @Mock
+    private MemberAccessHelper memberAccessHelper;
+
+    @Mock
+    private Authentication authentication;
 
     @InjectMocks
     private LoanController loanController;
@@ -60,6 +73,7 @@ class LoanControllerTest {
         memberId = UUID.randomUUID();
         loanId = UUID.randomUUID();
         loanProductId = UUID.randomUUID();
+        lenient().when(memberAccessHelper.currentActor(authentication)).thenReturn("test-user");
     }
 
     // -------------------------------------------------------------------------
@@ -132,8 +146,9 @@ class LoanControllerTest {
             LoanApplication loan = createLoan(LoanStatus.APPROVED);
 
             when(loanService.approveLoan(loanId, approvedBy)).thenReturn(loan);
+            when(memberAccessHelper.resolveCurrentUserId(authentication)).thenReturn(approvedBy);
 
-            ApiResponse<LoanResponse> response = loanController.approveLoan(loanId, approvedBy);
+            ApiResponse<LoanResponse> response = loanController.approveLoan(loanId, authentication);
 
             assertThat(response.isSuccess()).isTrue();
             assertThat(response.getMessage()).isEqualTo("Loan approved successfully");
@@ -155,8 +170,9 @@ class LoanControllerTest {
             LoanApplication loan = createLoan(LoanStatus.REJECTED);
 
             when(loanService.rejectLoan(loanId, rejectedBy)).thenReturn(loan);
+            when(memberAccessHelper.resolveCurrentUserId(authentication)).thenReturn(rejectedBy);
 
-            ApiResponse<LoanResponse> response = loanController.rejectLoan(loanId, rejectedBy);
+            ApiResponse<LoanResponse> response = loanController.rejectLoan(loanId, authentication);
 
             assertThat(response.isSuccess()).isTrue();
             assertThat(response.getMessage()).isEqualTo("Loan rejected");
@@ -177,13 +193,13 @@ class LoanControllerTest {
             LoanApplication loan = createLoan(LoanStatus.REPAYING);
             loan.setDisbursedAt(Instant.now());
 
-            when(loanService.disburseLoan(loanId, "admin")).thenReturn(loan);
+            when(loanService.disburseLoan(loanId, "test-user")).thenReturn(loan);
 
-            ApiResponse<LoanResponse> response = loanController.disburseLoan(loanId, "admin");
+            ApiResponse<LoanResponse> response = loanController.disburseLoan(loanId, authentication);
 
             assertThat(response.isSuccess()).isTrue();
             assertThat(response.getMessage()).isEqualTo("Loan disbursed successfully");
-            verify(loanService).disburseLoan(loanId, "admin");
+            verify(loanService).disburseLoan(loanId, "test-user");
         }
     }
 
@@ -205,15 +221,15 @@ class LoanControllerTest {
             LoanRepayment repayment = new LoanRepayment();
             repayment.setId(UUID.randomUUID());
 
-            when(loanService.recordRepayment(loanId, new BigDecimal("10000"), "REF001", "cashier"))
+            when(loanService.recordRepayment(loanId, new BigDecimal("10000"), "REF001", "test-user"))
                     .thenReturn(repayment);
 
-            ApiResponse<Void> response = loanController.recordRepayment(loanId, request, "cashier");
+            ApiResponse<Void> response = loanController.recordRepayment(loanId, request, authentication);
 
             assertThat(response.isSuccess()).isTrue();
             assertThat(response.getMessage()).isEqualTo("Repayment recorded successfully");
             assertThat(response.getData()).isNull();
-            verify(loanService).recordRepayment(loanId, new BigDecimal("10000"), "REF001", "cashier");
+            verify(loanService).recordRepayment(loanId, new BigDecimal("10000"), "REF001", "test-user");
         }
     }
 
@@ -228,9 +244,11 @@ class LoanControllerTest {
         @DisplayName("should return loan schedules")
         void shouldReturnSchedules() {
             RepaymentSchedule schedule = createSchedule(1);
+            LoanApplication loan = createLoan(LoanStatus.REPAYING);
             when(loanService.getLoanSchedule(loanId)).thenReturn(List.of(schedule));
+            when(loanService.getLoanById(loanId)).thenReturn(loan);
 
-            ApiResponse<List<RepaymentScheduleResponse>> response = loanController.getLoanSchedule(loanId);
+            ApiResponse<List<RepaymentScheduleResponse>> response = loanController.getLoanSchedule(loanId, authentication);
 
             assertThat(response.isSuccess()).isTrue();
             assertThat(response.getData()).hasSize(1);
@@ -239,9 +257,11 @@ class LoanControllerTest {
         @Test
         @DisplayName("should return empty list when no schedules exist")
         void shouldReturnEmptyList() {
+            LoanApplication loan = createLoan(LoanStatus.REPAYING);
+            when(loanService.getLoanById(loanId)).thenReturn(loan);
             when(loanService.getLoanSchedule(loanId)).thenReturn(List.of());
 
-            ApiResponse<List<RepaymentScheduleResponse>> response = loanController.getLoanSchedule(loanId);
+            ApiResponse<List<RepaymentScheduleResponse>> response = loanController.getLoanSchedule(loanId, authentication);
 
             assertThat(response.isSuccess()).isTrue();
             assertThat(response.getData()).isEmpty();
@@ -393,7 +413,7 @@ class LoanControllerTest {
             LoanApplication loan = createLoan(LoanStatus.REPAYING);
             when(loanService.getLoanById(loanId)).thenReturn(loan);
 
-            ApiResponse<LoanResponse> response = loanController.getLoanById(loanId);
+            ApiResponse<LoanResponse> response = loanController.getLoanById(loanId, authentication);
 
             assertThat(response.isSuccess()).isTrue();
             assertThat(response.getData().getId()).isEqualTo(loanId);
@@ -423,7 +443,7 @@ class LoanControllerTest {
 
             when(loanService.getMemberLoans(memberId)).thenReturn(List.of(activeLoan, closedLoan));
 
-            ApiResponse<LoanSummaryResponse> response = loanController.getMemberLoanSummary(memberId);
+            ApiResponse<LoanSummaryResponse> response = loanController.getMemberLoanSummary(memberId, authentication);
 
             assertThat(response.isSuccess()).isTrue();
             LoanSummaryResponse summary = response.getData();
@@ -460,7 +480,7 @@ class LoanControllerTest {
             when(loanService.getMemberLoans(memberId))
                     .thenReturn(List.of(pendingLoan, rejectedLoan, activeLoan));
 
-            ApiResponse<LoanSummaryResponse> response = loanController.getMemberLoanSummary(memberId);
+            ApiResponse<LoanSummaryResponse> response = loanController.getMemberLoanSummary(memberId, authentication);
 
             // totalBorrowed should only include active (non-PENDING, non-REJECTED)
             assertThat(response.getData().getTotalBorrowed()).isEqualByComparingTo(new BigDecimal("100000"));
@@ -476,7 +496,7 @@ class LoanControllerTest {
 
             when(loanService.getMemberLoans(memberId)).thenReturn(List.of(disbursedLoan));
 
-            ApiResponse<LoanSummaryResponse> response = loanController.getMemberLoanSummary(memberId);
+            ApiResponse<LoanSummaryResponse> response = loanController.getMemberLoanSummary(memberId, authentication);
 
             assertThat(response.getData().getActiveLoans()).isEqualTo(1);
         }
@@ -486,7 +506,7 @@ class LoanControllerTest {
         void shouldHandleNoLoans() {
             when(loanService.getMemberLoans(memberId)).thenReturn(List.of());
 
-            ApiResponse<LoanSummaryResponse> response = loanController.getMemberLoanSummary(memberId);
+            ApiResponse<LoanSummaryResponse> response = loanController.getMemberLoanSummary(memberId, authentication);
 
             LoanSummaryResponse summary = response.getData();
             assertThat(summary.getTotalLoans()).isEqualTo(0);

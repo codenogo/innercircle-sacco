@@ -16,7 +16,7 @@ class ContributionReceivedEventTest {
         BigDecimal amount = new BigDecimal("5000.00");
 
         ContributionReceivedEvent event = new ContributionReceivedEvent(
-                contributionId, memberId, amount, "REF-001", "admin"
+                contributionId, memberId, amount, "REF-001", UUID.randomUUID(), "admin"
         );
 
         assertThat(event.contributionId()).isEqualTo(contributionId);
@@ -29,7 +29,7 @@ class ContributionReceivedEventTest {
     @Test
     void getEventType_shouldReturnContributionReceived() {
         ContributionReceivedEvent event = new ContributionReceivedEvent(
-                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.TEN, "REF", "user"
+                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.TEN, "REF", UUID.randomUUID(), "user"
         );
 
         assertThat(event.getEventType()).isEqualTo("CONTRIBUTION_RECEIVED");
@@ -38,7 +38,7 @@ class ContributionReceivedEventTest {
     @Test
     void getActor_shouldReturnActorValue() {
         ContributionReceivedEvent event = new ContributionReceivedEvent(
-                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.ONE, "REF", "treasurer"
+                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.ONE, "REF", UUID.randomUUID(), "treasurer"
         );
 
         assertThat(event.getActor()).isEqualTo("treasurer");
@@ -47,7 +47,7 @@ class ContributionReceivedEventTest {
     @Test
     void shouldImplementAuditableEvent() {
         ContributionReceivedEvent event = new ContributionReceivedEvent(
-                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.ONE, "REF", "user"
+                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.ONE, "REF", UUID.randomUUID(), "user"
         );
 
         assertThat(event).isInstanceOf(AuditableEvent.class);
@@ -57,10 +57,11 @@ class ContributionReceivedEventTest {
     void equals_shouldBeBasedOnAllFields() {
         UUID cId = UUID.randomUUID();
         UUID mId = UUID.randomUUID();
+        UUID corrId = UUID.randomUUID();
         BigDecimal amount = BigDecimal.TEN;
 
-        ContributionReceivedEvent event1 = new ContributionReceivedEvent(cId, mId, amount, "REF", "actor");
-        ContributionReceivedEvent event2 = new ContributionReceivedEvent(cId, mId, amount, "REF", "actor");
+        ContributionReceivedEvent event1 = new ContributionReceivedEvent(cId, mId, amount, "REF", corrId, "actor");
+        ContributionReceivedEvent event2 = new ContributionReceivedEvent(cId, mId, amount, "REF", corrId, "actor");
 
         assertThat(event1).isEqualTo(event2);
         assertThat(event1.hashCode()).isEqualTo(event2.hashCode());
@@ -69,10 +70,10 @@ class ContributionReceivedEventTest {
     @Test
     void notEquals_shouldDetectDifferences() {
         ContributionReceivedEvent event1 = new ContributionReceivedEvent(
-                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.ONE, "REF-1", "user1"
+                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.ONE, "REF-1", UUID.randomUUID(), "user1"
         );
         ContributionReceivedEvent event2 = new ContributionReceivedEvent(
-                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.TEN, "REF-2", "user2"
+                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.TEN, "REF-2", UUID.randomUUID(), "user2"
         );
 
         assertThat(event1).isNotEqualTo(event2);
@@ -81,7 +82,7 @@ class ContributionReceivedEventTest {
     @Test
     void toString_shouldContainFieldValues() {
         ContributionReceivedEvent event = new ContributionReceivedEvent(
-                UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("100"), "REF-999", "actor"
+                UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("100"), "REF-999", UUID.randomUUID(), "actor"
         );
 
         String str = event.toString();

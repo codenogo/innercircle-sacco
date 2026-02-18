@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "feature": "event-hardening",
+  "displayName": "Domain State Guards + Event Hardening",
+  "decisions": [
+    {
+      "area": "architecture",
+      "decision": "Transactional outbox pattern for all event publishing",
+      "rationale": "Decouples GL/audit/account-setup handlers from business transactions. GL failures no longer roll back business operations. Eventually consistent (1-5s) is acceptable."
+    },
+    {
+      "area": "architecture",
+      "decision": "Accept eventual consistency for GL posting",
+      "rationale": "Small delay between business commit and GL entry is acceptable for a single small SACCO (<500 members). Outbox processor runs every 5 seconds."
+    },
+    {
+      "area": "architecture",
+      "decision": "Full outbox for all 18 event types with dead letter + retry",
+      "rationale": "Unified reliability guarantee. Failed events move to dead letter table. Exponential backoff retry (5min, 15min, 1h, 4h). Max 5 retries before FAILED status."
+    },
+    {
+      "area": "architecture",
+      "decision": "Outbox infrastructure in sacco-common, processor in sacco-app",
+      "rationale": "All modules already depend on sacco-common. Outbox entity, repository, writer go there. The @Scheduled processor lives in sacco-app."
+    },
+    {
+      "area": "architecture",
+      "decision": "Separate TransitionGuard<S> utility in sacco-common",
+      "rationale": "Single file to review all transition rules. More flexible than enum methods. Discoverable. Covers LoanStatus, PayoutStatus, ContributionStatus, MemberStatus."
+    },
+    {
+      "area": "api",
+      "decision": "TransitionGuard.validate() throws InvalidStateTransitionException",
+      "rationale": "Fail-fast behavior. Consistent enforcement. No risk of caller forgetting to check a boolean return value."
+    },
+    {
+      "area": "data-flow",
+      "decision": "Explicit correlationId field on AuditableEvent interface",
+      "rationale": "All 18 event records get a correlationId field. Enables tracing business operations across downstream events. More visible than MDC-only approach."
+    },
+    {
+      "area": "data-flow",
+      "decision": "Idempotency key on outbox entries for de-duplication",
+      "rationale": "Each outbox entry has a unique key (event_type + aggregate_id + timestamp). Handlers check for duplicate processing to prevent double GL entries."
+    },
+    {
+      "area": "data-flow",
+      "decision": "JSON serialization for event payloads in outbox",
+      "rationale": "Jackson JSON in the payload column. Enables inspection, debugging, manual replay. Event records are simple data classes that serialize cleanly."
+    },
+    {
+      "area": "operational",
+      "decision": "Polling-based outbox processor (5s interval) for MVP",
+      "rationale": "Simple @Scheduled every 5 seconds. PostgreSQL LISTEN/NOTIFY is an optimization for later if latency matters. Keep it simple."
+    }
+  ],
+  "constraints": [
+    "Must not break 605+ existing tests",
+    "Outbox processor must be idempotent (safe to restart)",
+    "JSON serialization must handle UUID, BigDecimal, Instant, LocalDate, String, enums",
+    "Dead letter table needs unique constraint on outbox_id",
+    "Liquibase migrations for event_outbox and event_dead_letter tables",
+    "Existing @TransactionalEventListener handlers change to @EventListener",
+    "TransitionGuard registered for all 4 status enums before removing ad-hoc checks",
+    "No external dependencies (Spring Boot 3.4 only)",
+    "All new entities extend BaseEntity (id, timestamps, version)"
+  ],
+  "openQuestions": [
+    "Should outbox processor use LISTEN/NOTIFY instead of polling for lower latency? (Recommendation: defer, polling is sufficient)",
+    "Should we add admin endpoint for dead letter inspection/retry? (Recommendation: defer to follow-up task)",
+    "Should TransitionGuard support transition callbacks/actions? (Recommendation: no, keep guards pure)"
+  ],
+  "relatedCode": [
+    "sacco-common/src/main/java/com/innercircle/sacco/common/event/AuditableEvent.java",
+    "sacco-common/src/main/java/com/innercircle/sacco/common/event/*.java",
+    "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/listener/FinancialEventListener.java",
+    "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/listener/MemberAccountListener.java",
+    "sacco-audit/src/main/java/com/innercircle/sacco/audit/listener/AuditEventListener.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchServiceImpl.java",
+    "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/PayoutServiceImpl.java",
+    "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/service/ContributionServiceImpl.java",
+    "sacco-member/src/main/java/com/innercircle/sacco/member/service/MemberServiceImpl.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/entity/LoanStatus.java",
+    "sacco-payout/src/main/java/com/innercircle/sacco/payout/entity/PayoutStatus.java",
+    "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/entity/ContributionStatus.java",
+    "sacco-member/src/main/java/com/innercircle/sacco/member/entity/MemberStatus.java",
+    "sacco-common/src/main/java/com/innercircle/sacco/common/model/BaseEntity.java",
+    "sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml"
+  ],
+  "timestamp": "2026-02-16T00:00:00Z"
+}

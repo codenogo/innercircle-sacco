@@ -28,7 +28,7 @@ class MemberAccountListenerTest {
     void handleMemberCreatedShouldCallCreateMemberAccounts() {
         UUID memberId = UUID.randomUUID();
         String memberNumber = "M001";
-        MemberCreatedEvent event = new MemberCreatedEvent(memberId, memberNumber, "John", "Doe", "system");
+        MemberCreatedEvent event = new MemberCreatedEvent(memberId, memberNumber, "John", "Doe", UUID.randomUUID(), "system");
 
         memberAccountListener.handleMemberCreated(event);
 
@@ -40,7 +40,7 @@ class MemberAccountListenerTest {
     void handleLoanApplicationShouldCallEnsureLoanSubAccount() {
         UUID memberId = UUID.randomUUID();
         UUID loanId = UUID.randomUUID();
-        LoanApplicationEvent event = new LoanApplicationEvent(loanId, memberId, "APPLY", "system");
+        LoanApplicationEvent event = new LoanApplicationEvent(loanId, memberId, "APPLY", UUID.randomUUID(), "system");
 
         memberAccountListener.handleLoanApplication(event);
 

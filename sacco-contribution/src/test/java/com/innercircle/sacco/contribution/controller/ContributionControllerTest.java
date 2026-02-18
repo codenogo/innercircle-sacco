@@ -2,6 +2,7 @@ package com.innercircle.sacco.contribution.controller;
 
 import com.innercircle.sacco.common.dto.ApiResponse;
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.security.MemberAccessHelper;
 import com.innercircle.sacco.contribution.dto.BulkContributionItemRequest;
 import com.innercircle.sacco.contribution.dto.BulkContributionRequest;
 import com.innercircle.sacco.contribution.dto.ContributionResponse;
@@ -21,6 +22,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -30,6 +32,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -38,6 +41,12 @@ class ContributionControllerTest {
 
     @Mock
     private ContributionService contributionService;
+
+    @Mock
+    private MemberAccessHelper memberAccessHelper;
+
+    @Mock
+    private Authentication authentication;
 
     @InjectMocks
     private ContributionController contributionController;
@@ -68,6 +77,8 @@ class ContributionControllerTest {
         sampleContribution.setId(contributionId);
         sampleContribution.setCreatedAt(Instant.now());
         sampleContribution.setUpdatedAt(Instant.now());
+
+        lenient().when(memberAccessHelper.currentActor(authentication)).thenReturn("test-user");
     }
 
     // -------------------------------------------------------
@@ -145,11 +156,11 @@ class ContributionControllerTest {
         void shouldConfirmContribution() {
             sampleContribution.setStatus(ContributionStatus.CONFIRMED);
 
-            when(contributionService.confirmContribution(contributionId, "treasurer"))
+            when(contributionService.confirmContribution(contributionId, "test-user"))
                     .thenReturn(sampleContribution);
 
             ApiResponse<ContributionResponse> result =
-                    contributionController.confirmContribution(contributionId, "treasurer");
+                    contributionController.confirmContribution(contributionId, authentication);
 
             assertThat(result).isNotNull();
             assertThat(result.isSuccess()).isTrue();
@@ -170,11 +181,11 @@ class ContributionControllerTest {
         void shouldReverseContribution() {
             sampleContribution.setStatus(ContributionStatus.REVERSED);
 
-            when(contributionService.reverseContribution(contributionId, "admin"))
+            when(contributionService.reverseContribution(contributionId, "test-user"))
                     .thenReturn(sampleContribution);
 
             ApiResponse<ContributionResponse> result =
-                    contributionController.reverseContribution(contributionId, "admin");
+                    contributionController.reverseContribution(contributionId, authentication);
 
             assertThat(result).isNotNull();
             assertThat(result.isSuccess()).isTrue();
@@ -224,7 +235,7 @@ class ContributionControllerTest {
             when(contributionService.getMemberContributions(memberId, null, 20)).thenReturn(page);
 
             ApiResponse<CursorPage<ContributionResponse>> result =
-                    contributionController.getMemberContributions(memberId, null, 20);
+                    contributionController.getMemberContributions(memberId, null, 20, authentication);
 
             assertThat(result.isSuccess()).isTrue();
             assertThat(result.getData().getItems()).hasSize(1);
@@ -250,7 +261,7 @@ class ContributionControllerTest {
             when(contributionService.getMemberSummary(memberId)).thenReturn(summary);
 
             ApiResponse<ContributionSummaryResponse> result =
-                    contributionController.getMemberSummary(memberId);
+                    contributionController.getMemberSummary(memberId, authentication);
 
             assertThat(result.isSuccess()).isTrue();
             assertThat(result.getData().getTotalContributed()).isEqualTo(new BigDecimal("5000.00"));

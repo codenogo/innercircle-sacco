@@ -20,8 +20,7 @@ import com.innercircle.sacco.ledger.service.LedgerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.context.event.EventListener;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -45,7 +44,7 @@ public class FinancialEventListener {
     private static final String ACCOUNT_MEMBER_ACCOUNT = "2002";
     private static final String ACCOUNT_BAD_DEBT_EXPENSE = "5003";
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    @EventListener
     public void handleContributionReceived(ContributionReceivedEvent event) {
         log.info("Posting contribution to ledger: {}", event.contributionId());
 
@@ -78,7 +77,7 @@ public class FinancialEventListener {
         ledgerService.postEntry(created.getId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    @EventListener
     public void handleLoanDisbursed(LoanDisbursedEvent event) {
         log.info("Posting loan disbursement to ledger: {}", event.loanId());
 
@@ -111,7 +110,7 @@ public class FinancialEventListener {
         ledgerService.postEntry(created.getId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    @EventListener
     public void handleLoanRepayment(LoanRepaymentEvent event) {
         log.info("Posting loan repayment to ledger: {}", event.repaymentId());
 
@@ -166,7 +165,7 @@ public class FinancialEventListener {
         ledgerService.postEntry(created.getId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    @EventListener
     public void handlePayoutProcessed(PayoutProcessedEvent event) {
         log.info("Posting payout to ledger: {}", event.payoutId());
 
@@ -199,7 +198,7 @@ public class FinancialEventListener {
         ledgerService.postEntry(created.getId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    @EventListener
     public void handlePenaltyApplied(PenaltyAppliedEvent event) {
         log.info("Posting penalty to ledger: {}", event.penaltyId());
 
@@ -232,7 +231,7 @@ public class FinancialEventListener {
         ledgerService.postEntry(created.getId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    @EventListener
     public void handleInterestAccrual(LoanInterestAccrualEvent event) {
         log.info("Posting interest accrual to ledger: loan {}", event.loanId());
 
@@ -265,7 +264,7 @@ public class FinancialEventListener {
         ledgerService.postEntry(created.getId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    @EventListener
     public void handleLoanReversal(LoanReversalEvent event) {
         log.info("Posting loan reversal to ledger: {}", event.reversalId());
 
@@ -320,7 +319,7 @@ public class FinancialEventListener {
         ledgerService.postEntry(created.getId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    @EventListener
     public void handleContributionReversed(ContributionReversedEvent event) {
         log.info("Posting contribution reversal to ledger: {}", event.contributionId());
 
@@ -353,7 +352,7 @@ public class FinancialEventListener {
         ledgerService.postEntry(created.getId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    @EventListener
     public void handlePenaltyWaived(PenaltyWaivedEvent event) {
         log.info("Posting penalty waiver to ledger: {}", event.penaltyId());
 
@@ -386,7 +385,7 @@ public class FinancialEventListener {
         ledgerService.postEntry(created.getId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    @EventListener
     public void handleBenefitsDistributed(BenefitsDistributedEvent event) {
         log.info("Posting benefits distribution to ledger: loan {}", event.loanId());
 

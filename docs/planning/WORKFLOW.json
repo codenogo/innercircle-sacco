@@ -1,27 +1,183 @@
 {
-  "version": 1,
-  "repoShape": "auto",
+  "agentTeams": {
+    "defaultCompositions": {
+      "debug": [
+        "debugger",
+        "debugger",
+        "debugger"
+      ],
+      "fullstack": [
+        "test-writer",
+        "debugger",
+        "docs-writer",
+        "refactorer"
+      ],
+      "review": [
+        "code-reviewer",
+        "security-scanner",
+        "perf-analyzer"
+      ]
+    },
+    "delegateMode": true,
+    "enabled": true
+  },
+  "enforcement": {
+    "karpathyChecklist": "warn",
+    "monorepoVerifyScope": "warn"
+  },
+  "packages": [
+    {
+      "commands": {
+        "build": "mvn -q -DskipTests package",
+        "format": "mvn -q spotless:apply",
+        "lint": "mvn -q spotless:check",
+        "test": "mvn -q test -DskipITs"
+      },
+      "kind": "java",
+      "name": "innercircle-sacco",
+      "path": "."
+    },
+    {
+      "commands": {
+        "build": "mvn -q -DskipTests package",
+        "format": "mvn -q spotless:apply",
+        "lint": "mvn -q spotless:check",
+        "test": "mvn -q test -DskipITs"
+      },
+      "kind": "java",
+      "name": "sacco-app",
+      "path": "sacco-app"
+    },
+    {
+      "commands": {
+        "build": "mvn -q -DskipTests package",
+        "format": "mvn -q spotless:apply",
+        "lint": "mvn -q spotless:check",
+        "test": "mvn -q test -DskipITs"
+      },
+      "kind": "java",
+      "name": "sacco-audit",
+      "path": "sacco-audit"
+    },
+    {
+      "commands": {
+        "build": "mvn -q -DskipTests package",
+        "format": "mvn -q spotless:apply",
+        "lint": "mvn -q spotless:check",
+        "test": "mvn -q test -DskipITs"
+      },
+      "kind": "java",
+      "name": "sacco-common",
+      "path": "sacco-common"
+    },
+    {
+      "commands": {
+        "build": "mvn -q -DskipTests package",
+        "format": "mvn -q spotless:apply",
+        "lint": "mvn -q spotless:check",
+        "test": "mvn -q test -DskipITs"
+      },
+      "kind": "java",
+      "name": "sacco-config",
+      "path": "sacco-config"
+    },
+    {
+      "commands": {
+        "build": "mvn -q -DskipTests package",
+        "format": "mvn -q spotless:apply",
+        "lint": "mvn -q spotless:check",
+        "test": "mvn -q test -DskipITs"
+      },
+      "kind": "java",
+      "name": "sacco-contribution",
+      "path": "sacco-contribution"
+    },
+    {
+      "commands": {
+        "build": "mvn -q -DskipTests package",
+        "format": "mvn -q spotless:apply",
+        "lint": "mvn -q spotless:check",
+        "test": "mvn -q test -DskipITs"
+      },
+      "kind": "java",
+      "name": "sacco-ledger",
+      "path": "sacco-ledger"
+    },
+    {
+      "commands": {
+        "build": "mvn -q -DskipTests package",
+        "format": "mvn -q spotless:apply",
+        "lint": "mvn -q spotless:check",
+        "test": "mvn -q test -DskipITs"
+      },
+      "kind": "java",
+      "name": "sacco-loan",
+      "path": "sacco-loan"
+    },
+    {
+      "commands": {
+        "build": "mvn -q -DskipTests package",
+        "format": "mvn -q spotless:apply",
+        "lint": "mvn -q spotless:check",
+        "test": "mvn -q test -DskipITs"
+      },
+      "kind": "java",
+      "name": "sacco-member",
+      "path": "sacco-member"
+    },
+    {
+      "commands": {
+        "build": "mvn -q -DskipTests package",
+        "format": "mvn -q spotless:apply",
+        "lint": "mvn -q spotless:check",
+        "test": "mvn -q test -DskipITs"
+      },
+      "kind": "java",
+      "name": "sacco-payout",
+      "path": "sacco-payout"
+    },
+    {
+      "commands": {
+        "build": "mvn -q -DskipTests package",
+        "format": "mvn -q spotless:apply",
+        "lint": "mvn -q spotless:check",
+        "test": "mvn -q test -DskipITs"
+      },
+      "kind": "java",
+      "name": "sacco-reporting",
+      "path": "sacco-reporting"
+    },
+    {
+      "commands": {
+        "build": "mvn -q -DskipTests package",
+        "format": "mvn -q spotless:apply",
+        "lint": "mvn -q spotless:check",
+        "test": "mvn -q test -DskipITs"
+      },
+      "kind": "java",
+      "name": "sacco-security",
+      "path": "sacco-security"
+    },
+    {
+      "commands": {
+        "build": "npm run build",
+        "dev": "npm run dev",
+        "lint": "npm run lint",
+        "test": "npm run test"
+      },
+      "kind": "typescript",
+      "name": "sacco-ui",
+      "path": "sacco-ui"
+    }
+  ],
   "performance": {
     "postEditFormat": "auto",
     "postEditFormatScope": "changed"
   },
+  "repoShape": "monorepo",
   "research": {
-    "mode": "auto",
-    "minSources": 3
+    "minSources": 3,
+    "mode": "auto"
   },
-  "enforcement": {
-    "monorepoVerifyScope": "warn",
-    "karpathyChecklist": "warn"
-  },
-  "packages": [],
-  "agentTeams": {
-    "enabled": true,
-    "delegateMode": true,
-    "defaultCompositions": {
-      "review": ["code-reviewer", "security-scanner", "perf-analyzer"],
-      "fullstack": ["test-writer", "debugger", "docs-writer", "refactorer"],
-      "debug": ["debugger", "debugger", "debugger"]
-    }
-  }
+  "version": 1
 }
-

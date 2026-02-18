@@ -21,7 +21,7 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -33,6 +33,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -50,7 +51,7 @@ class LoanReversalServiceImplTest {
     private RepaymentScheduleRepository scheduleRepository;
 
     @Mock
-    private ApplicationEventPublisher eventPublisher;
+    private EventOutboxWriter outboxWriter;
 
     @InjectMocks
     private LoanReversalServiceImpl reversalService;
@@ -328,7 +329,7 @@ class LoanReversalServiceImplTest {
             reversalService.reverseRepayment(repaymentId, "Duplicate payment", "admin");
 
             ArgumentCaptor<LoanReversalEvent> eventCaptor = ArgumentCaptor.forClass(LoanReversalEvent.class);
-            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            verify(outboxWriter).write(eventCaptor.capture(), eq("LoanApplication"), any(UUID.class));
 
             LoanReversalEvent event = eventCaptor.getValue();
             assertThat(event.reversalType()).isEqualTo("REPAYMENT");

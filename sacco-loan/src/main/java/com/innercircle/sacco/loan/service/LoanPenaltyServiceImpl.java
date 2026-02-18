@@ -2,11 +2,11 @@ package com.innercircle.sacco.loan.service;
 
 import com.innercircle.sacco.common.event.PenaltyAppliedEvent;
 import com.innercircle.sacco.common.event.PenaltyPaidEvent;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import com.innercircle.sacco.loan.entity.LoanPenalty;
 import com.innercircle.sacco.loan.repository.LoanPenaltyRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +21,7 @@ import java.util.UUID;
 public class LoanPenaltyServiceImpl implements LoanPenaltyService {
 
     private final LoanPenaltyRepository penaltyRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final EventOutboxWriter outboxWriter;
 
     @Override
     @Transactional
@@ -57,13 +57,14 @@ public class LoanPenaltyServiceImpl implements LoanPenaltyService {
         LoanPenalty savedPenalty = penaltyRepository.save(penalty);
 
         // Publish penalty applied event
-        eventPublisher.publishEvent(new PenaltyAppliedEvent(
+        outboxWriter.write(new PenaltyAppliedEvent(
                 savedPenalty.getId(),
                 memberId,
                 amount,
                 "LOAN_LATE_REPAYMENT",
+                UUID.randomUUID(),
                 actor
-        ));
+        ), "LoanApplication", savedPenalty.getId());
 
         log.info("Applied penalty {} of {} for loan {} (schedule: {})",
                 savedPenalty.getId(), amount, loanId, scheduleId);
@@ -110,12 +111,13 @@ public class LoanPenaltyServiceImpl implements LoanPenaltyService {
         penalty.setPaidAt(Instant.now());
         penaltyRepository.save(penalty);
 
-        eventPublisher.publishEvent(new PenaltyPaidEvent(
+        outboxWriter.write(new PenaltyPaidEvent(
                 penaltyId,
                 penalty.getMemberId(),
                 penalty.getAmount(),
+                UUID.randomUUID(),
                 actor
-        ));
+        ), "LoanApplication", penaltyId);
 
         log.info("Marked penalty {} as paid (amount: {})", penaltyId, penalty.getAmount());
     }

@@ -2,13 +2,13 @@ package com.innercircle.sacco.loan.service;
 
 import com.innercircle.sacco.common.event.BenefitsDistributedEvent;
 import com.innercircle.sacco.common.event.LoanRepaymentEvent;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import com.innercircle.sacco.loan.dto.LoanBenefitResponse;
 import com.innercircle.sacco.loan.dto.MemberEarningsResponse;
 import com.innercircle.sacco.loan.entity.LoanBenefit;
 import com.innercircle.sacco.loan.repository.LoanBenefitRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,7 +31,7 @@ public class LoanBenefitServiceImpl implements LoanBenefitService {
 
     private final LoanBenefitRepository benefitRepository;
     private final JdbcTemplate jdbcTemplate;
-    private final ApplicationEventPublisher eventPublisher;
+    private final EventOutboxWriter outboxWriter;
 
     @EventListener
     @Transactional
@@ -102,12 +102,13 @@ public class LoanBenefitServiceImpl implements LoanBenefitService {
         List<LoanBenefit> savedBenefits = benefitRepository.saveAll(benefits);
 
         // Publish event
-        eventPublisher.publishEvent(new BenefitsDistributedEvent(
+        outboxWriter.write(new BenefitsDistributedEvent(
                 loanId,
                 interestAmount,
                 savedBenefits.size(),
+                UUID.randomUUID(),
                 actor
-        ));
+        ), "LoanApplication", loanId);
 
         log.info("Distributed {} to {} beneficiaries from loan {}",
                 interestAmount, savedBenefits.size(), loanId);

@@ -1,35 +1,244 @@
 {
-  "schemaVersion": 1,
-  "timestamp": "2026-02-15T00:00:00Z",
-  "feature": "loan-batch-processing",
-  "branch": "feat/comprehensive-test-coverage",
   "automated": [
-    { "name": "lint", "result": "pass" },
-    { "name": "tests", "result": "pass", "details": "605 tests, 0 failures (254+128+83+84+56)" },
-    { "name": "security", "result": "pass" },
-    { "name": "types", "result": "skipped", "details": "Java - compiler handles" },
-    { "name": "deps", "result": "pass", "details": "No new dependencies added" }
+    {
+      "name": "lint",
+      "result": "skipped"
+    },
+    {
+      "name": "types",
+      "result": "skipped"
+    },
+    {
+      "name": "tests",
+      "result": "skipped"
+    }
   ],
-  "verdict": "warn",
   "blockers": [],
+  "branch": "feat/custom-auth-api",
+  "feature": "loan-batch-processing",
+  "invariants": {
+    "findings": [
+      {
+        "file": "scripts/memory/__init__.py",
+        "line": 1,
+        "message": "File has 894 lines (max 800).",
+        "rule": "max-file-lines",
+        "severity": "warn"
+      },
+      {
+        "file": "scripts/memory/bridge.py",
+        "line": 146,
+        "message": "Line length 200 exceeds 140.",
+        "rule": "max-line-length",
+        "severity": "warn"
+      },
+      {
+        "file": "scripts/memory/bridge.py",
+        "line": 147,
+        "message": "Line length 199 exceeds 140.",
+        "rule": "max-line-length",
+        "severity": "warn"
+      },
+      {
+        "file": "scripts/memory/bridge.py",
+        "line": 148,
+        "message": "Line length 186 exceeds 140.",
+        "rule": "max-line-length",
+        "severity": "warn"
+      },
+      {
+        "file": "scripts/memory/bridge.py",
+        "line": 149,
+        "message": "Line length 192 exceeds 140.",
+        "rule": "max-line-length",
+        "severity": "warn"
+      },
+      {
+        "file": "scripts/memory/bridge.py",
+        "line": 150,
+        "message": "Line length 185 exceeds 140.",
+        "rule": "max-line-length",
+        "severity": "warn"
+      },
+      {
+        "file": "scripts/workflow_checks.py",
+        "line": 1,
+        "message": "File has 868 lines (max 800).",
+        "rule": "max-file-lines",
+        "severity": "warn"
+      },
+      {
+        "file": "scripts/workflow_validate.py",
+        "line": 1,
+        "message": "File has 1391 lines (max 800).",
+        "rule": "max-file-lines",
+        "severity": "warn"
+      },
+      {
+        "file": "scripts/workflow_validate.py",
+        "line": 473,
+        "message": "Line length 150 exceeds 140.",
+        "rule": "max-line-length",
+        "severity": "warn"
+      },
+      {
+        "file": "scripts/workflow_validate.py",
+        "line": 507,
+        "message": "Line length 147 exceeds 140.",
+        "rule": "max-line-length",
+        "severity": "warn"
+      },
+      {
+        "file": "scripts/workflow_validate.py",
+        "line": 832,
+        "message": "Line length 142 exceeds 140.",
+        "rule": "max-line-length",
+        "severity": "warn"
+      },
+      {
+        "file": "scripts/workflow_validate.py",
+        "line": 892,
+        "message": "Line length 142 exceeds 140.",
+        "rule": "max-line-length",
+        "severity": "warn"
+      }
+    ],
+    "summary": {
+      "fail": 0,
+      "total": 12,
+      "warn": 12
+    }
+  },
+  "packages": [],
+  "principles": [
+    {
+      "name": "Think Before Coding",
+      "notes": "",
+      "status": "todo"
+    },
+    {
+      "name": "Simplicity First",
+      "notes": "",
+      "status": "todo"
+    },
+    {
+      "name": "Surgical Changes",
+      "notes": "",
+      "status": "todo"
+    },
+    {
+      "name": "Goal-Driven Execution",
+      "notes": "",
+      "status": "todo"
+    },
+    {
+      "name": "Prefer shared utility packages over hand-rolled helpers",
+      "notes": "",
+      "status": "todo"
+    },
+    {
+      "name": "Don't probe data YOLO-style",
+      "notes": "",
+      "status": "todo"
+    },
+    {
+      "name": "Validate boundaries",
+      "notes": "",
+      "status": "todo"
+    },
+    {
+      "name": "Typed SDKs",
+      "notes": "",
+      "status": "todo"
+    }
+  ],
+  "schemaVersion": 2,
+  "timestamp": "2026-02-16T00:57:29Z",
+  "verdict": "warn",
   "warnings": [
     {
-      "file": "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchServiceImpl.java",
-      "line": 230,
-      "issue": "Magic numbers 30 and 90 for overdue/default thresholds should be configurable via ConfigService",
+      "file": "scripts/memory/__init__.py",
+      "issue": "File has 894 lines (max 800).",
+      "line": 1,
+      "rule": "max-file-lines",
       "severity": "medium"
     },
     {
-      "file": "sacco-loan/src/main/resources/db/changelog/loan/004-create-batch-processing-log.yaml",
-      "line": null,
-      "issue": "Migration lacks explicit rollback section for safe rollback during incidents",
+      "file": "scripts/memory/bridge.py",
+      "issue": "Line length 200 exceeds 140.",
+      "line": 146,
+      "rule": "max-line-length",
       "severity": "medium"
     },
     {
-      "file": "sacco-loan/src/test/java/com/innercircle/sacco/loan/service/LoanBatchServiceImplTest.java",
-      "line": 52,
-      "issue": "@MockitoSettings(strictness = Strictness.LENIENT) at class level masks unnecessary stubbings",
-      "severity": "low"
+      "file": "scripts/memory/bridge.py",
+      "issue": "Line length 199 exceeds 140.",
+      "line": 147,
+      "rule": "max-line-length",
+      "severity": "medium"
+    },
+    {
+      "file": "scripts/memory/bridge.py",
+      "issue": "Line length 186 exceeds 140.",
+      "line": 148,
+      "rule": "max-line-length",
+      "severity": "medium"
+    },
+    {
+      "file": "scripts/memory/bridge.py",
+      "issue": "Line length 192 exceeds 140.",
+      "line": 149,
+      "rule": "max-line-length",
+      "severity": "medium"
+    },
+    {
+      "file": "scripts/memory/bridge.py",
+      "issue": "Line length 185 exceeds 140.",
+      "line": 150,
+      "rule": "max-line-length",
+      "severity": "medium"
+    },
+    {
+      "file": "scripts/workflow_checks.py",
+      "issue": "File has 868 lines (max 800).",
+      "line": 1,
+      "rule": "max-file-lines",
+      "severity": "medium"
+    },
+    {
+      "file": "scripts/workflow_validate.py",
+      "issue": "File has 1391 lines (max 800).",
+      "line": 1,
+      "rule": "max-file-lines",
+      "severity": "medium"
+    },
+    {
+      "file": "scripts/workflow_validate.py",
+      "issue": "Line length 150 exceeds 140.",
+      "line": 473,
+      "rule": "max-line-length",
+      "severity": "medium"
+    },
+    {
+      "file": "scripts/workflow_validate.py",
+      "issue": "Line length 147 exceeds 140.",
+      "line": 507,
+      "rule": "max-line-length",
+      "severity": "medium"
+    },
+    {
+      "file": "scripts/workflow_validate.py",
+      "issue": "Line length 142 exceeds 140.",
+      "line": 832,
+      "rule": "max-line-length",
+      "severity": "medium"
+    },
+    {
+      "file": "scripts/workflow_validate.py",
+      "issue": "Line length 142 exceeds 140.",
+      "line": 892,
+      "rule": "max-line-length",
+      "severity": "medium"
     }
   ]
 }

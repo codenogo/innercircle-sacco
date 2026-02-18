@@ -3,6 +3,7 @@ package com.innercircle.sacco.payout.service;
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.payout.entity.BankWithdrawal;
 import com.innercircle.sacco.payout.entity.WithdrawalStatus;
+import com.innercircle.sacco.common.event.AuditableEvent;
 import com.innercircle.sacco.payout.event.BankWithdrawalConfirmedEvent;
 import com.innercircle.sacco.payout.event.BankWithdrawalInitiatedEvent;
 import com.innercircle.sacco.payout.repository.BankWithdrawalRepository;
@@ -16,7 +17,7 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
@@ -30,6 +31,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -41,7 +43,7 @@ class BankWithdrawalServiceImplTest {
     private BankWithdrawalRepository withdrawalRepository;
 
     @Mock
-    private ApplicationEventPublisher eventPublisher;
+    private EventOutboxWriter outboxWriter;
 
     @InjectMocks
     private BankWithdrawalServiceImpl bankWithdrawalService;
@@ -50,7 +52,7 @@ class BankWithdrawalServiceImplTest {
     private ArgumentCaptor<BankWithdrawal> withdrawalCaptor;
 
     @Captor
-    private ArgumentCaptor<Object> eventCaptor;
+    private ArgumentCaptor<AuditableEvent> eventCaptor;
 
     private UUID memberId;
     private UUID withdrawalId;
@@ -114,8 +116,8 @@ class BankWithdrawalServiceImplTest {
 
             bankWithdrawalService.initiateWithdrawal(memberId, amount, bankName, accountNumber, "admin");
 
-            verify(eventPublisher).publishEvent(eventCaptor.capture());
-            Object event = eventCaptor.getValue();
+            verify(outboxWriter).write(eventCaptor.capture(), eq("BankWithdrawal"), any(UUID.class));
+            AuditableEvent event = eventCaptor.getValue();
             assertThat(event).isInstanceOf(BankWithdrawalInitiatedEvent.class);
             BankWithdrawalInitiatedEvent initiatedEvent = (BankWithdrawalInitiatedEvent) event;
             assertThat(initiatedEvent.withdrawalId()).isEqualTo(saved.getId());
@@ -167,8 +169,8 @@ class BankWithdrawalServiceImplTest {
 
             bankWithdrawalService.confirmWithdrawal(withdrawalId, "REF-001", "admin");
 
-            verify(eventPublisher).publishEvent(eventCaptor.capture());
-            Object event = eventCaptor.getValue();
+            verify(outboxWriter).write(eventCaptor.capture(), eq("BankWithdrawal"), any(UUID.class));
+            AuditableEvent event = eventCaptor.getValue();
             assertThat(event).isInstanceOf(BankWithdrawalConfirmedEvent.class);
             BankWithdrawalConfirmedEvent confirmedEvent = (BankWithdrawalConfirmedEvent) event;
             assertThat(confirmedEvent.withdrawalId()).isEqualTo(confirmedWithdrawal.getId());

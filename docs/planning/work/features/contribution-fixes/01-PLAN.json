@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "feature": "contribution-fixes",
+  "planNumber": "01",
+  "goal": "Fix contribution type mismatches (category, contributionMonth, BulkContributionRequest) and delete dead utils",
+  "tasks": [
+    {
+      "name": "Fix ContributionResponse.category type and BulkContributionRequest type",
+      "cwd": "sacco-ui",
+      "files": [
+        "sacco-ui/src/types/contributions.ts"
+      ],
+      "action": "In types/contributions.ts: (1) Change ContributionResponse.category from `string` to `ContributionCategoryResponse`. (2) Replace BulkContributionRequest with backend-matching shape: shared defaults (paymentMode: PaymentMode, contributionMonth: string, contributionDate: string, categoryId: string, batchReference?: string) plus contributions: BulkContributionItemRequest[]. (3) Add BulkContributionItemRequest interface (memberId: string, amount: number, paymentMode?: PaymentMode, contributionMonth?: string, contributionDate?: string, referenceNumber?: string, notes?: string). (4) Add ContributionCategoryRequest interface (name: string, description?: string, active?: boolean, isMandatory?: boolean).",
+      "verify": ["npx tsc --noEmit"]
+    },
+    {
+      "name": "Fix category rendering, contributionMonth send, and month filter",
+      "cwd": "sacco-ui",
+      "files": [
+        "sacco-ui/src/pages/Contributions.tsx",
+        "sacco-ui/src/components/RecordContributionModal.tsx"
+      ],
+      "action": "In Contributions.tsx: (1) Change line 221 from `{c.category}` to `{typeof c.category === 'string' ? c.category : c.category.name}` or just `{c.category.name}`. (2) Change line 103 month filter from `c.contributionMonth === month` to `c.contributionMonth.slice(0, 7) === month`. In RecordContributionModal.tsx: (3) Change line 88 from `contributionMonth: date.slice(0, 7)` to `contributionMonth: date.slice(0, 7) + '-01'`.",
+      "verify": ["npx tsc --noEmit", "npx vite build"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Delete dead utils/contributions.ts and its test",
+      "cwd": "sacco-ui",
+      "files": [
+        "sacco-ui/src/utils/contributions.ts",
+        "sacco-ui/tests/contributions-utils.test.ts"
+      ],
+      "action": "Delete both files. They have zero imports from src/ and use 'PAID' status which doesn't exist in the ContributionStatus enum. The functionality is superseded by inline summary in Contributions.tsx:107-113.",
+      "verify": ["npx tsc --noEmit", "npm test"]
+    }
+  ],
+  "planVerify": ["npx tsc --noEmit", "npx vite build", "npm test"],
+  "commitMessage": "fix(contribution): fix category/month type mismatches and remove dead utils",
+  "timestamp": "2026-02-18T12:50:00Z"
+}

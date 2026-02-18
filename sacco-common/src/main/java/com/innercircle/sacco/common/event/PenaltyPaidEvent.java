@@ -7,6 +7,7 @@ public record PenaltyPaidEvent(
         UUID penaltyId,
         UUID memberId,
         BigDecimal amount,
+        UUID correlationId,
         String actor
 ) implements AuditableEvent {
 
@@ -18,5 +19,10 @@ public record PenaltyPaidEvent(
     @Override
     public String getActor() {
         return actor;
+    }
+
+    @Override
+    public UUID getCorrelationId() {
+        return correlationId;
     }
 }

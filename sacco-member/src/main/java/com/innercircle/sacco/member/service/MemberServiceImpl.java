@@ -2,13 +2,15 @@ package com.innercircle.sacco.member.service;
 
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.event.MemberCreatedEvent;
+import com.innercircle.sacco.common.event.MemberStatusChangeEvent;
 import com.innercircle.sacco.common.exception.BusinessException;
 import com.innercircle.sacco.common.exception.ResourceNotFoundException;
 import com.innercircle.sacco.member.entity.Member;
 import com.innercircle.sacco.member.entity.MemberStatus;
+import com.innercircle.sacco.member.guard.MemberTransitionGuards;
 import com.innercircle.sacco.member.repository.MemberRepository;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,7 +25,7 @@ import java.util.UUID;
 public class MemberServiceImpl implements MemberService {
 
     private final MemberRepository memberRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final EventOutboxWriter outboxWriter;
 
     @Override
     @Transactional
@@ -41,12 +43,13 @@ public class MemberServiceImpl implements MemberService {
 
         Member savedMember = memberRepository.save(member);
 
-        eventPublisher.publishEvent(new MemberCreatedEvent(
+        outboxWriter.write(new MemberCreatedEvent(
                 savedMember.getId(),
                 savedMember.getMemberNumber(),
                 savedMember.getFirstName(),
                 savedMember.getLastName(),
-                getCurrentActor()));
+                UUID.randomUUID(),
+                getCurrentActor()), "Member", savedMember.getId());
 
         return savedMember;
     }
@@ -87,8 +90,6 @@ public class MemberServiceImpl implements MemberService {
         }
 
         Member updatedMember = memberRepository.save(existing);
-
-        // TODO: Publish MemberUpdatedEvent when event is defined
 
         return updatedMember;
     }
@@ -135,15 +136,20 @@ public class MemberServiceImpl implements MemberService {
     @Transactional
     public Member suspend(UUID id) {
         Member member = findById(id);
+        String previousStatus = member.getStatus().name();
 
-        if (member.getStatus() == MemberStatus.SUSPENDED) {
-            throw new BusinessException("Member is already suspended");
-        }
+        MemberTransitionGuards.MEMBER.validate(member.getStatus(), MemberStatus.SUSPENDED);
 
         member.setStatus(MemberStatus.SUSPENDED);
         Member suspendedMember = memberRepository.save(member);
 
-        // TODO: Publish MemberSuspendedEvent when event is defined
+        outboxWriter.write(new MemberStatusChangeEvent(
+                suspendedMember.getId(),
+                suspendedMember.getMemberNumber(),
+                previousStatus,
+                MemberStatus.SUSPENDED.name(),
+                UUID.randomUUID(),
+                getCurrentActor()), "Member", suspendedMember.getId());
 
         return suspendedMember;
     }
@@ -152,19 +158,20 @@ public class MemberServiceImpl implements MemberService {
     @Transactional
     public Member reactivate(UUID id) {
         Member member = findById(id);
+        String previousStatus = member.getStatus().name();
 
-        if (member.getStatus() == MemberStatus.ACTIVE) {
-            throw new BusinessException("Member is already active");
-        }
-
-        if (member.getStatus() == MemberStatus.DEACTIVATED) {
-            throw new BusinessException("Cannot reactivate a deactivated member");
-        }
+        MemberTransitionGuards.MEMBER.validate(member.getStatus(), MemberStatus.ACTIVE);
 
         member.setStatus(MemberStatus.ACTIVE);
         Member reactivatedMember = memberRepository.save(member);
 
-        // TODO: Publish MemberReactivatedEvent when event is defined
+        outboxWriter.write(new MemberStatusChangeEvent(
+                reactivatedMember.getId(),
+                reactivatedMember.getMemberNumber(),
+                previousStatus,
+                MemberStatus.ACTIVE.name(),
+                UUID.randomUUID(),
+                getCurrentActor()), "Member", reactivatedMember.getId());
 
         return reactivatedMember;
     }

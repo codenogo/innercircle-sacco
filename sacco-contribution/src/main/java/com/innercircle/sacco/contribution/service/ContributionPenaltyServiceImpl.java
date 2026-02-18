@@ -4,10 +4,10 @@ import com.innercircle.sacco.common.event.PenaltyAppliedEvent;
 import com.innercircle.sacco.common.event.PenaltyWaivedEvent;
 import com.innercircle.sacco.common.exception.BusinessException;
 import com.innercircle.sacco.common.exception.ResourceNotFoundException;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import com.innercircle.sacco.contribution.entity.ContributionPenalty;
 import com.innercircle.sacco.contribution.repository.ContributionPenaltyRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +23,7 @@ import java.util.UUID;
 public class ContributionPenaltyServiceImpl implements ContributionPenaltyService {
 
     private final ContributionPenaltyRepository penaltyRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final EventOutboxWriter outboxWriter;
 
     @Override
     @Transactional
@@ -31,14 +31,14 @@ public class ContributionPenaltyServiceImpl implements ContributionPenaltyServic
         penalty.setWaived(false);
         ContributionPenalty savedPenalty = penaltyRepository.save(penalty);
 
-        // Publish PenaltyAppliedEvent
-        eventPublisher.publishEvent(new PenaltyAppliedEvent(
+        outboxWriter.write(new PenaltyAppliedEvent(
                 savedPenalty.getId(),
                 savedPenalty.getMemberId(),
                 savedPenalty.getAmount(),
                 "CONTRIBUTION_PENALTY",
+                UUID.randomUUID(),
                 actor
-        ));
+        ), "ContributionPenalty", savedPenalty.getId());
 
         return savedPenalty;
     }
@@ -58,13 +58,14 @@ public class ContributionPenaltyServiceImpl implements ContributionPenaltyServic
 
         ContributionPenalty waivedPenalty = penaltyRepository.save(penalty);
 
-        eventPublisher.publishEvent(new PenaltyWaivedEvent(
+        outboxWriter.write(new PenaltyWaivedEvent(
                 waivedPenalty.getId(),
                 waivedPenalty.getMemberId(),
                 waivedPenalty.getAmount(),
                 "Manual waiver",
+                UUID.randomUUID(),
                 actor
-        ));
+        ), "ContributionPenalty", waivedPenalty.getId());
 
         return waivedPenalty;
     }

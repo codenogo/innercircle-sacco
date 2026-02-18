@@ -6,6 +6,7 @@ public record PayoutStatusChangeEvent(
         UUID payoutId,
         UUID memberId,
         String action,
+        UUID correlationId,
         String actor
 ) implements AuditableEvent {
 
@@ -17,5 +18,10 @@ public record PayoutStatusChangeEvent(
     @Override
     public String getActor() {
         return actor;
+    }
+
+    @Override
+    public UUID getCorrelationId() {
+        return correlationId;
     }
 }

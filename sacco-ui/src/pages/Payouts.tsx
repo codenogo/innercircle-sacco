@@ -1,0 +1,353 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ArrowDownToLine, Search } from 'lucide-react'
+import { NewPayoutModal } from '../components/NewPayoutModal'
+import { Select } from '../components/Select'
+import { ApiError } from '../services/apiClient'
+import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
+import { useAuthorization } from '../hooks/useAuthorization'
+import { useCurrentUser } from '../hooks/useCurrentUser'
+import type { CursorPage } from '../types/users'
+import type { PayoutResponse, PayoutRequest, PayoutStatus, PayoutType } from '../types/payouts'
+import type { MemberResponse } from '../types/members'
+import './Payouts.css'
+
+type StatusFilter = 'all' | PayoutStatus
+type FeedbackType = 'success' | 'error'
+
+interface Feedback {
+  type: FeedbackType
+  text: string
+}
+
+const PAGE_SIZE = 50
+
+const statusClass: Record<PayoutStatus, string> = {
+  PENDING: 'badge--pending',
+  APPROVED: 'badge--active',
+  PROCESSED: 'badge--completed',
+  FAILED: 'badge--rejected',
+}
+
+const payoutTypeLabel: Record<PayoutType, string> = {
+  MERRY_GO_ROUND: 'Merry-Go-Round',
+  AD_HOC: 'Ad Hoc',
+  DIVIDEND: 'Dividend',
+}
+
+function toErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError) return error.message
+  if (error instanceof Error) return error.message
+  return fallback
+}
+
+function fmtCurrency(value: number | string): string {
+  const parsed = typeof value === 'number' ? value : Number(value)
+  if (Number.isNaN(parsed)) return '0'
+  return parsed.toLocaleString('en-KE')
+}
+
+function fmtDate(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '-'
+  return date.toLocaleDateString('en-KE', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+export function Payouts() {
+  const { request } = useAuthenticatedApi()
+  const { canAccess, isMemberOnly } = useAuthorization()
+  const { profile, loading: profileLoading } = useCurrentUser()
+  const memberId = profile?.member?.id ?? null
+  const canCreatePayout = canAccess(['ADMIN', 'TREASURER'])
+
+  const [payouts, setPayouts] = useState<PayoutResponse[]>([])
+  const [memberMap, setMemberMap] = useState<Map<string, string>>(new Map())
+  const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState<StatusFilter>('all')
+  const [showModal, setShowModal] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [creatingPayout, setCreatingPayout] = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [hasMore, setHasMore] = useState(false)
+  const [feedback, setFeedback] = useState<Feedback | null>(null)
+
+  const loadPayouts = useCallback(async (opts?: { append?: boolean; cursor?: string | null }) => {
+    if (isMemberOnly) {
+      if (!memberId) {
+        setPayouts([])
+        setNextCursor(null)
+        setHasMore(false)
+        setFeedback({ type: 'error', text: 'Your account is not linked to a member profile.' })
+        setLoading(false)
+        setLoadingMore(false)
+        return
+      }
+
+      setLoading(true)
+      setFeedback(null)
+      try {
+        const path = opts?.cursor
+          ? `/api/v1/payouts/member/${memberId}?limit=${PAGE_SIZE}&cursor=${encodeURIComponent(opts.cursor)}`
+          : `/api/v1/payouts/member/${memberId}?limit=${PAGE_SIZE}`
+        const page = await request<CursorPage<PayoutResponse>>(path)
+        setPayouts(prev => {
+          if (!opts?.append) return page.items
+
+          const merged = new Map<string, PayoutResponse>()
+          prev.forEach(p => merged.set(p.id, p))
+          page.items.forEach(p => merged.set(p.id, p))
+          return Array.from(merged.values())
+        })
+        setNextCursor(page.nextCursor)
+        setHasMore(page.hasMore)
+      } catch (error) {
+        setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to load your payouts.') })
+      } finally {
+        setLoading(false)
+        setLoadingMore(false)
+      }
+      return
+    }
+
+    const append = Boolean(opts?.append)
+    const cursor = opts?.cursor
+
+    if (append) setLoadingMore(true)
+    else setLoading(true)
+
+    try {
+      const path = cursor
+        ? `/api/v1/payouts?limit=${PAGE_SIZE}&cursor=${encodeURIComponent(cursor)}`
+        : `/api/v1/payouts?limit=${PAGE_SIZE}`
+      const page = await request<CursorPage<PayoutResponse>>(path)
+
+      setPayouts(prev => {
+        if (!append) return page.items
+
+        const merged = new Map<string, PayoutResponse>()
+        prev.forEach(p => merged.set(p.id, p))
+        page.items.forEach(p => merged.set(p.id, p))
+        return Array.from(merged.values())
+      })
+      setNextCursor(page.nextCursor)
+      setHasMore(page.hasMore)
+      setFeedback(null)
+    } catch (error) {
+      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to load payouts.') })
+    } finally {
+      setLoading(false)
+      setLoadingMore(false)
+    }
+  }, [isMemberOnly, memberId, request])
+
+  const loadMembers = useCallback(async () => {
+    if (!canCreatePayout) {
+      setMemberMap(new Map())
+      return
+    }
+
+    try {
+      const page = await request<CursorPage<MemberResponse>>('/api/v1/members?size=200')
+      const map = new Map<string, string>()
+      page.items.forEach(m => map.set(m.id, `${m.firstName} ${m.lastName}`.trim()))
+      setMemberMap(map)
+    } catch {
+      // Members list is non-critical; silently fall back to showing IDs
+    }
+  }, [canCreatePayout, request])
+
+  useEffect(() => {
+    if (profileLoading) return
+    void loadPayouts({ append: false, cursor: null })
+    void loadMembers()
+  }, [loadPayouts, loadMembers, profileLoading])
+
+  async function handleCreatePayout(payload: PayoutRequest) {
+    if (!canCreatePayout) {
+      throw new Error('You are not allowed to create payouts.')
+    }
+
+    setCreatingPayout(true)
+    setFeedback(null)
+    try {
+      const created = await request<PayoutResponse>('/api/v1/payouts', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      })
+      setPayouts(prev => [created, ...prev])
+      setShowModal(false)
+      setFeedback({ type: 'success', text: 'Payout request submitted successfully.' })
+    } catch (error) {
+      const message = toErrorMessage(error, 'Unable to create payout.')
+      setFeedback({ type: 'error', text: message })
+      throw error instanceof Error ? error : new Error(message)
+    } finally {
+      setCreatingPayout(false)
+    }
+  }
+
+  const getMemberName = useCallback((memberId: string): string => {
+    if (memberId === profile?.member?.id && profile.member) {
+      return `${profile.member.firstName} ${profile.member.lastName}`.trim()
+    }
+    return memberMap.get(memberId) ?? memberId
+  }, [memberMap, profile?.member])
+
+  const memberList = useMemo(() => {
+    return Array.from(memberMap.entries()).map(([id, name]) => ({ id, name }))
+  }, [memberMap])
+
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase()
+
+    return payouts.filter(p => {
+      if (filter !== 'all' && p.status !== filter) return false
+      if (!query) return true
+
+      const text = [
+        getMemberName(p.memberId),
+        payoutTypeLabel[p.type],
+        p.status,
+        p.referenceNumber ?? '',
+      ].join(' ').toLowerCase()
+
+      return text.includes(query)
+    })
+  }, [filter, payouts, search, getMemberName])
+
+  const completed = payouts.filter(p => p.status === 'PROCESSED')
+  const pending = payouts.filter(p => p.status === 'PENDING' || p.status === 'APPROVED')
+  const totalPaid = completed.reduce((s, p) => s + Number(p.amount), 0)
+  const totalPending = pending.reduce((s, p) => s + Number(p.amount), 0)
+
+  return (
+    <div className="payouts-page">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Payouts</h1>
+          <p className="page-subtitle">Disbursements and withdrawals</p>
+        </div>
+        {canCreatePayout && (
+          <button className="btn btn--primary" onClick={() => setShowModal(true)}>
+            <ArrowDownToLine size={14} strokeWidth={2} />
+            New Payout
+          </button>
+        )}
+      </div>
+
+      <hr className="rule rule--strong" />
+
+      <section className="page-section">
+        <span className="page-section-title">Summary</span>
+        <hr className="rule" />
+        <div className="payout-summary">
+          <div className="dot-leader">
+            <span>Total Paid Out ({completed.length} payouts)</span>
+            <span className="dot-leader-value">KES {fmtCurrency(totalPaid)}</span>
+          </div>
+          <div className="dot-leader">
+            <span>Pending / Processing ({pending.length})</span>
+            <span className="dot-leader-value amount--negative">KES {fmtCurrency(totalPending)}</span>
+          </div>
+        </div>
+        <hr className="rule" />
+      </section>
+
+      {feedback && (
+        <div className={`ops-feedback ops-feedback--${feedback.type}`} role="status">
+          {feedback.text}
+        </div>
+      )}
+
+      <section className="page-section">
+        <span className="page-section-title">All Payouts</span>
+        <hr className="rule" />
+
+        <div className="filter-bar">
+          <div className="filter-search-wrap">
+            <Search size={14} strokeWidth={1.75} className="filter-search-icon" />
+            <input
+              type="text"
+              className="filter-search"
+              placeholder="Search payouts..."
+              value={search}
+              onChange={event => setSearch(event.target.value)}
+            />
+          </div>
+          <div className="filter-select-wrap">
+            <Select
+              value={filter}
+              onChange={value => setFilter(value as StatusFilter)}
+              options={[
+                { value: 'all', label: 'All Status' },
+                { value: 'PENDING', label: 'Pending' },
+                { value: 'APPROVED', label: 'Approved' },
+                { value: 'PROCESSED', label: 'Processed' },
+                { value: 'FAILED', label: 'Failed' },
+              ]}
+            />
+          </div>
+        </div>
+
+        <table className="ledger-table">
+          <thead>
+            <tr>
+              <th className="label">Member</th>
+              <th className="label">Type</th>
+              <th className="label">Status</th>
+              <th className="label">Reference</th>
+              <th className="label ledger-table-amount">Amount (KES)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={5} className="table-empty">Loading payouts...</td></tr>
+            ) : filtered.length === 0 ? (
+              <tr><td colSpan={5} className="table-empty">No payouts match your search.</td></tr>
+            ) : filtered.map((p, i) => (
+              <tr key={p.id} className={i % 2 === 1 ? 'ledger-row--alt' : ''}>
+                <td>
+                  <span className="payout-member">{getMemberName(p.memberId)}</span>
+                  <span className="payout-date">{fmtDate(p.createdAt)}</span>
+                </td>
+                <td className="payout-type">{payoutTypeLabel[p.type]}</td>
+                <td><span className={`badge ${statusClass[p.status]}`}>{p.status}</span></td>
+                <td className="data payout-ref">{p.referenceNumber ?? '—'}</td>
+                <td className="amount ledger-table-amount">{fmtCurrency(p.amount)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {hasMore && (
+          <div className="ops-pager">
+            <button
+              type="button"
+              className="btn btn--secondary"
+              disabled={loadingMore || !nextCursor}
+              onClick={() => void loadPayouts({ append: true, cursor: nextCursor })}
+            >
+              {loadingMore ? 'Loading...' : 'Load More'}
+            </button>
+          </div>
+        )}
+
+        <hr className="rule rule--strong" />
+      </section>
+
+      {canCreatePayout && (
+        <NewPayoutModal
+          open={showModal}
+          onClose={() => setShowModal(false)}
+          onSubmit={handleCreatePayout}
+          isSubmitting={creatingPayout}
+          members={memberList}
+        />
+      )}
+    </div>
+  )
+}

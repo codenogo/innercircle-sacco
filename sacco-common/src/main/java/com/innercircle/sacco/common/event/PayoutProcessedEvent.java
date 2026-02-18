@@ -8,6 +8,7 @@ public record PayoutProcessedEvent(
         UUID memberId,
         BigDecimal amount,
         String payoutType,
+        UUID correlationId,
         String actor
 ) implements AuditableEvent {
 
@@ -19,5 +20,10 @@ public record PayoutProcessedEvent(
     @Override
     public String getActor() {
         return actor;
+    }
+
+    @Override
+    public UUID getCorrelationId() {
+        return correlationId;
     }
 }

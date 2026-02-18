@@ -8,6 +8,7 @@ public record ContributionCreatedEvent(
         UUID memberId,
         BigDecimal amount,
         String referenceNumber,
+        UUID correlationId,
         String actor
 ) implements AuditableEvent {
 
@@ -19,5 +20,10 @@ public record ContributionCreatedEvent(
     @Override
     public String getActor() {
         return actor;
+    }
+
+    @Override
+    public UUID getCorrelationId() {
+        return correlationId;
     }
 }

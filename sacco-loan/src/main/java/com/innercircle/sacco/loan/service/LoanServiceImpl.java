@@ -4,6 +4,7 @@ import com.innercircle.sacco.common.event.LoanApplicationEvent;
 import com.innercircle.sacco.common.event.LoanDisbursedEvent;
 import com.innercircle.sacco.common.event.LoanRepaymentEvent;
 import com.innercircle.sacco.common.event.LoanStatusChangeEvent;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import com.innercircle.sacco.config.entity.InterestMethod;
 import com.innercircle.sacco.config.entity.LoanProductConfig;
 import com.innercircle.sacco.config.service.ConfigService;
@@ -14,12 +15,12 @@ import com.innercircle.sacco.loan.entity.LoanRepayment;
 import com.innercircle.sacco.loan.entity.LoanStatus;
 import com.innercircle.sacco.loan.entity.RepaymentSchedule;
 import com.innercircle.sacco.loan.entity.RepaymentStatus;
+import com.innercircle.sacco.loan.guard.LoanTransitionGuards;
 import com.innercircle.sacco.loan.repository.LoanApplicationRepository;
 import com.innercircle.sacco.loan.repository.LoanInterestHistoryRepository;
 import com.innercircle.sacco.loan.repository.LoanRepaymentRepository;
 import com.innercircle.sacco.loan.repository.RepaymentScheduleRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,7 +42,7 @@ public class LoanServiceImpl implements LoanService {
     private final LoanInterestHistoryRepository interestHistoryRepository;
     private final InterestCalculator interestCalculator;
     private final RepaymentScheduleGenerator scheduleGenerator;
-    private final ApplicationEventPublisher eventPublisher;
+    private final EventOutboxWriter outboxWriter;
     private final ConfigService configService;
     private final LoanPenaltyService loanPenaltyService;
 
@@ -91,12 +92,13 @@ public class LoanServiceImpl implements LoanService {
 
         LoanApplication savedLoan = loanRepository.save(loan);
 
-        eventPublisher.publishEvent(new LoanApplicationEvent(
+        outboxWriter.write(new LoanApplicationEvent(
                 savedLoan.getId(),
                 savedLoan.getMemberId(),
                 "APPLIED",
+                UUID.randomUUID(),
                 memberId.toString()
-        ));
+        ), "LoanApplication", savedLoan.getId());
 
         return savedLoan;
     }
@@ -106,9 +108,7 @@ public class LoanServiceImpl implements LoanService {
     public LoanApplication approveLoan(UUID loanId, UUID approvedBy) {
         LoanApplication loan = getLoanById(loanId);
 
-        if (loan.getStatus() != LoanStatus.PENDING) {
-            throw new IllegalStateException("Only pending loans can be approved");
-        }
+        LoanTransitionGuards.LOAN.validate(loan.getStatus(), LoanStatus.APPROVED);
 
         loan.setStatus(LoanStatus.APPROVED);
         loan.setApprovedBy(approvedBy);
@@ -116,12 +116,13 @@ public class LoanServiceImpl implements LoanService {
 
         LoanApplication approved = loanRepository.save(loan);
 
-        eventPublisher.publishEvent(new LoanApplicationEvent(
+        outboxWriter.write(new LoanApplicationEvent(
                 approved.getId(),
                 approved.getMemberId(),
                 "APPROVED",
+                UUID.randomUUID(),
                 approvedBy.toString()
-        ));
+        ), "LoanApplication", approved.getId());
 
         return approved;
     }
@@ -131,9 +132,7 @@ public class LoanServiceImpl implements LoanService {
     public LoanApplication rejectLoan(UUID loanId, UUID rejectedBy) {
         LoanApplication loan = getLoanById(loanId);
 
-        if (loan.getStatus() != LoanStatus.PENDING) {
-            throw new IllegalStateException("Only pending loans can be rejected");
-        }
+        LoanTransitionGuards.LOAN.validate(loan.getStatus(), LoanStatus.REJECTED);
 
         loan.setStatus(LoanStatus.REJECTED);
         loan.setApprovedBy(rejectedBy);
@@ -141,12 +140,13 @@ public class LoanServiceImpl implements LoanService {
 
         LoanApplication rejected = loanRepository.save(loan);
 
-        eventPublisher.publishEvent(new LoanApplicationEvent(
+        outboxWriter.write(new LoanApplicationEvent(
                 rejected.getId(),
                 rejected.getMemberId(),
                 "REJECTED",
+                UUID.randomUUID(),
                 rejectedBy.toString()
-        ));
+        ), "LoanApplication", rejected.getId());
 
         return rejected;
     }
@@ -156,9 +156,7 @@ public class LoanServiceImpl implements LoanService {
     public LoanApplication disburseLoan(UUID loanId, String actor) {
         LoanApplication loan = getLoanById(loanId);
 
-        if (loan.getStatus() != LoanStatus.APPROVED) {
-            throw new IllegalStateException("Only approved loans can be disbursed");
-        }
+        LoanTransitionGuards.LOAN.validate(loan.getStatus(), LoanStatus.DISBURSED);
 
         Instant now = Instant.now();
         LocalDate disbursementDate = LocalDate.ofInstant(now, ZoneId.systemDefault());
@@ -194,13 +192,14 @@ public class LoanServiceImpl implements LoanService {
         LoanApplication savedLoan = loanRepository.save(loan);
 
         // Publish disbursement event
-        eventPublisher.publishEvent(new LoanDisbursedEvent(
+        outboxWriter.write(new LoanDisbursedEvent(
                 loanId,
                 loan.getMemberId(),
                 loan.getPrincipalAmount(),
                 totalInterest,
+                UUID.randomUUID(),
                 actor
-        ));
+        ), "LoanApplication", loanId);
 
         return savedLoan;
     }
@@ -314,7 +313,7 @@ public class LoanServiceImpl implements LoanService {
         loanRepository.save(loan);
 
         // Publish repayment event
-        eventPublisher.publishEvent(new LoanRepaymentEvent(
+        outboxWriter.write(new LoanRepaymentEvent(
                 loanId,
                 loan.getMemberId(),
                 savedRepayment.getId(),
@@ -322,8 +321,9 @@ public class LoanServiceImpl implements LoanService {
                 totalPrincipalPaid,
                 totalInterestPaid,
                 totalPenaltyPaid,
+                UUID.randomUUID(),
                 actor
-        ));
+        ), "LoanApplication", loanId);
 
         return savedRepayment;
     }
@@ -341,12 +341,13 @@ public class LoanServiceImpl implements LoanService {
         loan.setStatus(LoanStatus.CLOSED);
         LoanApplication closed = loanRepository.save(loan);
 
-        eventPublisher.publishEvent(new LoanStatusChangeEvent(
+        outboxWriter.write(new LoanStatusChangeEvent(
                 closed.getId(),
                 previousStatus,
                 "CLOSED",
+                UUID.randomUUID(),
                 "system"
-        ));
+        ), "LoanApplication", closed.getId());
 
         return closed;
     }

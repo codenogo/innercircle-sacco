@@ -1,0 +1,82 @@
+/*
+ * InnerCircle SACCO — "The Ledger" Design Tokens
+ *
+ * Palette grounded in the physical world of Kenyan financial record-keeping:
+ * fountain pen ink on warm cream paper, faded blue ruled lines,
+ * M-Pesa green as the sole accent color.
+ */
+
+:root {
+  /* ─── Ink — deep blue-black, fountain pen on paper ─── */
+  --ink:           #1e2030;
+  --ink-secondary: #4d4f62;
+  --ink-muted:     #6b6d80;
+  --ink-faint:     #a8aab8;
+
+  /* ─── Paper — warm cream, ledger page ─── */
+  --paper:         #f5f0e5;
+  --paper-alt:     #ede7db;
+  --paper-inset:   #e5dfd3;
+
+  /* ─── Rule — faded blue, printed lines in an accounts book ─── */
+  --rule:          rgba(90, 110, 150, 0.12);
+  --rule-strong:   rgba(90, 110, 150, 0.22);
+  --rule-subtle:   rgba(90, 110, 150, 0.06);
+
+  /* ─── M-Pesa — the sole accent, Kenyan financial green ─── */
+  --mpesa:         #3a7d44;
+  --mpesa-hover:   #2d6435;
+  --mpesa-soft:    rgba(58, 125, 68, 0.10);
+  --mpesa-text:    #2d6435;
+
+  /* ─── Semantic ─── */
+  --deficit:       #b94a3d;
+  --deficit-soft:  rgba(185, 74, 61, 0.08);
+  --caution:       #c08a15;
+  --caution-soft:  rgba(192, 138, 21, 0.08);
+
+  /* ─── Typography ─── */
+  --font-heading:  'Source Serif 4', Georgia, serif;
+  --font-body:     'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-data:     'JetBrains Mono', 'Courier New', monospace;
+
+  /* Type scale */
+  --text-xs:   0.75rem;    /* 12px — metadata, fine print */
+  --text-sm:   0.8125rem;  /* 13px — labels, table headers */
+  --text-base: 0.875rem;   /* 14px — body text, table data */
+  --text-md:   1rem;       /* 16px — section headings */
+  --text-lg:   1.25rem;    /* 20px — page titles */
+  --text-xl:   1.5rem;     /* 24px — hero numbers */
+
+  /* Leading */
+  --leading-tight:  1.25;
+  --leading-normal: 1.5;
+  --leading-loose:  1.75;
+
+  /* Tracking */
+  --tracking-tight:  -0.01em;
+  --tracking-normal:  0;
+  --tracking-wide:    0.02em;
+  --tracking-wider:   0.06em;
+
+  /* ─── Spacing — 8px base, 4px micro ─── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  24px;
+  --space-6:  32px;
+  --space-7:  48px;
+  --space-8:  64px;
+
+  /* ─── Radius — barely there, like the corner of a ledger page ─── */
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+
+  /* ─── Transitions ─── */
+  --ease: 150ms ease-out;
+
+  /* ─── Sidebar ─── */
+  --sidebar-width: 220px;
+}

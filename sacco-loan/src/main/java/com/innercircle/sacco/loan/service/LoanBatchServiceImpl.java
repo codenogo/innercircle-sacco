@@ -2,6 +2,7 @@ package com.innercircle.sacco.loan.service;
 
 import com.innercircle.sacco.common.event.LoanBatchProcessedEvent;
 import com.innercircle.sacco.common.event.LoanInterestAccrualEvent;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import com.innercircle.sacco.config.entity.InterestMethod;
 import com.innercircle.sacco.config.entity.PenaltyRule;
 import com.innercircle.sacco.config.entity.SystemConfig;
@@ -21,7 +22,6 @@ import com.innercircle.sacco.loan.repository.LoanPenaltyRepository;
 import com.innercircle.sacco.loan.repository.RepaymentScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,7 +48,7 @@ public class LoanBatchServiceImpl implements LoanBatchService {
     private final RepaymentScheduleRepository scheduleRepository;
     private final LoanInterestHistoryRepository interestHistoryRepository;
     private final InterestCalculator interestCalculator;
-    private final ApplicationEventPublisher eventPublisher;
+    private final EventOutboxWriter outboxWriter;
     private final BatchProcessingLogRepository batchLogRepository;
     private final ConfigService configService;
     private final LoanPenaltyService loanPenaltyService;
@@ -129,13 +129,14 @@ public class LoanBatchServiceImpl implements LoanBatchService {
             configService.updateSystemConfig("loan.batch.last_processed_month", monthKey);
 
             // Publish event
-            eventPublisher.publishEvent(new LoanBatchProcessedEvent(
+            outboxWriter.write(new LoanBatchProcessedEvent(
                     result.getProcessedLoans(),
                     result.getPenalizedLoans(),
                     result.getClosedLoans(),
                     result.getProcessedAt(),
+                    UUID.randomUUID(),
                     triggeredBy
-            ));
+            ), "LoanApplication", batchLog.getId());
 
             log.info("Batch processing completed for {}: {}", targetMonth, result.getMessage());
             return result;
@@ -455,14 +456,15 @@ public class LoanBatchServiceImpl implements LoanBatchService {
                 monthlyInterest, outstandingBalance, annualRate));
         interestHistoryRepository.save(history);
 
-        eventPublisher.publishEvent(new LoanInterestAccrualEvent(
+        outboxWriter.write(new LoanInterestAccrualEvent(
                 loan.getId(),
                 loan.getMemberId(),
                 monthlyInterest,
                 outstandingBalance,
                 accrualDate,
+                UUID.randomUUID(),
                 "SYSTEM"
-        ));
+        ), "LoanApplication", loan.getId());
 
         log.info("Accrued interest {} for loan {} (balance: {}, method: {})",
                 monthlyInterest, loan.getId(), outstandingBalance, loan.getInterestMethod());

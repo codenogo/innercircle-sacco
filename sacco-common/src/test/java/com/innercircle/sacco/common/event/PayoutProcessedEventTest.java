@@ -16,7 +16,7 @@ class PayoutProcessedEventTest {
         BigDecimal amount = new BigDecimal("50000.00");
 
         PayoutProcessedEvent event = new PayoutProcessedEvent(
-                payoutId, memberId, amount, "WITHDRAWAL", "teller"
+                payoutId, memberId, amount, "WITHDRAWAL", UUID.randomUUID(), "teller"
         );
 
         assertThat(event.payoutId()).isEqualTo(payoutId);
@@ -29,7 +29,7 @@ class PayoutProcessedEventTest {
     @Test
     void getEventType_shouldReturnPayoutProcessed() {
         PayoutProcessedEvent event = new PayoutProcessedEvent(
-                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.TEN, "TRANSFER", "actor"
+                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.TEN, "TRANSFER", UUID.randomUUID(), "actor"
         );
 
         assertThat(event.getEventType()).isEqualTo("PAYOUT_PROCESSED");
@@ -38,7 +38,7 @@ class PayoutProcessedEventTest {
     @Test
     void getActor_shouldReturnActorValue() {
         PayoutProcessedEvent event = new PayoutProcessedEvent(
-                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.TEN, "TRANSFER", "finance-officer"
+                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.TEN, "TRANSFER", UUID.randomUUID(), "finance-officer"
         );
 
         assertThat(event.getActor()).isEqualTo("finance-officer");
@@ -47,7 +47,7 @@ class PayoutProcessedEventTest {
     @Test
     void shouldImplementAuditableEvent() {
         PayoutProcessedEvent event = new PayoutProcessedEvent(
-                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.TEN, "TRANSFER", "actor"
+                UUID.randomUUID(), UUID.randomUUID(), BigDecimal.TEN, "TRANSFER", UUID.randomUUID(), "actor"
         );
 
         assertThat(event).isInstanceOf(AuditableEvent.class);
@@ -57,9 +57,10 @@ class PayoutProcessedEventTest {
     void equals_shouldBeBasedOnAllFields() {
         UUID pId = UUID.randomUUID();
         UUID mId = UUID.randomUUID();
+        UUID cId = UUID.randomUUID();
 
-        PayoutProcessedEvent event1 = new PayoutProcessedEvent(pId, mId, BigDecimal.TEN, "CASH", "actor");
-        PayoutProcessedEvent event2 = new PayoutProcessedEvent(pId, mId, BigDecimal.TEN, "CASH", "actor");
+        PayoutProcessedEvent event1 = new PayoutProcessedEvent(pId, mId, BigDecimal.TEN, "CASH", cId, "actor");
+        PayoutProcessedEvent event2 = new PayoutProcessedEvent(pId, mId, BigDecimal.TEN, "CASH", cId, "actor");
 
         assertThat(event1).isEqualTo(event2);
         assertThat(event1.hashCode()).isEqualTo(event2.hashCode());
@@ -68,7 +69,7 @@ class PayoutProcessedEventTest {
     @Test
     void toString_shouldContainFieldValues() {
         PayoutProcessedEvent event = new PayoutProcessedEvent(
-                UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("25000"), "BANK_TRANSFER", "actor"
+                UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("25000"), "BANK_TRANSFER", UUID.randomUUID(), "actor"
         );
 
         String str = event.toString();

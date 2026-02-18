@@ -47,7 +47,14 @@ def guess_kind(dir_path: Path) -> str:
         return "node"
     if (dir_path / "pom.xml").exists() or (dir_path / "build.gradle").exists() or (dir_path / "build.gradle.kts").exists():
         return "java"
-    if (dir_path / "pyproject.toml").exists() or (dir_path / "setup.py").exists():
+    if (
+        (dir_path / "pyproject.toml").exists()
+        or (dir_path / "setup.py").exists()
+        or (dir_path / "setup.cfg").exists()
+        or (dir_path / "requirements.txt").exists()
+        or (dir_path / "Pipfile").exists()
+        or (dir_path / "poetry.lock").exists()
+    ):
         return "python"
     if (dir_path / "go.mod").exists():
         return "go"
@@ -104,7 +111,14 @@ def _java_commands(dir_path: Path) -> dict[str, str]:
 
 def _python_commands(dir_path: Path) -> dict[str, str]:
     cmds: dict[str, str] = {}
-    if (dir_path / "pyproject.toml").exists() or (dir_path / "setup.py").exists():
+    if (
+        (dir_path / "pyproject.toml").exists()
+        or (dir_path / "setup.py").exists()
+        or (dir_path / "setup.cfg").exists()
+        or (dir_path / "requirements.txt").exists()
+        or (dir_path / "Pipfile").exists()
+        or (dir_path / "poetry.lock").exists()
+    ):
         cmds["test"] = "pytest -q --tb=short"
         cmds["lint"] = "ruff check ."
         cmds["format"] = "python3 -m black . && python3 -m isort ."
@@ -122,7 +136,20 @@ def _rust_commands(_dir_path: Path) -> dict[str, str]:
 def build_packages(root: Path) -> list[Package]:
     # Identify candidate package directories by manifest files.
     manifests = []
-    for name in ["package.json", "pom.xml", "build.gradle", "build.gradle.kts", "pyproject.toml", "setup.py", "go.mod", "Cargo.toml"]:
+    for name in [
+        "package.json",
+        "pom.xml",
+        "build.gradle",
+        "build.gradle.kts",
+        "pyproject.toml",
+        "setup.py",
+        "setup.cfg",
+        "requirements.txt",
+        "Pipfile",
+        "poetry.lock",
+        "go.mod",
+        "Cargo.toml",
+    ]:
         manifests.extend(find_files(root, name))
 
     dirs = sorted({p.parent for p in manifests})
@@ -236,4 +263,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

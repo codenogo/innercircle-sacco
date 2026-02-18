@@ -1,0 +1,176 @@
+{
+  "01": {
+    "goal": "Create outbox and dead letter database tables, JPA entities, repositories, and EventOutboxWriter in sacco-common",
+    "tasks": [
+      {
+        "name": "Create Liquibase migrations for event_outbox and event_dead_letter tables",
+        "files": [
+          "sacco-common/src/main/resources/db/changelog/common/003-create-event-outbox-table.yaml",
+          "sacco-common/src/main/resources/db/changelog/common/004-create-event-dead-letter-table.yaml",
+          "sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml"
+        ],
+        "action": "Create Liquibase YAML migrations for event_outbox (id UUID PK, event_type VARCHAR(100), aggregate_type VARCHAR(100), aggregate_id UUID, correlation_id UUID, idempotency_key VARCHAR(255) UNIQUE, payload TEXT, status VARCHAR(20) DEFAULT 'PENDING', created_at TIMESTAMP, processed_at TIMESTAMP, version BIGINT) and event_dead_letter (id UUID PK, outbox_id UUID UNIQUE FK, event_type VARCHAR(100), correlation_id UUID, payload TEXT, error_message TEXT, retries INT DEFAULT 0, max_retries INT DEFAULT 5, next_retry_at TIMESTAMP, status VARCHAR(20) DEFAULT 'PENDING_RETRY', created_at TIMESTAMP, last_retry_at TIMESTAMP, version BIGINT). Register both in db.changelog-master.yaml under Common cross-cutting migrations section.",
+        "verify": [
+          "mvn -pl sacco-app liquibase:validate -DskipTests 2>&1 || echo 'Liquibase plugin not configured, verify via compile'",
+          "mvn -pl sacco-common compile -q"
+        ]
+      },
+      {
+        "name": "Create EventOutbox and EventDeadLetter JPA entities with enums",
+        "files": [
+          "sacco-common/src/main/java/com/innercircle/sacco/common/outbox/EventOutbox.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/outbox/EventOutboxStatus.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/outbox/EventDeadLetter.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/outbox/EventDeadLetterStatus.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/outbox/EventOutboxRepository.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/outbox/EventDeadLetterRepository.java"
+        ],
+        "action": "Create EventOutbox entity extending BaseEntity with fields matching the event_outbox table. EventOutboxStatus enum: PENDING, PROCESSING, PROCESSED, FAILED. EventDeadLetter entity extending BaseEntity with fields matching event_dead_letter table. EventDeadLetterStatus enum: PENDING_RETRY, RETRYING, RESOLVED, FAILED. Create Spring Data JPA repositories: EventOutboxRepository (findByStatusOrderByCreatedAtAsc) and EventDeadLetterRepository (findByStatusAndNextRetryAtBeforeAndRetriesLessThan).",
+        "verify": [
+          "mvn -pl sacco-common compile -q"
+        ],
+        "blockedBy": [
+          0
+        ]
+      },
+      {
+        "name": "Create EventOutboxWriter service for writing events to outbox",
+        "files": [
+          "sacco-common/src/main/java/com/innercircle/sacco/common/outbox/EventOutboxWriter.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/outbox/EventSerializer.java"
+        ],
+        "action": "Create EventSerializer utility class that serializes AuditableEvent records to JSON using Jackson ObjectMapper (handle UUID, BigDecimal, Instant, LocalDate, enums) and deserializes JSON back to event objects. Create EventOutboxWriter @Service that accepts an AuditableEvent, serializes it via EventSerializer, generates an idempotency_key (eventType + aggregateId + timestamp hash), and persists an EventOutbox entity with status PENDING. The writer participates in the caller's transaction (no new @Transactional).",
+        "verify": [
+          "mvn -pl sacco-common compile -q"
+        ],
+        "blockedBy": [
+          1
+        ]
+      }
+    ],
+    "planVerify": [
+      "mvn -pl sacco-common compile -q",
+      "mvn -pl sacco-common test -q"
+    ],
+    "commitMessage": "feat(event-hardening): add outbox and dead letter infrastructure (entities, migrations, writer)"
+  },
+  "02": {
+    "goal": "Add correlationId to AuditableEvent interface and update all 18 event records",
+    "tasks": [
+      {
+        "name": "Extend AuditableEvent interface with correlationId and update first 9 event records",
+        "files": [
+          "sacco-common/src/main/java/com/innercircle/sacco/common/event/AuditableEvent.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/event/MemberCreatedEvent.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/event/ContributionReceivedEvent.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/event/ContributionCreatedEvent.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/event/ContributionReversedEvent.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/event/LoanApplicationEvent.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/event/LoanDisbursedEvent.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/event/LoanRepaymentEvent.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/event/LoanStatusChangeEvent.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/event/LoanReversalEvent.java"
+        ],
+        "action": "Add UUID getCorrelationId() method to AuditableEvent interface. Update the first 9 event records to include a UUID correlationId parameter in the record constructor and implement getCorrelationId(). For each record: add correlationId as the last parameter before actor.",
+        "verify": [
+          "mvn -pl sacco-common compile -q"
+        ]
+      },
+      {
+        "name": "Update remaining 8 event records with correlationId",
+        "files": [
+          "sacco-common/src/main/java/com/innercircle/sacco/common/event/LoanInterestAccrualEvent.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/event/LoanBatchProcessedEvent.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/event/PayoutProcessedEvent.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/event/PayoutStatusChangeEvent.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/event/PenaltyAppliedEvent.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/event/PenaltyPaidEvent.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/event/PenaltyWaivedEvent.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/event/BenefitsDistributedEvent.java"
+        ],
+        "action": "Update the remaining 8 event records to include UUID correlationId parameter in the record constructor and implement getCorrelationId(). Same pattern as task 1.",
+        "verify": [
+          "mvn -pl sacco-common compile -q"
+        ]
+      },
+      {
+        "name": "Fix all event construction call sites across modules to pass correlationId",
+        "files": [
+          "sacco-member/src/main/java/com/innercircle/sacco/member/service/MemberServiceImpl.java",
+          "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/service/ContributionServiceImpl.java",
+          "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java",
+          "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBatchServiceImpl.java",
+          "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanReversalServiceImpl.java",
+          "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanBenefitServiceImpl.java",
+          "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanPenaltyServiceImpl.java",
+          "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/PayoutServiceImpl.java",
+          "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/BankWithdrawalServiceImpl.java",
+          "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/ShareWithdrawalServiceImpl.java",
+          "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/CashDisbursementServiceImpl.java"
+        ],
+        "action": "Find every call site that constructs any of the 17 event records (excluding AuditableEvent interface) and add UUID.randomUUID() as the correlationId argument. Use a single correlationId per business operation (e.g., one UUID per service method call shared across all events published in that method). Fix all compilation errors in test files that construct events directly.",
+        "verify": [
+          "mvn -pl sacco-common,sacco-member,sacco-contribution,sacco-loan,sacco-payout compile -q"
+        ],
+        "blockedBy": [
+          0,
+          1
+        ]
+      }
+    ],
+    "planVerify": [
+      "mvn -pl sacco-common,sacco-member,sacco-contribution,sacco-loan,sacco-payout,sacco-ledger,sacco-audit compile -q",
+      "mvn -pl sacco-common,sacco-member,sacco-contribution,sacco-loan,sacco-payout,sacco-ledger,sacco-audit test -q"
+    ],
+    "commitMessage": "feat(event-hardening): add correlationId to AuditableEvent and all 17 event records"
+  },
+  "04": {
+    "goal": "Create TransitionGuard utility and register all 4 status enum state machines",
+    "tasks": [
+      {
+        "name": "Create TransitionGuard utility and InvalidStateTransitionException",
+        "files": [
+          "sacco-common/src/main/java/com/innercircle/sacco/common/guard/TransitionGuard.java",
+          "sacco-common/src/main/java/com/innercircle/sacco/common/exception/InvalidStateTransitionException.java"
+        ],
+        "action": "Create InvalidStateTransitionException extending BusinessException with fields: currentState, targetState, entityType. Create TransitionGuard<S extends Enum<S>> class with: (1) a Builder pattern to register allowed transitions: allow(S from, S to), (2) validate(S current, S target) that throws InvalidStateTransitionException if transition is not registered, (3) isAllowed(S current, S target) boolean check, (4) getAllowedTargets(S current) returns Set<S>. The class should be immutable after build.",
+        "verify": [
+          "mvn -pl sacco-common compile -q"
+        ]
+      },
+      {
+        "name": "Register TransitionGuard instances for all 4 status enums",
+        "files": [
+          "sacco-common/src/main/java/com/innercircle/sacco/common/guard/TransitionGuards.java"
+        ],
+        "action": "Create TransitionGuards final class with static TransitionGuard instances for: (1) LOAN: PENDING->APPROVED, PENDING->REJECTED, APPROVED->DISBURSED, DISBURSED->REPAYING, REPAYING->CLOSED, REPAYING->DEFAULTED. (2) PAYOUT: PENDING->APPROVED, APPROVED->PROCESSED, APPROVED->FAILED, PENDING->FAILED. (3) CONTRIBUTION: PENDING->CONFIRMED, CONFIRMED->REVERSED. (4) MEMBER: ACTIVE->SUSPENDED, SUSPENDED->ACTIVE, ACTIVE->DEACTIVATED, SUSPENDED->DEACTIVATED. Each guard is a public static final field. Import the status enums from their respective modules \u2014 if cross-module dependency is an issue, use String-based keys instead and adapt the guard to work with enum names.",
+        "verify": [
+          "mvn -pl sacco-common compile -q"
+        ],
+        "blockedBy": [
+          0
+        ]
+      },
+      {
+        "name": "Add comprehensive unit tests for TransitionGuard and all 4 registrations",
+        "files": [
+          "sacco-common/src/test/java/com/innercircle/sacco/common/guard/TransitionGuardTest.java",
+          "sacco-common/src/test/java/com/innercircle/sacco/common/guard/TransitionGuardsTest.java"
+        ],
+        "action": "TransitionGuardTest: (1) valid transition passes, (2) invalid transition throws InvalidStateTransitionException, (3) getAllowedTargets returns correct set, (4) isAllowed returns correct boolean. TransitionGuardsTest: test each of the 4 registered guards with (a) every valid transition succeeds, (b) at least one invalid transition per guard throws. Note: since sacco-common cannot import module-specific enums, if TransitionGuards uses String-based approach, test with String state names.",
+        "verify": [
+          "mvn -pl sacco-common test -q"
+        ],
+        "blockedBy": [
+          0,
+          1
+        ]
+      }
+    ],
+    "planVerify": [
+      "mvn -pl sacco-common compile -q",
+      "mvn -pl sacco-common test -q"
+    ],
+    "commitMessage": "feat(event-hardening): add TransitionGuard utility with registrations for all 4 status enums"
+  }
+}

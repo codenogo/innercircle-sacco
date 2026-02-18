@@ -1,0 +1,226 @@
+/* ─── DatePicker — ledger-style calendar dropdown ─── */
+
+.datepicker {
+  position: relative;
+}
+
+.datepicker-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--paper-inset);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color var(--ease), background var(--ease);
+  text-align: left;
+}
+
+.datepicker-trigger:hover {
+  border-color: var(--rule-strong);
+}
+
+.datepicker-trigger:focus-visible {
+  outline: 2px solid var(--mpesa);
+  outline-offset: 2px;
+}
+
+.datepicker-trigger--open {
+  border-color: var(--rule-strong);
+  background: var(--paper);
+}
+
+.datepicker-trigger svg {
+  flex-shrink: 0;
+  color: var(--ink-muted);
+}
+
+.datepicker-trigger-text {
+  flex: 1;
+}
+
+.datepicker-trigger--placeholder {
+  color: var(--ink-faint);
+}
+
+/* ─── Dropdown panel ─── */
+
+.datepicker-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 1100;
+  width: 280px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  animation: datepicker-in 120ms ease-out;
+}
+
+@keyframes datepicker-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Calendar header — month/year nav ─── */
+
+.datepicker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.datepicker-month-label {
+  font-family: var(--font-heading);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: var(--tracking-tight);
+}
+
+.datepicker-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: color var(--ease), background var(--ease);
+}
+
+.datepicker-nav:hover {
+  color: var(--ink);
+  background: var(--rule-subtle);
+}
+
+.datepicker-nav:focus-visible {
+  outline: 2px solid var(--mpesa);
+  outline-offset: -2px;
+}
+
+/* ─── Weekday headers ─── */
+
+.datepicker-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: var(--space-1);
+}
+
+.datepicker-weekday {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--ink-faint);
+  padding: var(--space-1) 0;
+}
+
+/* ─── Day grid ─── */
+
+.datepicker-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+}
+
+.datepicker-day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background var(--ease), color var(--ease);
+}
+
+.datepicker-day:hover {
+  background: var(--rule-subtle);
+}
+
+.datepicker-day--outside {
+  color: var(--ink-faint);
+}
+
+.datepicker-day--today {
+  font-weight: 600;
+  color: var(--mpesa-text);
+  background: var(--mpesa-soft);
+}
+
+.datepicker-day--today:hover {
+  background: rgba(58, 125, 68, 0.15);
+}
+
+.datepicker-day--selected {
+  background: var(--mpesa);
+  color: #fff;
+  font-weight: 600;
+}
+
+.datepicker-day--selected:hover {
+  background: var(--mpesa-hover);
+}
+
+.datepicker-day:focus-visible {
+  outline: 2px solid var(--mpesa);
+  outline-offset: -2px;
+}
+
+/* ─── Today shortcut ─── */
+
+.datepicker-footer {
+  display: flex;
+  justify-content: center;
+  padding-top: var(--space-2);
+  margin-top: var(--space-2);
+  border-top: 1px solid var(--rule-subtle);
+}
+
+.datepicker-today-btn {
+  padding: 2px var(--space-2);
+  background: none;
+  border: none;
+  font-size: var(--text-xs);
+  color: var(--mpesa-text);
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background var(--ease);
+}
+
+.datepicker-today-btn:hover {
+  background: var(--mpesa-soft);
+}
+
+.datepicker-today-btn:focus-visible {
+  outline: 2px solid var(--mpesa);
+  outline-offset: 2px;
+}
+
+/* ─── Responsive ─── */
+
+@media (max-width: 480px) {
+  .datepicker-panel {
+    width: 260px;
+  }
+}

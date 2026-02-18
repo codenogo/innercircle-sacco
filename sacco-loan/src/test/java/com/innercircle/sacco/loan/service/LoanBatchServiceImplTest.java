@@ -29,7 +29,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import org.springframework.context.ApplicationEventPublisher;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -45,6 +45,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -68,7 +69,7 @@ class LoanBatchServiceImplTest {
     private InterestCalculator interestCalculator;
 
     @Mock
-    private ApplicationEventPublisher eventPublisher;
+    private EventOutboxWriter outboxWriter;
 
     @Mock
     private BatchProcessingLogRepository batchLogRepository;
@@ -106,7 +107,13 @@ class LoanBatchServiceImplTest {
         when(configService.getSystemConfig("loan.batch.processing_day_of_month")).thenReturn(processingDayConfig);
         when(configService.getSystemConfig("loan.batch.last_processed_month")).thenThrow(new RuntimeException("Not found"));
         when(batchLogRepository.existsByProcessingMonth(any())).thenReturn(false);
-        when(batchLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(batchLogRepository.save(any())).thenAnswer(inv -> {
+            BatchProcessingLog log = inv.getArgument(0);
+            if (log.getId() == null) {
+                log.setId(UUID.randomUUID());
+            }
+            return log;
+        });
         when(configService.updateSystemConfig(any(), any())).thenReturn(new SystemConfig());
         SystemConfig thresholdConfig = new SystemConfig();
         thresholdConfig.setConfigValue("15");
@@ -324,7 +331,7 @@ class LoanBatchServiceImplTest {
 
             ArgumentCaptor<LoanBatchProcessedEvent> eventCaptor =
                     ArgumentCaptor.forClass(LoanBatchProcessedEvent.class);
-            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            verify(outboxWriter).write(eventCaptor.capture(), eq("LoanApplication"), any(UUID.class));
 
             LoanBatchProcessedEvent event = eventCaptor.getValue();
             assertThat(event.processedLoans()).isEqualTo(0);

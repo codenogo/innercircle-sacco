@@ -2,7 +2,9 @@ package com.innercircle.sacco.member.service;
 
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.event.MemberCreatedEvent;
+import com.innercircle.sacco.common.event.MemberStatusChangeEvent;
 import com.innercircle.sacco.common.exception.BusinessException;
+import com.innercircle.sacco.common.exception.InvalidStateTransitionException;
 import com.innercircle.sacco.common.exception.ResourceNotFoundException;
 import com.innercircle.sacco.member.entity.Member;
 import com.innercircle.sacco.member.entity.MemberStatus;
@@ -16,7 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -44,7 +46,7 @@ class MemberServiceImplTest {
     private MemberRepository memberRepository;
 
     @Mock
-    private ApplicationEventPublisher eventPublisher;
+    private EventOutboxWriter outboxWriter;
 
     @InjectMocks
     private MemberServiceImpl memberService;
@@ -153,7 +155,7 @@ class MemberServiceImplTest {
             memberService.create(sampleMember);
 
             ArgumentCaptor<MemberCreatedEvent> eventCaptor = ArgumentCaptor.forClass(MemberCreatedEvent.class);
-            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            verify(outboxWriter).write(eventCaptor.capture(), eq("Member"), any(UUID.class));
 
             MemberCreatedEvent event = eventCaptor.getValue();
             assertThat(event.memberId()).isEqualTo(memberId);
@@ -176,7 +178,7 @@ class MemberServiceImplTest {
             memberService.create(sampleMember);
 
             ArgumentCaptor<MemberCreatedEvent> eventCaptor = ArgumentCaptor.forClass(MemberCreatedEvent.class);
-            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            verify(outboxWriter).write(eventCaptor.capture(), eq("Member"), any(UUID.class));
 
             assertThat(eventCaptor.getValue().actor()).isEqualTo("system");
         }
@@ -575,6 +577,13 @@ class MemberServiceImplTest {
 
             assertThat(result.getStatus()).isEqualTo(MemberStatus.SUSPENDED);
             verify(memberRepository).save(sampleMember);
+
+            ArgumentCaptor<MemberStatusChangeEvent> eventCaptor = ArgumentCaptor.forClass(MemberStatusChangeEvent.class);
+            verify(outboxWriter).write(eventCaptor.capture(), eq("Member"), any(UUID.class));
+            MemberStatusChangeEvent event = eventCaptor.getValue();
+            assertThat(event.memberId()).isEqualTo(memberId);
+            assertThat(event.previousStatus()).isEqualTo("ACTIVE");
+            assertThat(event.newStatus()).isEqualTo("SUSPENDED");
         }
 
         @Test
@@ -585,23 +594,20 @@ class MemberServiceImplTest {
             when(memberRepository.findById(memberId)).thenReturn(Optional.of(sampleMember));
 
             assertThatThrownBy(() -> memberService.suspend(memberId))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("Member is already suspended");
+                    .isInstanceOf(InvalidStateTransitionException.class);
 
             verify(memberRepository, never()).save(any());
         }
 
         @Test
-        @DisplayName("should suspend a deactivated member")
-        void shouldSuspendDeactivatedMember() {
+        @DisplayName("should throw when suspending a deactivated member")
+        void shouldThrowWhenSuspendingDeactivatedMember() {
             sampleMember.setStatus(MemberStatus.DEACTIVATED);
 
             when(memberRepository.findById(memberId)).thenReturn(Optional.of(sampleMember));
-            when(memberRepository.save(sampleMember)).thenReturn(sampleMember);
 
-            Member result = memberService.suspend(memberId);
-
-            assertThat(result.getStatus()).isEqualTo(MemberStatus.SUSPENDED);
+            assertThatThrownBy(() -> memberService.suspend(memberId))
+                    .isInstanceOf(InvalidStateTransitionException.class);
         }
 
         @Test
@@ -634,6 +640,13 @@ class MemberServiceImplTest {
 
             assertThat(result.getStatus()).isEqualTo(MemberStatus.ACTIVE);
             verify(memberRepository).save(sampleMember);
+
+            ArgumentCaptor<MemberStatusChangeEvent> eventCaptor = ArgumentCaptor.forClass(MemberStatusChangeEvent.class);
+            verify(outboxWriter).write(eventCaptor.capture(), eq("Member"), any(UUID.class));
+            MemberStatusChangeEvent event = eventCaptor.getValue();
+            assertThat(event.memberId()).isEqualTo(memberId);
+            assertThat(event.previousStatus()).isEqualTo("SUSPENDED");
+            assertThat(event.newStatus()).isEqualTo("ACTIVE");
         }
 
         @Test
@@ -644,22 +657,20 @@ class MemberServiceImplTest {
             when(memberRepository.findById(memberId)).thenReturn(Optional.of(sampleMember));
 
             assertThatThrownBy(() -> memberService.reactivate(memberId))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("Member is already active");
+                    .isInstanceOf(InvalidStateTransitionException.class);
 
             verify(memberRepository, never()).save(any());
         }
 
         @Test
-        @DisplayName("should throw BusinessException when member is deactivated")
+        @DisplayName("should throw InvalidStateTransitionException when member is deactivated")
         void shouldThrowWhenDeactivated() {
             sampleMember.setStatus(MemberStatus.DEACTIVATED);
 
             when(memberRepository.findById(memberId)).thenReturn(Optional.of(sampleMember));
 
             assertThatThrownBy(() -> memberService.reactivate(memberId))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("Cannot reactivate a deactivated member");
+                    .isInstanceOf(InvalidStateTransitionException.class);
 
             verify(memberRepository, never()).save(any());
         }

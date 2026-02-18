@@ -16,7 +16,7 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -50,7 +50,7 @@ class LoanBenefitServiceImplTest {
     private JdbcTemplate jdbcTemplate;
 
     @Mock
-    private ApplicationEventPublisher eventPublisher;
+    private EventOutboxWriter outboxWriter;
 
     @InjectMocks
     private LoanBenefitServiceImpl benefitService;
@@ -83,7 +83,7 @@ class LoanBenefitServiceImplTest {
             LoanRepaymentEvent event = new LoanRepaymentEvent(
                     loanId, memberId1, repaymentId,
                     new BigDecimal("10000"), new BigDecimal("8000"),
-                    new BigDecimal("2000"), BigDecimal.ZERO, "user");
+                    new BigDecimal("2000"), BigDecimal.ZERO, UUID.randomUUID(), "user");
 
             Map<String, Object> member = new HashMap<>();
             member.put("id", memberId1);
@@ -95,7 +95,7 @@ class LoanBenefitServiceImplTest {
             benefitService.handleLoanRepayment(event);
 
             verify(benefitRepository).saveAll(anyList());
-            verify(eventPublisher).publishEvent(any(BenefitsDistributedEvent.class));
+            verify(outboxWriter).write(any(BenefitsDistributedEvent.class), eq("LoanApplication"), any(UUID.class));
         }
 
         @Test
@@ -105,7 +105,7 @@ class LoanBenefitServiceImplTest {
             LoanRepaymentEvent event = new LoanRepaymentEvent(
                     loanId, memberId1, repaymentId,
                     new BigDecimal("10000"), new BigDecimal("10000"),
-                    BigDecimal.ZERO, BigDecimal.ZERO, "user");
+                    BigDecimal.ZERO, BigDecimal.ZERO, UUID.randomUUID(), "user");
 
             benefitService.handleLoanRepayment(event);
 
@@ -119,7 +119,7 @@ class LoanBenefitServiceImplTest {
             LoanRepaymentEvent event = new LoanRepaymentEvent(
                     loanId, memberId1, repaymentId,
                     new BigDecimal("10000"), new BigDecimal("10000"),
-                    new BigDecimal("-100"), BigDecimal.ZERO, "user");
+                    new BigDecimal("-100"), BigDecimal.ZERO, UUID.randomUUID(), "user");
 
             benefitService.handleLoanRepayment(event);
 
@@ -248,7 +248,7 @@ class LoanBenefitServiceImplTest {
 
             ArgumentCaptor<BenefitsDistributedEvent> eventCaptor =
                     ArgumentCaptor.forClass(BenefitsDistributedEvent.class);
-            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            verify(outboxWriter).write(eventCaptor.capture(), eq("LoanApplication"), any(UUID.class));
 
             BenefitsDistributedEvent event = eventCaptor.getValue();
             assertThat(event.loanId()).isEqualTo(loanId);

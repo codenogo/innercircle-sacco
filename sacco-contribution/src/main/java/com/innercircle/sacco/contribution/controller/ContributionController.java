@@ -2,6 +2,7 @@ package com.innercircle.sacco.contribution.controller;
 
 import com.innercircle.sacco.common.dto.ApiResponse;
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.security.MemberAccessHelper;
 import com.innercircle.sacco.contribution.dto.BulkContributionRequest;
 import com.innercircle.sacco.contribution.dto.ContributionResponse;
 import com.innercircle.sacco.contribution.dto.ContributionSummaryResponse;
@@ -13,6 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -39,6 +41,7 @@ import java.util.UUID;
 public class ContributionController {
 
     private final ContributionService contributionService;
+    private final MemberAccessHelper memberAccessHelper;
 
     /**
      * Record a new contribution (PENDING status).
@@ -80,7 +83,8 @@ public class ContributionController {
     @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<ContributionResponse> confirmContribution(
             @PathVariable UUID id,
-            @RequestParam(required = false, defaultValue = "SYSTEM") String actor) {
+            Authentication authentication) {
+        String actor = memberAccessHelper.currentActor(authentication);
 
         Contribution confirmed = contributionService.confirmContribution(id, actor);
         return ApiResponse.ok(ContributionResponse.fromEntity(confirmed), "Contribution confirmed successfully");
@@ -94,7 +98,8 @@ public class ContributionController {
     @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<ContributionResponse> reverseContribution(
             @PathVariable UUID id,
-            @RequestParam(required = false, defaultValue = "SYSTEM") String actor) {
+            Authentication authentication) {
+        String actor = memberAccessHelper.currentActor(authentication);
 
         Contribution reversed = contributionService.reverseContribution(id, actor);
         return ApiResponse.ok(ContributionResponse.fromEntity(reversed), "Contribution reversed successfully");
@@ -105,6 +110,7 @@ public class ContributionController {
      * GET /api/v1/contributions
      */
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<CursorPage<ContributionResponse>> listContributions(
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int size,
@@ -132,7 +138,9 @@ public class ContributionController {
     public ApiResponse<CursorPage<ContributionResponse>> getMemberContributions(
             @PathVariable UUID memberId,
             @RequestParam(required = false) String cursor,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            Authentication authentication) {
+        memberAccessHelper.assertAccessToMember(memberId, authentication);
 
         CursorPage<Contribution> page = contributionService.getMemberContributions(memberId, cursor, size);
         CursorPage<ContributionResponse> responsePage = CursorPage.of(
@@ -151,7 +159,10 @@ public class ContributionController {
      * GET /api/v1/contributions/member/{memberId}/summary
      */
     @GetMapping("/member/{memberId}/summary")
-    public ApiResponse<ContributionSummaryResponse> getMemberSummary(@PathVariable UUID memberId) {
+    public ApiResponse<ContributionSummaryResponse> getMemberSummary(
+            @PathVariable UUID memberId,
+            Authentication authentication) {
+        memberAccessHelper.assertAccessToMember(memberId, authentication);
         ContributionSummaryResponse summary = contributionService.getMemberSummary(memberId);
         return ApiResponse.ok(summary);
     }

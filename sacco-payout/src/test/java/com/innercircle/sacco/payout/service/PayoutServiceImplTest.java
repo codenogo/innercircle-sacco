@@ -3,6 +3,7 @@ package com.innercircle.sacco.payout.service;
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.event.PayoutProcessedEvent;
 import com.innercircle.sacco.common.event.PayoutStatusChangeEvent;
+import com.innercircle.sacco.common.exception.InvalidStateTransitionException;
 import com.innercircle.sacco.payout.entity.Payout;
 import com.innercircle.sacco.payout.entity.PayoutStatus;
 import com.innercircle.sacco.payout.entity.PayoutType;
@@ -17,7 +18,7 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
+import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
@@ -30,6 +31,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -41,7 +43,7 @@ class PayoutServiceImplTest {
     private PayoutRepository payoutRepository;
 
     @Mock
-    private ApplicationEventPublisher eventPublisher;
+    private EventOutboxWriter outboxWriter;
 
     @InjectMocks
     private PayoutServiceImpl payoutService;
@@ -139,7 +141,7 @@ class PayoutServiceImplTest {
 
             payoutService.createPayout(memberId, amount, PayoutType.MERRY_GO_ROUND, "admin");
 
-            verify(eventPublisher).publishEvent(statusChangeEventCaptor.capture());
+            verify(outboxWriter).write(statusChangeEventCaptor.capture(), eq("Payout"), any(UUID.class));
             PayoutStatusChangeEvent event = statusChangeEventCaptor.getValue();
             assertThat(event.payoutId()).isEqualTo(expectedPayout.getId());
             assertThat(event.memberId()).isEqualTo(expectedPayout.getMemberId());
@@ -198,7 +200,7 @@ class PayoutServiceImplTest {
 
             payoutService.approvePayout(payoutId, "treasurer");
 
-            verify(eventPublisher).publishEvent(statusChangeEventCaptor.capture());
+            verify(outboxWriter).write(statusChangeEventCaptor.capture(), eq("Payout"), any(UUID.class));
             PayoutStatusChangeEvent event = statusChangeEventCaptor.getValue();
             assertThat(event.payoutId()).isEqualTo(approvedPayout.getId());
             assertThat(event.memberId()).isEqualTo(approvedPayout.getMemberId());
@@ -223,8 +225,7 @@ class PayoutServiceImplTest {
             when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(approvedPayout));
 
             assertThatThrownBy(() -> payoutService.approvePayout(payoutId, "admin"))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Only pending payouts can be approved");
+                    .isInstanceOf(InvalidStateTransitionException.class);
 
             verify(payoutRepository, never()).save(any());
         }
@@ -236,8 +237,7 @@ class PayoutServiceImplTest {
             when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(processedPayout));
 
             assertThatThrownBy(() -> payoutService.approvePayout(payoutId, "admin"))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Only pending payouts can be approved");
+                    .isInstanceOf(InvalidStateTransitionException.class);
 
             verify(payoutRepository, never()).save(any());
         }
@@ -249,8 +249,7 @@ class PayoutServiceImplTest {
             when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(failedPayout));
 
             assertThatThrownBy(() -> payoutService.approvePayout(payoutId, "admin"))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Only pending payouts can be approved");
+                    .isInstanceOf(InvalidStateTransitionException.class);
         }
     }
 
@@ -296,7 +295,7 @@ class PayoutServiceImplTest {
 
             payoutService.processPayout(payoutId, "admin");
 
-            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            verify(outboxWriter).write(eventCaptor.capture(), eq("Payout"), any(UUID.class));
             PayoutProcessedEvent event = eventCaptor.getValue();
             assertThat(event.payoutId()).isEqualTo(processedPayout.getId());
             assertThat(event.memberId()).isEqualTo(processedPayout.getMemberId());
@@ -322,11 +321,10 @@ class PayoutServiceImplTest {
             when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(pendingPayout));
 
             assertThatThrownBy(() -> payoutService.processPayout(payoutId, "admin"))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Only approved payouts can be processed");
+                    .isInstanceOf(InvalidStateTransitionException.class);
 
             verify(payoutRepository, never()).save(any());
-            verify(eventPublisher, never()).publishEvent(any());
+            verify(outboxWriter, never()).write(any(), any(), any());
         }
 
         @Test
@@ -336,8 +334,7 @@ class PayoutServiceImplTest {
             when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(processedPayout));
 
             assertThatThrownBy(() -> payoutService.processPayout(payoutId, "admin"))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Only approved payouts can be processed");
+                    .isInstanceOf(InvalidStateTransitionException.class);
         }
 
         @Test
@@ -347,8 +344,7 @@ class PayoutServiceImplTest {
             when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(failedPayout));
 
             assertThatThrownBy(() -> payoutService.processPayout(payoutId, "admin"))
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Only approved payouts can be processed");
+                    .isInstanceOf(InvalidStateTransitionException.class);
         }
 
         @Test

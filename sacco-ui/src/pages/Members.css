@@ -1,0 +1,52 @@
+.members-page {
+  max-width: 720px;
+}
+
+.member-name {
+  display: block;
+  font-weight: 500;
+  color: var(--ink);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-link {
+  text-decoration: none;
+}
+
+.member-link:hover .member-name {
+  color: var(--ink-secondary);
+}
+
+.member-sub {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--ink-secondary);
+  margin-top: 1px;
+}
+
+.member-email {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+  margin-top: 1px;
+}
+
+.filter-search-wrap {
+  position: relative;
+}
+
+.filter-search-icon {
+  position: absolute;
+  left: var(--space-2);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-faint);
+  pointer-events: none;
+}
+
+.filter-search-wrap .filter-search {
+  padding-left: var(--space-6);
+}

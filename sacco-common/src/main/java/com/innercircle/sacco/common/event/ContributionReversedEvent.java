@@ -12,6 +12,7 @@ public record ContributionReversedEvent(
         UUID memberId,
         BigDecimal amount,
         String referenceNumber,
+        UUID correlationId,
         String actor
 ) implements AuditableEvent {
 
@@ -23,5 +24,10 @@ public record ContributionReversedEvent(
     @Override
     public String getActor() {
         return actor;
+    }
+
+    @Override
+    public UUID getCorrelationId() {
+        return correlationId;
     }
 }

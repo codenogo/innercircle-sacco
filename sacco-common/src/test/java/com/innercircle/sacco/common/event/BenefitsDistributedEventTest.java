@@ -15,7 +15,7 @@ class BenefitsDistributedEventTest {
         BigDecimal totalInterest = new BigDecimal("15000.00");
 
         BenefitsDistributedEvent event = new BenefitsDistributedEvent(
-                loanId, totalInterest, 5, "system"
+                loanId, totalInterest, 5, UUID.randomUUID(), "system"
         );
 
         assertThat(event.loanId()).isEqualTo(loanId);
@@ -27,7 +27,7 @@ class BenefitsDistributedEventTest {
     @Test
     void getEventType_shouldReturnBenefitsDistributed() {
         BenefitsDistributedEvent event = new BenefitsDistributedEvent(
-                UUID.randomUUID(), BigDecimal.TEN, 3, "actor"
+                UUID.randomUUID(), BigDecimal.TEN, 3, UUID.randomUUID(), "actor"
         );
 
         assertThat(event.getEventType()).isEqualTo("BENEFITS_DISTRIBUTED");
@@ -36,7 +36,7 @@ class BenefitsDistributedEventTest {
     @Test
     void getActor_shouldReturnActorValue() {
         BenefitsDistributedEvent event = new BenefitsDistributedEvent(
-                UUID.randomUUID(), BigDecimal.TEN, 1, "scheduler"
+                UUID.randomUUID(), BigDecimal.TEN, 1, UUID.randomUUID(), "scheduler"
         );
 
         assertThat(event.getActor()).isEqualTo("scheduler");
@@ -45,7 +45,7 @@ class BenefitsDistributedEventTest {
     @Test
     void shouldImplementAuditableEvent() {
         BenefitsDistributedEvent event = new BenefitsDistributedEvent(
-                UUID.randomUUID(), BigDecimal.TEN, 1, "actor"
+                UUID.randomUUID(), BigDecimal.TEN, 1, UUID.randomUUID(), "actor"
         );
 
         assertThat(event).isInstanceOf(AuditableEvent.class);
@@ -54,9 +54,10 @@ class BenefitsDistributedEventTest {
     @Test
     void equals_shouldBeBasedOnAllFields() {
         UUID lId = UUID.randomUUID();
+        UUID cId = UUID.randomUUID();
 
-        BenefitsDistributedEvent event1 = new BenefitsDistributedEvent(lId, BigDecimal.TEN, 3, "actor");
-        BenefitsDistributedEvent event2 = new BenefitsDistributedEvent(lId, BigDecimal.TEN, 3, "actor");
+        BenefitsDistributedEvent event1 = new BenefitsDistributedEvent(lId, BigDecimal.TEN, 3, cId, "actor");
+        BenefitsDistributedEvent event2 = new BenefitsDistributedEvent(lId, BigDecimal.TEN, 3, cId, "actor");
 
         assertThat(event1).isEqualTo(event2);
         assertThat(event1.hashCode()).isEqualTo(event2.hashCode());
@@ -65,7 +66,7 @@ class BenefitsDistributedEventTest {
     @Test
     void toString_shouldContainFieldValues() {
         BenefitsDistributedEvent event = new BenefitsDistributedEvent(
-                UUID.randomUUID(), new BigDecimal("12000"), 7, "admin"
+                UUID.randomUUID(), new BigDecimal("12000"), 7, UUID.randomUUID(), "admin"
         );
 
         String str = event.toString();
@@ -76,7 +77,7 @@ class BenefitsDistributedEventTest {
     @Test
     void beneficiaryCount_withZero_shouldBeAccepted() {
         BenefitsDistributedEvent event = new BenefitsDistributedEvent(
-                UUID.randomUUID(), BigDecimal.ZERO, 0, "actor"
+                UUID.randomUUID(), BigDecimal.ZERO, 0, UUID.randomUUID(), "actor"
         );
 
         assertThat(event.beneficiaryCount()).isEqualTo(0);
