@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "timestamp": "2026-02-15T21:00:00Z",
+  "feature": "event-gl-completeness",
+  "branch": "feat/loan-interest-accrual-plan03",
+  "commits": ["159ca5b", "9590530", "114e34b"],
+  "automated": [
+    { "name": "lint", "result": "pass" },
+    { "name": "tests", "result": "pass", "details": "1049 tests, 0 failures across 10 modules" },
+    { "name": "security", "result": "pass" },
+    { "name": "types", "result": "pass" },
+    { "name": "deps", "result": "skipped" }
+  ],
+  "verdict": "pass",
+  "blockers": [],
+  "warnings": [
+    {
+      "file": "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/service/ContributionPenaltyServiceImpl.java",
+      "line": 65,
+      "issue": "Hardcoded 'Manual waiver' reason string — method signature lacks a reason parameter",
+      "severity": "low"
+    }
+  ]
+}

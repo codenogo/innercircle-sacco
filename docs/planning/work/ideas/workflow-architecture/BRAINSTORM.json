@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "topic": "Workflow Architecture for SACCO Business Processes",
+  "slug": "workflow-architecture",
+  "timestamp": "2026-02-16T00:00:00Z",
+  "questionsAsked": [
+    "Business processes only vs both business + dev workflows? → Business processes only",
+    "Biggest pain point: silent failures, unclear state transitions, or hard to add new flows? → All of the above",
+    "Target scale: small SACCO vs multi-SACCO platform? → Single small SACCO (< 500 members)",
+    "Open to external workflow engine or Spring-only? → Spring-only"
+  ],
+  "constraints": [
+    "Spring Boot 3.4 monolith, no external workflow engines",
+    "Single SACCO, < 500 members",
+    "Modules decoupled via Spring events (ApplicationEventPublisher)",
+    "All monetary operations require double-entry GL entries",
+    "Liquibase for all schema changes",
+    "Java 21, Lombok, constructor injection",
+    "Existing: 18 event types, 10 GL handlers, batch processing with idempotency log"
+  ],
+  "candidates": [
+    {
+      "name": "Domain State Guards + Event Hardening",
+      "summary": "Harden existing event-driven architecture with transactional outbox, dead letter queue, retry mechanism, idempotency keys, and correlation IDs. Add explicit state transition guards on entities (allowed transitions map) without a framework.",
+      "risks": [
+        "Outbox processor adds ~5s eventual consistency delay (acceptable for small SACCO)",
+        "Dead letter retry could cause duplicates without idempotency keys",
+        "State guards on entities may feel scattered (mitigated by single ALLOWED_TRANSITIONS map)"
+      ],
+      "mvp": [
+        "Add state transition guard to LoanApplication entity",
+        "Create event_outbox + event_dead_letter tables via Liquibase",
+        "Build outbox writer and @Scheduled processor",
+        "Build dead letter writer and @Scheduled retry job",
+        "Add correlation ID and idempotency key to AuditableEvent interface"
+      ]
+    },
+    {
+      "name": "Lifecycle State Machine Module",
+      "summary": "Build a generic StateMachine<S,E> abstraction in sacco-common. Define concrete state machines for loan, payout, and contribution lifecycles with explicit states, transitions, guards (predicates), and actions (side effects). Includes transition audit logging and event hardening.",
+      "risks": [
+        "Over-engineering for a small system (mitigated: minimal abstraction < 200 lines)",
+        "Requires refactoring existing services to use state machine API",
+        "Guard predicates may need service-layer dependencies (mitigated: context objects)"
+      ],
+      "mvp": [
+        "Build generic StateMachine abstraction in sacco-common/workflow/",
+        "Define LoanLifecycle state machine with all 7 states and transitions",
+        "Refactor LoanServiceImpl to delegate status changes to state machine",
+        "Create state_transitions audit table",
+        "Add event hardening (outbox + dead letter)"
+      ]
+    },
+    {
+      "name": "Process Template + Event Catalog",
+      "summary": "Create an annotation-based business process registry and event catalog. @BusinessProcess annotations declare triggers, steps, published events, and GL requirements. EventCatalog scanner validates GL completeness at test time. Focuses on discoverability and consistency for adding new flows.",
+      "risks": [
+        "Annotations add ceremony without runtime behavior",
+        "ProcessTemplate may be too abstract to be useful",
+        "Doesn't solve runtime state transition or failure problems alone"
+      ],
+      "mvp": [
+        "Define @BusinessProcess, @PublishesEvents, @RequiresGLEntry annotations",
+        "Build EventCatalog scanner that maps events to handlers",
+        "Write integration test verifying GL completeness",
+        "Annotate 5 core business processes",
+        "Add event hardening from Candidate A"
+      ]
+    }
+  ],
+  "recommendation": {
+    "primary": "Domain State Guards + Event Hardening",
+    "primaryRationale": "Addresses the most critical pain point (silent failures / GL drift) immediately. Lowest risk with additive changes. Entity-level state guards solve 80% of unclear transitions with 20% effort. Outbox + dead letter is a well-understood reliability pattern. Proportional to a single small SACCO.",
+    "backup": "Lifecycle State Machine Module",
+    "backupRationale": "Consider upgrading to this for the loan module specifically after event hardening is in place. The loan lifecycle has 7 states with complex business rules that benefit from formal state machine clarity and testability.",
+    "suggestedSequence": [
+      "Phase 1: Event hardening (outbox, dead letter, idempotency, correlation IDs)",
+      "Phase 2: Entity state guards (LoanApplication, PayoutRequest, ContributionStatus)",
+      "Phase 3 (optional): Formal loan state machine if guards prove insufficient",
+      "Phase 4 (optional): Event catalog + GL completeness test"
+    ]
+  }
+}
