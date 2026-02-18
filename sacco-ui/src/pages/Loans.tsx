@@ -50,13 +50,16 @@ export function Loans() {
   const { request } = useAuthenticatedApi()
 
   const [loans, setLoans] = useState<LoanResponse[]>([])
+  const [members, setMembers] = useState<MemberResponse[]>([])
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [submittingLoan, setSubmittingLoan] = useState(false)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const loadLoans = useCallback(async (opts?: { append?: boolean; cursor?: string | null }) => {
     const append = Boolean(opts?.append)
@@ -93,6 +96,42 @@ export function Loans() {
   useEffect(() => {
     void loadLoans({ append: false, cursor: null })
   }, [loadLoans])
+
+  useEffect(() => {
+    let cancelled = false
+    async function fetchMembers() {
+      try {
+        const page = await request<CursorPage<MemberResponse>>('/api/v1/members?size=200')
+        if (!cancelled) setMembers(page.items)
+      } catch {
+        // members list is non-critical; modal can still show empty list
+      }
+    }
+    void fetchMembers()
+    return () => { cancelled = true }
+  }, [request])
+
+  async function handleApplyLoan(payload: LoanApplicationRequest) {
+    setSubmittingLoan(true)
+    setFeedback(null)
+    try {
+      const created = await request<LoanResponse>('/api/v1/loans/apply', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      })
+      setLoans(prev => [created, ...prev])
+      setShowModal(false)
+      setFeedback({ type: 'success', text: 'Loan application submitted successfully.' })
+    } catch (err) {
+      const message = toErrorMessage(err, 'Unable to submit loan application.')
+      setFeedback({ type: 'error', text: message })
+      throw err instanceof Error ? err : new Error(message)
+    } finally {
+      setSubmittingLoan(false)
+    }
+  }
+
+  const memberList = members.map(m => ({ id: m.id, name: `${m.firstName} ${m.lastName}`.trim() }))
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -151,6 +190,12 @@ export function Loans() {
         </div>
         <hr className="rule rule--strong" />
       </section>
+
+      {feedback && (
+        <div className={`ops-feedback ops-feedback--${feedback.type}`} role="status">
+          {feedback.text}
+        </div>
+      )}
 
       {error && (
         <div className="ops-feedback ops-feedback--error" role="status">
@@ -228,7 +273,13 @@ export function Loans() {
         <hr className="rule rule--strong" />
       </section>
 
-      <NewLoanModal open={showModal} onClose={() => setShowModal(false)} members={[]} />
+      <NewLoanModal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        members={memberList}
+        onSubmit={handleApplyLoan}
+        isSubmitting={submittingLoan}
+      />
     </div>
   )
 }
