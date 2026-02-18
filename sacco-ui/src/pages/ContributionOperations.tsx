@@ -10,8 +10,8 @@ import {
   recordBulkContributions,
   reverseContribution,
 } from '../services/contributionService'
+import { getAllMembers } from '../services/memberService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
-import type { CursorPage } from '../types/users'
 import type { MemberResponse } from '../types/members'
 import type {
   ContributionResponse,
@@ -117,7 +117,7 @@ export function ContributionOperations() {
     else setLoading(true)
 
     try {
-      const page = await getContributions(cursor, 50, request)
+      const page = await getContributions(cursor, 50, request, month)
       setContributions(prev => {
         if (!cursor) return page.items
         const merged = new Map<string, ContributionResponse>()
@@ -133,13 +133,13 @@ export function ContributionOperations() {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [request])
+  }, [month, request])
 
   // --- Fetch members ---
   const fetchMembers = useCallback(async () => {
     try {
-      const page = await request<CursorPage<MemberResponse>>('/api/v1/members?size=200')
-      setMembers(page.items)
+      const allMembers = await getAllMembers(request)
+      setMembers(allMembers)
     } catch {
       // Members are non-critical for display; silent fallback
     }

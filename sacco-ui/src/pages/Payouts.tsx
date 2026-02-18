@@ -3,12 +3,12 @@ import { ArrowDownToLine, Search } from 'lucide-react'
 import { NewPayoutModal } from '../components/NewPayoutModal'
 import { Select } from '../components/Select'
 import { ApiError } from '../services/apiClient'
+import { getAllMembers } from '../services/memberService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { useAuthorization } from '../hooks/useAuthorization'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import type { CursorPage } from '../types/users'
 import type { PayoutResponse, PayoutRequest, PayoutStatus, PayoutType } from '../types/payouts'
-import type { MemberResponse } from '../types/members'
 import './Payouts.css'
 
 type StatusFilter = 'all' | PayoutStatus
@@ -151,9 +151,9 @@ export function Payouts() {
     }
 
     try {
-      const page = await request<CursorPage<MemberResponse>>('/api/v1/members?size=200')
+      const page = await getAllMembers(request)
       const map = new Map<string, string>()
-      page.items.forEach(m => map.set(m.id, `${m.firstName} ${m.lastName}`.trim()))
+      page.forEach(m => map.set(m.id, `${m.firstName} ${m.lastName}`.trim()))
       setMemberMap(map)
     } catch {
       // Members list is non-critical; silently fall back to showing IDs

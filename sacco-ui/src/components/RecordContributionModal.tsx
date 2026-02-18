@@ -15,12 +15,6 @@ interface RecordContributionModalProps {
   isSubmitting: boolean
 }
 
-const fallbackCategories: ContributionCategoryResponse[] = [
-  { id: 'monthly', name: 'Monthly', description: '', isMandatory: true, active: true },
-  { id: 'special', name: 'Special', description: '', isMandatory: false, active: true },
-  { id: 'registration', name: 'Registration', description: '', isMandatory: false, active: true },
-]
-
 const paymentModeOptions = [
   { value: 'MPESA', label: 'M-Pesa' },
   { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
@@ -40,20 +34,37 @@ export function RecordContributionModal({ open, onClose, members, onSubmit, isSu
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
 
-  const [categories, setCategories] = useState<ContributionCategoryResponse[]>(fallbackCategories)
+  const [categories, setCategories] = useState<ContributionCategoryResponse[]>([])
+  const [categoriesLoading, setCategoriesLoading] = useState(false)
+  const [categoriesError, setCategoriesError] = useState('')
 
   useEffect(() => {
     if (!open) return
     let cancelled = false
 
     async function loadCategories() {
+      setCategoriesLoading(true)
+      setCategoriesError('')
       try {
         const data = await getCategories(true, request)
-        if (!cancelled && data.length > 0) {
-          setCategories(data)
+        if (cancelled) return
+
+        setCategories(data)
+        if (data.length === 0) {
+          setCategoriesError('No active contribution categories are configured.')
+          setCategoryId('')
+          return
         }
+
+        setCategoryId(prev => prev || data[0].id)
       } catch {
-        // Fall back to hardcoded categories
+        if (!cancelled) {
+          setCategories([])
+          setCategoryId('')
+          setCategoriesError('Unable to load contribution categories.')
+        }
+      } finally {
+        if (!cancelled) setCategoriesLoading(false)
       }
     }
 
@@ -66,7 +77,7 @@ export function RecordContributionModal({ open, onClose, members, onSubmit, isSu
 
   function reset() {
     setMemberId('')
-    setCategoryId('')
+    setCategoryId(categories[0]?.id ?? '')
     setAmount('15000')
     setDate(localISODate())
     setPaymentMode('MPESA')
@@ -78,6 +89,11 @@ export function RecordContributionModal({ open, onClose, members, onSubmit, isSu
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
+
+    if (categories.length === 0 || !categoryId) {
+      setError('No selectable contribution category is available.')
+      return
+    }
 
     const payload: RecordContributionRequest = {
       memberId,
@@ -118,7 +134,12 @@ export function RecordContributionModal({ open, onClose, members, onSubmit, isSu
       footer={
         <>
           <button className="btn btn--secondary" type="button" onClick={handleClose} disabled={isSubmitting}>Cancel</button>
-          <button className="btn btn--primary" type="submit" form="record-contrib-form" disabled={isSubmitting}>
+          <button
+            className="btn btn--primary"
+            type="submit"
+            form="record-contrib-form"
+            disabled={isSubmitting || categoriesLoading || categories.length === 0}
+          >
             {isSubmitting ? 'Recording...' : 'Record Contribution'}
           </button>
         </>
@@ -140,6 +161,8 @@ export function RecordContributionModal({ open, onClose, members, onSubmit, isSu
           <div className="field">
             <label className="field-label">Category</label>
             <Select options={categoryOptions} value={categoryId} onChange={setCategoryId} required />
+            {categoriesLoading && <span className="field-hint">Loading categories...</span>}
+            {!categoriesLoading && categoriesError && <span className="field-hint">{categoriesError}</span>}
           </div>
           <div className="field">
             <label className="field-label">Amount (KES)</label>

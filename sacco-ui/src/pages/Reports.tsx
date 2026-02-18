@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FileText, Download, BarChart3, TrendingUp, Users, Wallet, Loader2, Search } from 'lucide-react'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { ApiError } from '../services/apiClient'
+import { getAllMembers } from '../services/memberService'
 import { localISODate } from '../utils/date'
 import {
   exportFinancialSummaryCsvUrl,
@@ -9,7 +10,6 @@ import {
 } from '../services/reportService'
 import type { SaccoStateResponse } from '../types/dashboard'
 import type { MemberResponse } from '../types/members'
-import type { CursorPage } from '../types/users'
 import './Reports.css'
 
 interface ReportDefinition {
@@ -127,8 +127,8 @@ export function Reports() {
   const loadMembers = useCallback(async () => {
     setMembersLoading(true)
     try {
-      const page = await request<CursorPage<MemberResponse>>('/api/v1/members?size=200')
-      setMembers(page.items)
+      const allMembers = await getAllMembers(request)
+      setMembers(allMembers)
     } catch {
       setMembers([])
     } finally {

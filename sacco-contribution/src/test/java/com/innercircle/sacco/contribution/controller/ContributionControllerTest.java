@@ -207,10 +207,10 @@ class ContributionControllerTest {
                     List.of(sampleContribution), null, false
             );
 
-            when(contributionService.list(null, 20, null, null, null)).thenReturn(page);
+            when(contributionService.list(null, 20, null, null, null, null)).thenReturn(page);
 
             ApiResponse<CursorPage<ContributionResponse>> result =
-                    contributionController.listContributions(null, 20, null, null, null);
+                    contributionController.listContributions(null, 20, null, null, null, null);
 
             assertThat(result.isSuccess()).isTrue();
             assertThat(result.getData().getItems()).hasSize(1);
@@ -232,10 +232,10 @@ class ContributionControllerTest {
                     List.of(sampleContribution), null, false
             );
 
-            when(contributionService.getMemberContributions(memberId, null, 20)).thenReturn(page);
+            when(contributionService.getMemberContributions(memberId, null, 20, null)).thenReturn(page);
 
             ApiResponse<CursorPage<ContributionResponse>> result =
-                    contributionController.getMemberContributions(memberId, null, 20, authentication);
+                    contributionController.getMemberContributions(memberId, null, 20, null, authentication);
 
             assertThat(result.isSuccess()).isTrue();
             assertThat(result.getData().getItems()).hasSize(1);

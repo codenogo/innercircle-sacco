@@ -7,6 +7,7 @@ import com.innercircle.sacco.contribution.dto.RecordContributionRequest;
 import com.innercircle.sacco.contribution.entity.Contribution;
 import com.innercircle.sacco.contribution.entity.ContributionStatus;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -43,12 +44,19 @@ public interface ContributionService {
     /**
      * List contributions with cursor pagination and optional filters.
      */
-    CursorPage<Contribution> list(String cursor, int size, ContributionStatus status, UUID categoryId, UUID memberId);
+    CursorPage<Contribution> list(
+            String cursor,
+            int size,
+            ContributionStatus status,
+            UUID categoryId,
+            UUID memberId,
+            LocalDate contributionMonth
+    );
 
     /**
      * Get contributions for a specific member.
      */
-    CursorPage<Contribution> getMemberContributions(UUID memberId, String cursor, int size);
+    CursorPage<Contribution> getMemberContributions(UUID memberId, String cursor, int size, LocalDate contributionMonth);
 
     /**
      * Get contribution summary for a member.

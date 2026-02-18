@@ -9,10 +9,10 @@ import {
   getMemberContributionSummary,
   recordContribution,
 } from '../services/contributionService'
+import { getAllMembers } from '../services/memberService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { useAuthorization } from '../hooks/useAuthorization'
 import { useCurrentUser } from '../hooks/useCurrentUser'
-import type { CursorPage } from '../types/users'
 import type { MemberResponse } from '../types/members'
 import type {
   ContributionResponse,
@@ -100,8 +100,8 @@ export function Contributions() {
       }
 
       const page = isMemberOnly
-        ? await getMemberContributions(memberId!, cursor ?? undefined, PAGE_SIZE, request)
-        : await getContributions(cursor ?? undefined, PAGE_SIZE, request)
+        ? await getMemberContributions(memberId!, cursor ?? undefined, PAGE_SIZE, request, month)
+        : await getContributions(cursor ?? undefined, PAGE_SIZE, request, month)
 
       setContributions(prev => {
         if (!append) return page.items
@@ -120,7 +120,7 @@ export function Contributions() {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [isMemberOnly, memberId, request])
+  }, [isMemberOnly, memberId, month, request])
 
   const loadMemberSummary = useCallback(async () => {
     if (!isMemberOnly || !memberId) {
@@ -168,8 +168,8 @@ export function Contributions() {
     }
 
     try {
-      const page = await request<CursorPage<MemberResponse>>('/api/v1/members?size=200')
-      setMembers(page.items)
+      const allMembers = await getAllMembers(request)
+      setMembers(allMembers)
     } catch {
       // Members will remain empty; modal member dropdown will be empty
     }

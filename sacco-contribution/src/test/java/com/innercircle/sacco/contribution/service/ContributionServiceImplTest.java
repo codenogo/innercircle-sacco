@@ -428,7 +428,7 @@ class ContributionServiceImplTest {
             when(contributionRepository.findAll(any(Specification.class), any(Pageable.class)))
                     .thenReturn(new PageImpl<>(List.of(sampleContribution)));
 
-            CursorPage<Contribution> result = contributionService.list(null, 20, null, null, null);
+            CursorPage<Contribution> result = contributionService.list(null, 20, null, null, null, null);
 
             assertThat(result.getItems()).hasSize(1);
             assertThat(result.isHasMore()).isFalse();
@@ -441,7 +441,7 @@ class ContributionServiceImplTest {
             when(contributionRepository.findAll(any(Specification.class), any(Pageable.class)))
                     .thenReturn(new PageImpl<>(Collections.emptyList()));
 
-            CursorPage<Contribution> result = contributionService.list(null, 20, null, null, null);
+            CursorPage<Contribution> result = contributionService.list(null, 20, null, null, null, null);
 
             assertThat(result.getItems()).isEmpty();
             assertThat(result.isHasMore()).isFalse();

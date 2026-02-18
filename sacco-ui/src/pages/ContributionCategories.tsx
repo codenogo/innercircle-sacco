@@ -3,6 +3,7 @@ import { Modal } from '../components/Modal'
 import { ApiError } from '../services/apiClient'
 import { getCategories as fetchAllCategories } from '../services/contributionService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
+import { useAuthorization } from '../hooks/useAuthorization'
 import type {
   ContributionCategoryResponse,
   ContributionCategoryRequest,
@@ -17,6 +18,8 @@ function toErrorMessage(error: unknown, fallback: string): string {
 
 export function ContributionCategories() {
   const { request } = useAuthenticatedApi()
+  const { canAccess } = useAuthorization()
+  const canManageCategories = canAccess(['ADMIN'])
 
   const [categories, setCategories] = useState<ContributionCategoryResponse[]>([])
   const [loading, setLoading] = useState(true)
@@ -26,6 +29,12 @@ export function ContributionCategories() {
   const [submitting, setSubmitting] = useState(false)
 
   const loadCategories = useCallback(async () => {
+    if (!canManageCategories) {
+      setLoading(false)
+      setCategories([])
+      return
+    }
+
     setLoading(true)
     try {
       const data = await fetchAllCategories(false, request)
@@ -35,11 +44,30 @@ export function ContributionCategories() {
     } finally {
       setLoading(false)
     }
-  }, [request])
+  }, [canManageCategories, request])
 
   useEffect(() => {
     void loadCategories()
   }, [loadCategories])
+
+  if (!canManageCategories) {
+    return (
+      <div className="ops-page">
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Contribution Categories</h1>
+            <p className="page-subtitle">Manage contribution categories</p>
+          </div>
+        </div>
+
+        <hr className="rule rule--strong" />
+
+        <div className="ops-feedback ops-feedback--error" role="status">
+          Only admins can manage contribution categories.
+        </div>
+      </div>
+    )
+  }
 
   function handleOpenAdd() {
     setEditingCategory(null)

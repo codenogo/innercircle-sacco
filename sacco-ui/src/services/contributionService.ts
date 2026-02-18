@@ -11,6 +11,10 @@ import type {
 
 export type AuthenticatedRequest = <T>(path: string, options?: RequestInit) => Promise<T>
 
+function normalizeContributionMonth(contributionMonth: string): string {
+  return contributionMonth.length === 7 ? `${contributionMonth}-01` : contributionMonth
+}
+
 function callApi<T>(
   path: string,
   options: RequestInit | undefined,
@@ -24,9 +28,11 @@ export async function getContributions(
   cursor?: string,
   size = 50,
   request?: AuthenticatedRequest,
+  contributionMonth?: string,
 ): Promise<CursorPage<ContributionResponse>> {
   const params = new URLSearchParams({ size: String(size) })
   if (cursor) params.set('cursor', cursor)
+  if (contributionMonth) params.set('contributionMonth', normalizeContributionMonth(contributionMonth))
   return callApi<CursorPage<ContributionResponse>>(`/api/v1/contributions?${params}`, undefined, request)
 }
 
@@ -35,9 +41,11 @@ export async function getMemberContributions(
   cursor?: string,
   size = 50,
   request?: AuthenticatedRequest,
+  contributionMonth?: string,
 ): Promise<CursorPage<ContributionResponse>> {
   const params = new URLSearchParams({ size: String(size) })
   if (cursor) params.set('cursor', cursor)
+  if (contributionMonth) params.set('contributionMonth', normalizeContributionMonth(contributionMonth))
   return callApi<CursorPage<ContributionResponse>>(
     `/api/v1/contributions/member/${memberId}?${params}`,
     undefined,

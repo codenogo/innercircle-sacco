@@ -175,7 +175,14 @@ public class ContributionServiceImpl implements ContributionService {
 
     @Override
     @Transactional(readOnly = true)
-    public CursorPage<Contribution> list(String cursor, int size, ContributionStatus status, UUID categoryId, UUID memberId) {
+    public CursorPage<Contribution> list(
+            String cursor,
+            int size,
+            ContributionStatus status,
+            UUID categoryId,
+            UUID memberId,
+            LocalDate contributionMonth
+    ) {
         UUID cursorId = (cursor != null && !cursor.isEmpty())
                 ? UUID.fromString(cursor)
                 : new UUID(0L, 0L);
@@ -190,6 +197,9 @@ public class ContributionServiceImpl implements ContributionService {
         }
         if (memberId != null) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("memberId"), memberId));
+        }
+        if (contributionMonth != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("contributionMonth"), contributionMonth));
         }
         spec = spec.and((root, query, cb) -> cb.greaterThan(root.get("id"), cursorId));
 
@@ -210,8 +220,13 @@ public class ContributionServiceImpl implements ContributionService {
 
     @Override
     @Transactional(readOnly = true)
-    public CursorPage<Contribution> getMemberContributions(UUID memberId, String cursor, int size) {
-        return list(cursor, size, null, null, memberId);
+    public CursorPage<Contribution> getMemberContributions(
+            UUID memberId,
+            String cursor,
+            int size,
+            LocalDate contributionMonth
+    ) {
+        return list(cursor, size, null, null, memberId, contributionMonth);
     }
 
     @Override

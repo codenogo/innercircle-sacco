@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Landmark, Search } from 'lucide-react'
 import { NewLoanModal } from '../components/NewLoanModal'
 import { ApiError } from '../services/apiClient'
+import { getAllMembers } from '../services/memberService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { useAuthorization } from '../hooks/useAuthorization'
 import { useCurrentUser } from '../hooks/useCurrentUser'
@@ -141,8 +142,8 @@ export function Loans() {
     let cancelled = false
     async function fetchMembers() {
       try {
-        const page = await request<CursorPage<MemberResponse>>('/api/v1/members?size=200')
-        if (!cancelled) setMembers(page.items)
+        const allMembers = await getAllMembers(request)
+        if (!cancelled) setMembers(allMembers)
       } catch {
         // members list is non-critical; modal can still show empty list
       }

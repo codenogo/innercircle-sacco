@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -116,9 +117,17 @@ public class ContributionController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) ContributionStatus status,
             @RequestParam(required = false) UUID categoryId,
-            @RequestParam(required = false) UUID memberId) {
+            @RequestParam(required = false) UUID memberId,
+            @RequestParam(required = false) LocalDate contributionMonth) {
 
-        CursorPage<Contribution> page = contributionService.list(cursor, size, status, categoryId, memberId);
+        CursorPage<Contribution> page = contributionService.list(
+                cursor,
+                size,
+                status,
+                categoryId,
+                memberId,
+                contributionMonth
+        );
         CursorPage<ContributionResponse> responsePage = CursorPage.of(
                 page.getItems().stream()
                         .map(ContributionResponse::fromEntity)
@@ -139,10 +148,16 @@ public class ContributionController {
             @PathVariable UUID memberId,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) LocalDate contributionMonth,
             Authentication authentication) {
         memberAccessHelper.assertAccessToMember(memberId, authentication);
 
-        CursorPage<Contribution> page = contributionService.getMemberContributions(memberId, cursor, size);
+        CursorPage<Contribution> page = contributionService.getMemberContributions(
+                memberId,
+                cursor,
+                size,
+                contributionMonth
+        );
         CursorPage<ContributionResponse> responsePage = CursorPage.of(
                 page.getItems().stream()
                         .map(ContributionResponse::fromEntity)
