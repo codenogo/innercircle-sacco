@@ -6,6 +6,7 @@ import type {
   RecordContributionRequest,
   BulkContributionRequest,
   ContributionCategoryResponse,
+  ContributionCategoryRequest,
 } from '../types/contributions'
 
 export async function getContributions(cursor?: string, size = 50): Promise<CursorPage<ContributionResponse>> {
@@ -53,4 +54,24 @@ export async function reverseContribution(id: string): Promise<ContributionRespo
 export async function getCategories(activeOnly = true): Promise<ContributionCategoryResponse[]> {
   const params = new URLSearchParams({ activeOnly: String(activeOnly) })
   return apiRequest<ContributionCategoryResponse[]>(`/api/v1/contribution-categories?${params}`)
+}
+
+export async function createCategory(payload: ContributionCategoryRequest): Promise<ContributionCategoryResponse> {
+  return apiRequest<ContributionCategoryResponse>('/api/v1/contribution-categories', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function updateCategory(id: string, payload: ContributionCategoryRequest): Promise<ContributionCategoryResponse> {
+  return apiRequest<ContributionCategoryResponse>(`/api/v1/contribution-categories/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+  return apiRequest<void>(`/api/v1/contribution-categories/${id}`, {
+    method: 'DELETE',
+  })
 }
