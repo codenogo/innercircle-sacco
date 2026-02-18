@@ -38,7 +38,8 @@ public class OutboxProcessor {
         this.eventPublisher = eventPublisher;
     }
 
-    @Scheduled(fixedDelay = 5000)
+    @Scheduled(fixedDelayString = "${sacco.outbox.processing.fixed-delay-ms:1000}")
+    @Transactional
     public void processOutbox() {
         List<EventOutbox> pendingEvents = outboxRepository
                 .findByStatusOrderByCreatedAtAsc(EventOutboxStatus.PENDING, PageRequest.of(0, 50));

@@ -1,0 +1,118 @@
+@import './reset.css';
+@import './tokens.css';
+@import './auth.css';
+@import './components.css';
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--ink);
+  background: var(--paper);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* ─── Typography utilities ─── */
+
+.heading {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  color: var(--ink);
+}
+
+.label {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.data {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.amount {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.amount--positive {
+  color: var(--mpesa-text);
+}
+
+.amount--negative {
+  color: var(--deficit);
+}
+
+/* ─── The ruled line — signature element ─── */
+
+.rule {
+  border: none;
+  border-top: 1px solid var(--rule);
+  margin: 0;
+}
+
+.rule--strong {
+  border-top-color: var(--rule-strong);
+}
+
+.rule--subtle {
+  border-top-color: var(--rule-subtle);
+}
+
+/* ─── Dot leader — connects label to value like in a ledger ─── */
+
+.dot-leader {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.dot-leader::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px dotted var(--ink-faint);
+  margin-bottom: 0.2em;
+}
+
+.dot-leader-value {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ─── Scrollbar styling ─── */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--rule-strong);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-faint);
+}
+
+/* ─── Selection ─── */
+
+::selection {
+  background: var(--mpesa-soft);
+  color: var(--ink);
+}

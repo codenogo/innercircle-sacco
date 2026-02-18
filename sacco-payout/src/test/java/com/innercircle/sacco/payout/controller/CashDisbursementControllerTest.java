@@ -3,6 +3,7 @@ package com.innercircle.sacco.payout.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.security.MemberAccessHelper;
 import com.innercircle.sacco.payout.dto.CashDisbursementRequest;
 import com.innercircle.sacco.payout.entity.CashDisbursement;
 import com.innercircle.sacco.payout.service.CashDisbursementService;
@@ -47,6 +48,9 @@ class CashDisbursementControllerTest {
     @MockitoBean
     private CashDisbursementService cashDisbursementService;
 
+    @MockitoBean
+    private MemberAccessHelper memberAccessHelper;
+
     private UUID memberId;
     private UUID disbursementId;
     private CashDisbursement testDisbursement;
@@ -62,6 +66,8 @@ class CashDisbursementControllerTest {
         testDisbursement.setId(disbursementId);
         testDisbursement.setCreatedAt(Instant.now());
         testDisbursement.setUpdatedAt(Instant.now());
+
+        when(memberAccessHelper.currentActor(any())).thenReturn("admin");
     }
 
     @Nested
@@ -83,8 +89,7 @@ class CashDisbursementControllerTest {
 
             mockMvc.perform(post("/api/v1/cash-disbursements")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
-                            .param("actor", "admin"))
+                            .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.id").value(disbursementId.toString()))
@@ -102,15 +107,14 @@ class CashDisbursementControllerTest {
         @Test
         @DisplayName("should sign off disbursement")
         void shouldSignOffDisbursement() throws Exception {
-            testDisbursement.setSignoffBy("supervisor");
-            when(cashDisbursementService.signoff(eq(disbursementId), eq("supervisor")))
+            testDisbursement.setSignoffBy("admin");
+            when(cashDisbursementService.signoff(eq(disbursementId), eq("admin")))
                     .thenReturn(testDisbursement);
 
-            mockMvc.perform(put("/api/v1/cash-disbursements/{disbursementId}/signoff", disbursementId)
-                            .param("signoffBy", "supervisor"))
+            mockMvc.perform(put("/api/v1/cash-disbursements/{disbursementId}/signoff", disbursementId))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.data.signoffBy").value("supervisor"))
+                    .andExpect(jsonPath("$.data.signoffBy").value("admin"))
                     .andExpect(jsonPath("$.message").value("Cash disbursement signed off successfully"));
         }
     }

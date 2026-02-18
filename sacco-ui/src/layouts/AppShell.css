@@ -1,0 +1,94 @@
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-main {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  padding: var(--space-6) var(--space-7);
+  max-width: 960px;
+}
+
+/* ─── Mobile header — hidden on desktop ─── */
+
+.mobile-header {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    height: 48px;
+    padding: 0 var(--space-4);
+    background: var(--paper);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .mobile-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--ink-secondary);
+    cursor: pointer;
+    transition: color var(--ease), background var(--ease);
+  }
+
+  .mobile-menu-btn:hover {
+    color: var(--ink);
+    background: var(--rule-subtle);
+  }
+
+  .mobile-menu-btn:focus-visible {
+    outline: 2px solid var(--mpesa);
+    outline-offset: 2px;
+  }
+
+  .mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .mobile-monogram {
+    font-family: var(--font-heading);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    color: var(--mpesa);
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--mpesa-soft);
+    border-radius: var(--radius-sm);
+  }
+
+  .mobile-title {
+    font-family: var(--font-heading);
+    font-size: var(--text-base);
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: var(--tracking-tight);
+  }
+
+  .app-main {
+    margin-left: 0;
+    padding: var(--space-4);
+    padding-top: calc(48px + var(--space-4));
+    max-width: 100%;
+  }
+}

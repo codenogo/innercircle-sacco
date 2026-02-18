@@ -3,10 +3,24 @@ import { Plus } from 'lucide-react'
 import { RecordContributionModal } from '../components/RecordContributionModal'
 import { MonthPicker } from '../components/MonthPicker'
 import { ApiError } from '../services/apiClient'
+import {
+  getContributions,
+  getMemberContributions,
+  getMemberContributionSummary,
+  recordContribution,
+} from '../services/contributionService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
+import { useAuthorization } from '../hooks/useAuthorization'
+import { useCurrentUser } from '../hooks/useCurrentUser'
 import type { CursorPage } from '../types/users'
 import type { MemberResponse } from '../types/members'
-import type { ContributionResponse, ContributionStatus, RecordContributionRequest } from '../types/contributions'
+import type {
+  ContributionResponse,
+  ContributionStatus,
+  ContributionSummaryResponse,
+  RecordContributionRequest,
+} from '../types/contributions'
+import { filterByMonth } from '../utils/contributions'
 import './Contributions.css'
 
 const PAGE_SIZE = 50
@@ -51,6 +65,10 @@ interface Feedback {
 
 export function Contributions() {
   const { request } = useAuthenticatedApi()
+  const { canAccess, isMemberOnly } = useAuthorization()
+  const { profile, loading: profileLoading } = useCurrentUser()
+  const memberId = profile?.member?.id ?? null
+  const canRecordContribution = canAccess(['ADMIN', 'TREASURER'])
 
   const [contributions, setContributions] = useState<ContributionResponse[]>([])
   const [loading, setLoading] = useState(true)
@@ -62,6 +80,7 @@ export function Contributions() {
   const [showModal, setShowModal] = useState(false)
   const [members, setMembers] = useState<MemberResponse[]>([])
   const [recordingContribution, setRecordingContribution] = useState(false)
+  const [memberSummary, setMemberSummary] = useState<ContributionSummaryResponse | null>(null)
 
   const loadContributions = useCallback(async (opts?: { append?: boolean; cursor?: string | null }) => {
     const append = Boolean(opts?.append)
@@ -71,10 +90,18 @@ export function Contributions() {
     else setLoading(true)
 
     try {
-      const path = cursor
-        ? `/api/v1/contributions?size=${PAGE_SIZE}&cursor=${encodeURIComponent(cursor)}`
-        : `/api/v1/contributions?size=${PAGE_SIZE}`
-      const page = await request<CursorPage<ContributionResponse>>(path)
+      if (isMemberOnly && !memberId) {
+        setContributions([])
+        setNextCursor(null)
+        setHasMore(false)
+        setMemberSummary(null)
+        setFeedback({ type: 'error', text: 'Your account is not linked to a member profile.' })
+        return
+      }
+
+      const page = isMemberOnly
+        ? await getMemberContributions(memberId!, cursor ?? undefined, PAGE_SIZE, request)
+        : await getContributions(cursor ?? undefined, PAGE_SIZE, request)
 
       setContributions(prev => {
         if (!append) return page.items
@@ -93,19 +120,41 @@ export function Contributions() {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [request])
+  }, [isMemberOnly, memberId, request])
+
+  const loadMemberSummary = useCallback(async () => {
+    if (!isMemberOnly || !memberId) {
+      setMemberSummary(null)
+      return
+    }
+
+    try {
+      const summary = await getMemberContributionSummary(memberId, request)
+      setMemberSummary(summary)
+    } catch {
+      setMemberSummary(null)
+    }
+  }, [isMemberOnly, memberId, request])
 
   useEffect(() => {
+    if (profileLoading) return
     void loadContributions({ append: false, cursor: null })
-  }, [loadContributions])
+  }, [loadContributions, profileLoading])
+
+  useEffect(() => {
+    if (profileLoading) return
+    void loadMemberSummary()
+  }, [loadMemberSummary, profileLoading])
 
   const monthContributions = useMemo(
-    () => contributions.filter(c => c.contributionMonth === month),
+    () => filterByMonth(contributions, month),
     [contributions, month],
   )
 
   const summary = useMemo(() => {
-    const collected = monthContributions.reduce((sum, c) => sum + c.amount, 0)
+    const collected = monthContributions
+      .filter(c => c.status !== 'REVERSED')
+      .reduce((sum, c) => sum + c.amount, 0)
     const confirmed = monthContributions.filter(c => c.status === 'CONFIRMED').length
     const pending = monthContributions.filter(c => c.status === 'PENDING').length
     const reversed = monthContributions.filter(c => c.status === 'REVERSED').length
@@ -113,13 +162,18 @@ export function Contributions() {
   }, [monthContributions])
 
   const loadMembers = useCallback(async () => {
+    if (isMemberOnly) {
+      setMembers([])
+      return
+    }
+
     try {
       const page = await request<CursorPage<MemberResponse>>('/api/v1/members?size=200')
       setMembers(page.items)
     } catch {
       // Members will remain empty; modal member dropdown will be empty
     }
-  }, [request])
+  }, [isMemberOnly, request])
 
   useEffect(() => {
     void loadMembers()
@@ -128,8 +182,11 @@ export function Contributions() {
   const memberMap = useMemo(() => {
     const map = new Map<string, string>()
     members.forEach(m => map.set(m.id, `${m.firstName} ${m.lastName}`.trim()))
+    if (profile?.member) {
+      map.set(profile.member.id, `${profile.member.firstName} ${profile.member.lastName}`.trim())
+    }
     return map
-  }, [members])
+  }, [members, profile?.member])
 
   const memberList = useMemo(
     () => members.map(m => ({ id: m.id, name: `${m.firstName} ${m.lastName}`.trim() })),
@@ -137,13 +194,14 @@ export function Contributions() {
   )
 
   async function handleRecordContribution(payload: RecordContributionRequest) {
+    if (!canRecordContribution) {
+      throw new Error('You are not allowed to record contributions.')
+    }
+
     setRecordingContribution(true)
     setFeedback(null)
     try {
-      const created = await request<ContributionResponse>('/api/v1/contributions', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      })
+      const created = await recordContribution(payload, request)
       setContributions(prev => [created, ...prev])
       setShowModal(false)
       setFeedback({ type: 'success', text: 'Contribution recorded successfully.' })
@@ -163,10 +221,12 @@ export function Contributions() {
           <h1 className="page-title">Contributions</h1>
           <p className="page-subtitle">Monthly contribution tracking</p>
         </div>
-        <button className="btn btn--primary" onClick={() => setShowModal(true)}>
-          <Plus size={14} strokeWidth={2} />
-          Record Contribution
-        </button>
+        {canRecordContribution && (
+          <button className="btn btn--primary" onClick={() => setShowModal(true)}>
+            <Plus size={14} strokeWidth={2} />
+            Record Contribution
+          </button>
+        )}
       </div>
 
       <hr className="rule rule--strong" />
@@ -181,6 +241,16 @@ export function Contributions() {
         <span>Reversed: <strong>{summary.reversed}</strong></span>
         <span className="page-summary-divider">|</span>
         <span>Collected: <strong>KES {fmt(summary.collected)}</strong></span>
+        {isMemberOnly && memberSummary && (
+          <>
+            <span className="page-summary-divider">|</span>
+            <span>Lifetime: <strong>KES {fmt(memberSummary.totalContributed)}</strong></span>
+            <span className="page-summary-divider">|</span>
+            <span>Pending: <strong>KES {fmt(memberSummary.totalPending)}</strong></span>
+            <span className="page-summary-divider">|</span>
+            <span>Penalties: <strong>KES {fmt(memberSummary.totalPenalties)}</strong></span>
+          </>
+        )}
       </div>
 
       <hr className="rule" />
@@ -218,7 +288,7 @@ export function Contributions() {
           ) : monthContributions.map((c, i) => (
             <tr key={c.id} className={i % 2 === 1 ? 'ledger-row--alt' : ''}>
               <td>{memberMap.get(c.memberId) ?? c.memberId}</td>
-              <td className="ledger-date">{c.category}</td>
+              <td className="ledger-date">{c.category.name}</td>
               <td className="data ledger-date">{c.contributionDate ? fmtDate(c.contributionDate) : '\u2014'}</td>
               <td><span className={`badge ${statusClass[c.status]}`}>{c.status}</span></td>
               <td className="amount ledger-table-amount">
@@ -244,13 +314,15 @@ export function Contributions() {
 
       <hr className="rule rule--strong" />
 
-      <RecordContributionModal
-        open={showModal}
-        onClose={() => setShowModal(false)}
-        members={memberList}
-        onSubmit={handleRecordContribution}
-        isSubmitting={recordingContribution}
-      />
+      {canRecordContribution && (
+        <RecordContributionModal
+          open={showModal}
+          onClose={() => setShowModal(false)}
+          members={memberList}
+          onSubmit={handleRecordContribution}
+          isSubmitting={recordingContribution}
+        />
+      )}
     </div>
   )
 }

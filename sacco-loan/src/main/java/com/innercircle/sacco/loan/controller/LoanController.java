@@ -2,6 +2,7 @@ package com.innercircle.sacco.loan.controller;
 
 import com.innercircle.sacco.common.dto.ApiResponse;
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.security.MemberAccessHelper;
 import com.innercircle.sacco.loan.dto.LoanApplicationRequest;
 import com.innercircle.sacco.loan.dto.LoanResponse;
 import com.innercircle.sacco.loan.dto.LoanSummaryResponse;
@@ -22,6 +23,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -47,6 +49,7 @@ public class LoanController {
     private final LoanService loanService;
     private final InterestReportingService interestReportingService;
     private final LoanApplicationRepository loanRepository;
+    private final MemberAccessHelper memberAccessHelper;
 
     @PostMapping("/apply")
     @ResponseStatus(HttpStatus.CREATED)
@@ -66,7 +69,8 @@ public class LoanController {
     @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<LoanResponse> approveLoan(
             @PathVariable UUID id,
-            @RequestParam UUID approvedBy) {
+            Authentication authentication) {
+        UUID approvedBy = memberAccessHelper.resolveCurrentUserId(authentication);
         LoanApplication loan = loanService.approveLoan(id, approvedBy);
         return ApiResponse.ok(LoanResponse.from(loan), "Loan approved successfully");
     }
@@ -75,7 +79,8 @@ public class LoanController {
     @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<LoanResponse> rejectLoan(
             @PathVariable UUID id,
-            @RequestParam UUID rejectedBy) {
+            Authentication authentication) {
+        UUID rejectedBy = memberAccessHelper.resolveCurrentUserId(authentication);
         LoanApplication loan = loanService.rejectLoan(id, rejectedBy);
         return ApiResponse.ok(LoanResponse.from(loan), "Loan rejected");
     }
@@ -84,7 +89,8 @@ public class LoanController {
     @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<LoanResponse> disburseLoan(
             @PathVariable UUID id,
-            @RequestParam String actor) {
+            Authentication authentication) {
+        String actor = memberAccessHelper.currentActor(authentication);
         LoanApplication loan = loanService.disburseLoan(id, actor);
         return ApiResponse.ok(LoanResponse.from(loan), "Loan disbursed successfully");
     }
@@ -94,7 +100,8 @@ public class LoanController {
     public ApiResponse<Void> recordRepayment(
             @PathVariable UUID id,
             @Valid @RequestBody RepaymentRequest request,
-            @RequestParam String actor) {
+            Authentication authentication) {
+        String actor = memberAccessHelper.currentActor(authentication);
         LoanRepayment repayment = loanService.recordRepayment(
                 id,
                 request.getAmount(),
@@ -105,7 +112,12 @@ public class LoanController {
     }
 
     @GetMapping("/{id}/schedule")
-    public ApiResponse<List<RepaymentScheduleResponse>> getLoanSchedule(@PathVariable UUID id) {
+    public ApiResponse<List<RepaymentScheduleResponse>> getLoanSchedule(
+            @PathVariable UUID id,
+            Authentication authentication) {
+        LoanApplication loan = loanService.getLoanById(id);
+        memberAccessHelper.assertAccessToMember(loan.getMemberId(), authentication);
+
         List<RepaymentSchedule> schedules = loanService.getLoanSchedule(id);
         List<RepaymentScheduleResponse> responses = schedules.stream()
                 .map(RepaymentScheduleResponse::from)
@@ -114,6 +126,7 @@ public class LoanController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<CursorPage<LoanResponse>> listLoans(
             @RequestParam(required = false) UUID memberId,
             @RequestParam(required = false) LoanStatus status,
@@ -149,13 +162,19 @@ public class LoanController {
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<LoanResponse> getLoanById(@PathVariable UUID id) {
+    public ApiResponse<LoanResponse> getLoanById(
+            @PathVariable UUID id,
+            Authentication authentication) {
         LoanApplication loan = loanService.getLoanById(id);
+        memberAccessHelper.assertAccessToMember(loan.getMemberId(), authentication);
         return ApiResponse.ok(LoanResponse.from(loan));
     }
 
     @GetMapping("/member/{memberId}/summary")
-    public ApiResponse<LoanSummaryResponse> getMemberLoanSummary(@PathVariable UUID memberId) {
+    public ApiResponse<LoanSummaryResponse> getMemberLoanSummary(
+            @PathVariable UUID memberId,
+            Authentication authentication) {
+        memberAccessHelper.assertAccessToMember(memberId, authentication);
         List<LoanApplication> loans = loanService.getMemberLoans(memberId);
 
         long activeCount = loans.stream()
@@ -198,6 +217,7 @@ public class LoanController {
     }
 
     @GetMapping("/interest/summary")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<MonthlyInterestSummary> getMonthlyInterestSummary(
             @RequestParam String month) {
         YearMonth yearMonth = YearMonth.parse(month);
@@ -207,12 +227,15 @@ public class LoanController {
 
     @GetMapping("/interest/member/{memberId}")
     public ApiResponse<List<MemberInterestSummary>> getMemberInterestSummary(
-            @PathVariable UUID memberId) {
+            @PathVariable UUID memberId,
+            Authentication authentication) {
+        memberAccessHelper.assertAccessToMember(memberId, authentication);
         List<MemberInterestSummary> summaries = interestReportingService.getMemberInterestSummary(memberId);
         return ApiResponse.ok(summaries);
     }
 
     @GetMapping("/interest/arrears")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<List<MemberInterestSummary>> getPortfolioInterestArrears() {
         List<MemberInterestSummary> arrears = interestReportingService.getPortfolioInterestArrears();
         return ApiResponse.ok(arrears);

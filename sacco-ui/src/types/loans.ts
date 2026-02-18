@@ -1,4 +1,4 @@
-export type LoanStatus = 'PENDING' | 'APPROVED' | 'ACTIVE' | 'COMPLETED' | 'DEFAULTED' | 'REJECTED'
+export type LoanStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'DISBURSED' | 'REPAYING' | 'CLOSED' | 'DEFAULTED'
 export type InterestMethod = 'FLAT' | 'REDUCING_BALANCE'
 
 export interface LoanResponse {
@@ -48,17 +48,21 @@ export interface LoanSummaryResponse {
 }
 
 export interface RepaymentScheduleResponse {
+  id: string
+  loanId: string
   installmentNumber: number
   dueDate: string
   principalAmount: number
   interestAmount: number
   totalAmount: number
-  status: string
+  paid: boolean
 }
 
 export interface MonthlyInterestSummary {
   month: string
   totalInterestAccrued: number
-  totalInterestPaid: number
-  loansProcessed: number
+  totalInterestReceived: number
+  totalInterestArrears: number
+  activeLoansCount: number
+  loansWithArrearsCount: number
 }

@@ -12,22 +12,14 @@ interface NewPayoutModalProps {
 }
 
 const PAYOUT_TYPES: { value: PayoutType; label: string }[] = [
-  { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
-  { value: 'MPESA', label: 'M-Pesa' },
-  { value: 'CASH', label: 'Cash' },
-  { value: 'SHARE_WITHDRAWAL', label: 'Share Withdrawal' },
+  { value: 'MERRY_GO_ROUND', label: 'Merry-Go-Round' },
+  { value: 'AD_HOC', label: 'Ad Hoc' },
+  { value: 'DIVIDEND', label: 'Dividend' },
 ]
-
-const REF_HINTS: Record<PayoutType, string> = {
-  BANK_TRANSFER: 'Bank reference number',
-  MPESA: 'M-Pesa transaction code',
-  CASH: 'Receipt number',
-  SHARE_WITHDRAWAL: 'Withdrawal reference',
-}
 
 export function NewPayoutModal({ open, onClose, onSubmit, isSubmitting, members }: NewPayoutModalProps) {
   const [memberId, setMemberId] = useState('')
-  const [payoutType, setPayoutType] = useState<PayoutType>('BANK_TRANSFER')
+  const [payoutType, setPayoutType] = useState<PayoutType>('MERRY_GO_ROUND')
   const [amount, setAmount] = useState('')
   const [error, setError] = useState('')
 
@@ -35,7 +27,7 @@ export function NewPayoutModal({ open, onClose, onSubmit, isSubmitting, members 
 
   function reset() {
     setMemberId('')
-    setPayoutType('BANK_TRANSFER')
+    setPayoutType('MERRY_GO_ROUND')
     setAmount('')
     setError('')
   }
@@ -108,10 +100,6 @@ export function NewPayoutModal({ open, onClose, onSubmit, isSubmitting, members 
           </div>
         </div>
 
-        <div className="field">
-          <label className="field-label">Reference Hint</label>
-          <span className="field-hint">{REF_HINTS[payoutType]}</span>
-        </div>
       </form>
     </Modal>
   )

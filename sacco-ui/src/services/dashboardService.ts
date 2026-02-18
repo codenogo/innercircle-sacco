@@ -2,6 +2,7 @@ import type {
   TreasurerDashboardResponse,
   AdminDashboardResponse,
   DashboardAnalyticsResponse,
+  MonthlyDataPoint,
   SaccoStateResponse,
 } from '../types/dashboard'
 import { apiRequest } from './apiClient'
@@ -21,18 +22,18 @@ export async function getAnalytics(year?: number): Promise<DashboardAnalyticsRes
   return apiRequest<DashboardAnalyticsResponse>(`/api/v1/dashboard/analytics${query ? `?${query}` : ''}`)
 }
 
-export async function getContributionAnalytics(year?: number): Promise<DashboardAnalyticsResponse> {
+export async function getContributionAnalytics(year?: number): Promise<MonthlyDataPoint[]> {
   const params = new URLSearchParams()
   if (year != null) params.set('year', String(year))
   const query = params.toString()
-  return apiRequest<DashboardAnalyticsResponse>(`/api/v1/dashboard/analytics/contributions${query ? `?${query}` : ''}`)
+  return apiRequest<MonthlyDataPoint[]>(`/api/v1/dashboard/analytics/contributions${query ? `?${query}` : ''}`)
 }
 
-export async function getLoanAnalytics(year?: number): Promise<DashboardAnalyticsResponse> {
+export async function getLoanAnalytics(year?: number): Promise<MonthlyDataPoint[]> {
   const params = new URLSearchParams()
   if (year != null) params.set('year', String(year))
   const query = params.toString()
-  return apiRequest<DashboardAnalyticsResponse>(`/api/v1/dashboard/analytics/loans${query ? `?${query}` : ''}`)
+  return apiRequest<MonthlyDataPoint[]>(`/api/v1/dashboard/analytics/loans${query ? `?${query}` : ''}`)
 }
 
 export async function getSaccoState(): Promise<SaccoStateResponse> {

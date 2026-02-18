@@ -2,17 +2,19 @@ export type AccountType = 'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'EXPENS
 
 export interface AccountResponse {
   id: string
-  code: string
-  name: string
+  accountCode: string
+  accountName: string
   accountType: AccountType
   balance: number
 }
 
 export interface JournalLineDto {
+  id: string
   accountCode: string
   accountName: string
-  debit: number
-  credit: number
+  debitAmount: string
+  creditAmount: string
+  description: string
 }
 
 export interface JournalEntryResponse {

@@ -49,8 +49,8 @@ function flattenEntries(entries: JournalEntryResponse[]): FlatLine[] {
         transactionDate: entry.transactionDate,
         description: entry.description,
         accountName: line.accountName,
-        debit: line.debit,
-        credit: line.credit,
+        debit: Number(line.debitAmount) || 0,
+        credit: Number(line.creditAmount) || 0,
       })
     }
   }
@@ -74,8 +74,8 @@ export function Ledger() {
     try {
       const data = await request<AccountResponse[]>('/api/v1/ledger/accounts')
       setAccounts(data)
-    } catch (err) {
-      console.error('Failed to load accounts', err)
+    } catch {
+      // non-critical — filter dropdown will be empty
     }
   }, [request])
 
@@ -116,7 +116,7 @@ export function Ledger() {
   const totalDebit = filtered.reduce((sum, line) => sum + line.debit, 0)
   const totalCredit = filtered.reduce((sum, line) => sum + line.credit, 0)
 
-  const accountOptions = ['All Accounts', ...accounts.map(a => a.name)]
+  const accountOptions = ['All Accounts', ...accounts.map(a => a.accountName)]
 
   return (
     <div className="ledger-page">
@@ -219,7 +219,7 @@ export function Ledger() {
       <NewJournalEntryModal
         open={showModal}
         onClose={() => setShowModal(false)}
-        accounts={accounts.map(a => a.name)}
+        accounts={accounts.map(a => a.accountName)}
       />
     </div>
   )

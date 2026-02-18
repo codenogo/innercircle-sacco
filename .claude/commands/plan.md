@@ -37,6 +37,9 @@ Split by boundaries:
 - risk boundary (safe refactor vs behavior change)
 
 Use principles from `CLAUDE.md` (do not duplicate long explanations here).
+Apply:
+- `.claude/skills/workflow-contract-integrity.md` for contract/lifecycle correctness
+- `.claude/skills/artifact-token-budgeting.md` to keep plans concise
 
 ### Step 3: Author `NN-PLAN.json` (Source of Truth)
 

@@ -12,7 +12,7 @@ import { apiRequest } from './apiClient'
 export async function getLoans(cursor?: string, size?: number): Promise<CursorPage<LoanResponse>> {
   const params = new URLSearchParams()
   if (cursor) params.set('cursor', cursor)
-  if (size != null) params.set('size', String(size))
+  if (size != null) params.set('limit', String(size))
   const query = params.toString()
   return apiRequest<CursorPage<LoanResponse>>(`/api/v1/loans${query ? `?${query}` : ''}`)
 }
@@ -46,8 +46,8 @@ export async function disburseLoan(id: string): Promise<LoanResponse> {
   })
 }
 
-export async function repayLoan(id: string, payload: RepaymentRequest): Promise<LoanResponse> {
-  return apiRequest<LoanResponse>(`/api/v1/loans/${id}/repay`, {
+export async function repayLoan(id: string, payload: RepaymentRequest): Promise<void> {
+  await apiRequest<void>(`/api/v1/loans/${id}/repay`, {
     method: 'POST',
     body: JSON.stringify(payload),
   })

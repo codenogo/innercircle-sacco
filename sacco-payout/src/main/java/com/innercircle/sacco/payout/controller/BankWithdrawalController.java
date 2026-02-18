@@ -2,6 +2,7 @@ package com.innercircle.sacco.payout.controller;
 
 import com.innercircle.sacco.common.dto.ApiResponse;
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.security.MemberAccessHelper;
 import com.innercircle.sacco.payout.dto.BankWithdrawalRequest;
 import com.innercircle.sacco.payout.dto.BankWithdrawalResponse;
 import com.innercircle.sacco.payout.entity.BankWithdrawal;
@@ -11,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,14 +32,16 @@ import java.util.UUID;
 public class BankWithdrawalController {
 
     private final BankWithdrawalService bankWithdrawalService;
+    private final MemberAccessHelper memberAccessHelper;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<BankWithdrawalResponse> initiateWithdrawal(
             @Valid @RequestBody BankWithdrawalRequest request,
-            @RequestParam(defaultValue = "system") String actor
+            Authentication authentication
     ) {
+        String actor = memberAccessHelper.currentActor(authentication);
         BankWithdrawal withdrawal = bankWithdrawalService.initiateWithdrawal(
                 request.memberId(),
                 request.amount(),
@@ -53,8 +57,9 @@ public class BankWithdrawalController {
     public ApiResponse<BankWithdrawalResponse> confirmWithdrawal(
             @PathVariable UUID withdrawalId,
             @RequestParam String referenceNumber,
-            @RequestParam(defaultValue = "system") String actor
+            Authentication authentication
     ) {
+        String actor = memberAccessHelper.currentActor(authentication);
         BankWithdrawal withdrawal = bankWithdrawalService.confirmWithdrawal(withdrawalId, referenceNumber, actor);
         return ApiResponse.ok(BankWithdrawalResponse.from(withdrawal), "Bank withdrawal confirmed successfully");
     }
@@ -63,19 +68,24 @@ public class BankWithdrawalController {
     @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<BankWithdrawalResponse> markReconciled(
             @PathVariable UUID withdrawalId,
-            @RequestParam(defaultValue = "system") String actor
+            Authentication authentication
     ) {
+        String actor = memberAccessHelper.currentActor(authentication);
         BankWithdrawal withdrawal = bankWithdrawalService.markReconciled(withdrawalId, actor);
         return ApiResponse.ok(BankWithdrawalResponse.from(withdrawal), "Bank withdrawal marked as reconciled");
     }
 
     @GetMapping("/{withdrawalId}")
-    public ApiResponse<BankWithdrawalResponse> getWithdrawalById(@PathVariable UUID withdrawalId) {
+    public ApiResponse<BankWithdrawalResponse> getWithdrawalById(
+            @PathVariable UUID withdrawalId,
+            Authentication authentication) {
         BankWithdrawal withdrawal = bankWithdrawalService.getWithdrawalById(withdrawalId);
+        memberAccessHelper.assertAccessToMember(withdrawal.getMemberId(), authentication);
         return ApiResponse.ok(BankWithdrawalResponse.from(withdrawal));
     }
 
     @GetMapping("/unreconciled")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<CursorPage<BankWithdrawalResponse>> getUnreconciled(
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int limit
@@ -93,8 +103,10 @@ public class BankWithdrawalController {
     public ApiResponse<CursorPage<BankWithdrawalResponse>> getWithdrawalsByMember(
             @PathVariable UUID memberId,
             @RequestParam(required = false) String cursor,
-            @RequestParam(defaultValue = "20") int limit
+            @RequestParam(defaultValue = "20") int limit,
+            Authentication authentication
     ) {
+        memberAccessHelper.assertAccessToMember(memberId, authentication);
         CursorPage<BankWithdrawal> withdrawalPage = bankWithdrawalService.getWithdrawalsByMember(memberId, cursor, limit);
         CursorPage<BankWithdrawalResponse> responsePage = CursorPage.of(
                 withdrawalPage.getItems().stream().map(BankWithdrawalResponse::from).toList(),
@@ -105,6 +117,7 @@ public class BankWithdrawalController {
     }
 
     @GetMapping("/status/{status}")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<CursorPage<BankWithdrawalResponse>> getWithdrawalsByStatus(
             @PathVariable WithdrawalStatus status,
             @RequestParam(required = false) String cursor,

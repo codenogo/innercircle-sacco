@@ -1,0 +1,251 @@
+/* ─── Select — custom dropdown matching DatePicker aesthetic ─── */
+
+.select {
+  position: relative;
+}
+
+/* ─── Trigger ─── */
+
+.select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 10px var(--space-3);
+  background: var(--paper-inset);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: inset 0 1px 2px rgba(30, 32, 48, 0.06);
+  transition: border-color var(--ease), background var(--ease), box-shadow var(--ease);
+  text-align: left;
+}
+
+.select-trigger:hover {
+  border-color: var(--rule-strong);
+  box-shadow: inset 0 1px 2px rgba(30, 32, 48, 0.04);
+}
+
+.select-trigger:focus-visible {
+  border-color: var(--mpesa);
+  box-shadow: 0 0 0 3px var(--mpesa-soft);
+  outline: none;
+}
+
+.select-trigger--open {
+  border-color: var(--mpesa);
+  background: var(--paper);
+  box-shadow: 0 0 0 3px var(--mpesa-soft);
+}
+
+.select-trigger--placeholder .select-trigger-text {
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+.select-trigger-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-chevron {
+  flex-shrink: 0;
+  color: var(--ink-muted);
+  transition: transform var(--ease), color var(--ease);
+}
+
+.select-trigger:hover .select-chevron {
+  color: var(--ink-secondary);
+}
+
+.select-chevron--open {
+  transform: rotate(180deg);
+  color: var(--mpesa);
+}
+
+/* ─── Dropdown panel ─── */
+
+.select-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 1100;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  padding: var(--space-1);
+  animation: select-in 120ms ease-out;
+  overflow: hidden;
+}
+
+@keyframes select-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Search input ─── */
+
+.select-search-wrap {
+  position: relative;
+  padding: var(--space-1);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--rule-subtle);
+}
+
+.select-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(calc(-50% - 2px));
+  color: var(--ink-faint);
+  pointer-events: none;
+}
+
+.select-search {
+  width: 100%;
+  padding: var(--space-2) var(--space-2) var(--space-2) 28px;
+  background: var(--paper-inset);
+  border: 1px solid var(--rule-subtle);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--ink);
+  outline: none;
+  transition: border-color var(--ease), box-shadow var(--ease);
+}
+
+.select-search::placeholder {
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+.select-search:focus {
+  border-color: var(--mpesa);
+  box-shadow: 0 0 0 2px var(--mpesa-soft);
+}
+
+/* ─── Options list ─── */
+
+.select-options {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: var(--space-1) 0;
+}
+
+.select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--ease), color var(--ease);
+}
+
+.select-option:hover,
+.select-option--highlight {
+  background: var(--rule-subtle);
+}
+
+.select-option--selected {
+  color: var(--mpesa-text);
+  font-weight: 500;
+}
+
+.select-option--selected:hover,
+.select-option--selected.select-option--highlight {
+  background: var(--mpesa-soft);
+}
+
+.select-option-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-option-check {
+  color: var(--mpesa);
+  flex-shrink: 0;
+  margin-left: var(--space-2);
+}
+
+.select-option:focus-visible {
+  outline: 2px solid var(--mpesa);
+  outline-offset: -2px;
+}
+
+/* ─── Empty state ─── */
+
+.select-empty {
+  padding: var(--space-4) var(--space-3);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+/* ─── Scrollbar styling ─── */
+
+.select-options::-webkit-scrollbar {
+  width: 4px;
+}
+
+.select-options::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.select-options::-webkit-scrollbar-thumb {
+  background: var(--rule);
+  border-radius: 2px;
+}
+
+.select-options::-webkit-scrollbar-thumb:hover {
+  background: var(--rule-strong);
+}
+
+/* ─── Compact variant — for filter bars ─── */
+
+.filter-select-wrap {
+  min-width: 140px;
+}
+
+.filter-select-wrap .select-trigger {
+  padding: var(--space-1) var(--space-2);
+  padding-right: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--ink-secondary);
+  background: var(--paper);
+  box-shadow: inset 0 1px 2px rgba(30, 32, 48, 0.04);
+}
+
+.filter-select-wrap .select-trigger:hover {
+  color: var(--ink);
+}
+
+.filter-select-wrap .select-trigger--open {
+  color: var(--ink);
+}
+
+.filter-select-wrap .select-option {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.filter-select-wrap .select-panel {
+  min-width: 160px;
+}

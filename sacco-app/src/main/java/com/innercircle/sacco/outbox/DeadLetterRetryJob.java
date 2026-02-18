@@ -35,6 +35,7 @@ public class DeadLetterRetryJob {
     }
 
     @Scheduled(fixedDelay = 300000)
+    @Transactional
     public void retryDeadLetters() {
         List<EventDeadLetter> retryable = deadLetterRepository
                 .findByStatusAndNextRetryAtBeforeAndRetriesLessThan(

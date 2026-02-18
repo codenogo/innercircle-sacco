@@ -3,6 +3,7 @@ import { Modal } from './Modal'
 import { DatePicker } from './DatePicker'
 import { Select } from './Select'
 import { localISODate } from '../utils/date'
+import { getCategories } from '../services/contributionService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import type { RecordContributionRequest, ContributionCategoryResponse, PaymentMode } from '../types/contributions'
 
@@ -15,9 +16,9 @@ interface RecordContributionModalProps {
 }
 
 const fallbackCategories: ContributionCategoryResponse[] = [
-  { id: 'monthly', name: 'Monthly', description: '', mandatory: true, active: true, createdAt: '' },
-  { id: 'special', name: 'Special', description: '', mandatory: false, active: true, createdAt: '' },
-  { id: 'registration', name: 'Registration', description: '', mandatory: false, active: true, createdAt: '' },
+  { id: 'monthly', name: 'Monthly', description: '', isMandatory: true, active: true },
+  { id: 'special', name: 'Special', description: '', isMandatory: false, active: true },
+  { id: 'registration', name: 'Registration', description: '', isMandatory: false, active: true },
 ]
 
 const paymentModeOptions = [
@@ -35,6 +36,7 @@ export function RecordContributionModal({ open, onClose, members, onSubmit, isSu
   const [amount, setAmount] = useState('15000')
   const [date, setDate] = useState(localISODate)
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('MPESA')
+  const [referenceNumber, setReferenceNumber] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
 
@@ -46,9 +48,7 @@ export function RecordContributionModal({ open, onClose, members, onSubmit, isSu
 
     async function loadCategories() {
       try {
-        const data = await request<ContributionCategoryResponse[]>(
-          '/api/v1/contribution-categories?activeOnly=true',
-        )
+        const data = await getCategories(true, request)
         if (!cancelled && data.length > 0) {
           setCategories(data)
         }
@@ -70,6 +70,7 @@ export function RecordContributionModal({ open, onClose, members, onSubmit, isSu
     setAmount('15000')
     setDate(localISODate())
     setPaymentMode('MPESA')
+    setReferenceNumber('')
     setNotes('')
     setError('')
   }
@@ -83,8 +84,9 @@ export function RecordContributionModal({ open, onClose, members, onSubmit, isSu
       amount: Number(amount),
       categoryId,
       paymentMode,
-      contributionMonth: date.slice(0, 7),
+      contributionMonth: date.slice(0, 7) + '-01',
       contributionDate: date,
+      referenceNumber: referenceNumber.trim() || undefined,
       notes: notes.trim() || undefined,
     }
 
@@ -141,7 +143,7 @@ export function RecordContributionModal({ open, onClose, members, onSubmit, isSu
           </div>
           <div className="field">
             <label className="field-label">Amount (KES)</label>
-            <input className="field-input" type="number" min={0} required value={amount} onChange={e => setAmount(e.target.value)} disabled={isSubmitting} />
+            <input className="field-input" type="number" min={1} required value={amount} onChange={e => setAmount(e.target.value)} disabled={isSubmitting} />
           </div>
         </div>
 
@@ -154,6 +156,19 @@ export function RecordContributionModal({ open, onClose, members, onSubmit, isSu
             <label className="field-label">Date</label>
             <DatePicker value={date} onChange={setDate} required />
           </div>
+        </div>
+
+        <div className="field">
+          <label className="field-label">Reference Number</label>
+          <input
+            className="field-input"
+            type="text"
+            maxLength={100}
+            value={referenceNumber}
+            onChange={e => setReferenceNumber(e.target.value)}
+            placeholder="M-Pesa code, bank ref, etc."
+            disabled={isSubmitting}
+          />
         </div>
 
         <div className="field">

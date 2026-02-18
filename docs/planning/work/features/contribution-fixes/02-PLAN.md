@@ -1,0 +1,47 @@
+# Plan 02: Wire ContributionCategories.tsx to live /api/v1/contribution-categories CRUD API
+
+## Goal
+Wire ContributionCategories.tsx to live /api/v1/contribution-categories CRUD API
+
+## Tasks
+
+### Task 1: Add category CRUD service functions
+**CWD:** `sacco-ui`
+**Files:** `sacco-ui/src/services/contributionService.ts`
+**Action:**
+Add three functions to contributionService.ts: (1) createCategory(payload: ContributionCategoryRequest) → POST /api/v1/contribution-categories, returns ContributionCategoryResponse. (2) updateCategory(id: string, payload: ContributionCategoryRequest) → PUT /api/v1/contribution-categories/{id}, returns ContributionCategoryResponse. (3) deleteCategory(id: string) → DELETE /api/v1/contribution-categories/{id}, returns void. Import ContributionCategoryRequest from types. All use apiRequest with authenticated calls.
+
+**Verify:**
+```bash
+npx tsc --noEmit
+```
+
+**Done when:** [Observable outcome]
+
+### Task 2: Rewrite ContributionCategories.tsx to fetch live data with Add/Edit/Delete
+**CWD:** `sacco-ui`
+**Files:** `sacco-ui/src/pages/ContributionCategories.tsx`
+**Action:**
+Rewrite the page: (1) Remove hardcoded mock data and local interfaces. (2) Import useAuthenticatedApi, ContributionCategoryResponse, ContributionCategoryRequest from types. (3) Add state: categories[], loading, error, feedback, showAddModal, editingCategory. (4) Fetch categories on mount via request<ContributionCategoryResponse[]>('/api/v1/contribution-categories'). (5) Remove 'Amount' and 'Cadence' columns — backend has no such fields. Show columns: Category (name+description), Mandatory (yes/no badge), Status (active/inactive badge), Actions. (6) Wire Add Category button to open a modal form (name required, description optional, mandatory checkbox). On submit POST to API, prepend to list, show success feedback. (7) Wire Edit button to open same modal pre-filled. On submit PUT to API, update in list. (8) Wire Delete button with window.confirm. On confirm DELETE to API, remove from list. (9) Use existing Modal component from ../components/Modal. (10) Add loading/error/feedback states matching other pages' patterns.
+
+**Verify:**
+```bash
+npx tsc --noEmit
+npx vite build
+```
+
+**Done when:** [Observable outcome]
+
+## Verification
+
+After all tasks:
+```bash
+npx tsc --noEmit
+npx vite build
+npm test
+```
+
+## Commit Message
+```
+feat(contribution): wire ContributionCategories page to live CRUD API
+```

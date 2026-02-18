@@ -38,8 +38,8 @@ python3 scripts/workflow_memory.py phase-set <feature-slug> implement
 
 ### Step 1c: Team Mode Routing
 
-- If `--team` passed: delegate to `/team implement <feature> <plan>`.
-- Else if plan has `"parallelizable": true` and Agent Teams available: delegate to `/team implement`.
+- If `--team` passed: delegate to `/team implement <feature> <plan-number>`.
+- Else if plan has `"parallelizable": true` and Agent Teams available: delegate to `/team implement <feature> <plan-number>`.
 - Else execute serially.
 
 ### Step 2: Execute Tasks
@@ -51,6 +51,8 @@ For each task in plan JSON:
 4. run all task `verify[]` commands
 5. on success: close memory ID if present
 6. on failure: inspect history, fix, retry (max 2 attempts before escalation)
+
+If task files touch memory sync/import paths (for example `scripts/memory/sync.py` or `.cnogo/issues.jsonl` flows), apply `.claude/skills/memory-sync-reconciliation.md`.
 
 Retry helper commands:
 
@@ -88,6 +90,8 @@ Then render markdown summary:
 ```bash
 python3 scripts/workflow_render.py docs/planning/work/features/<feature>/<NN>-SUMMARY.json
 ```
+
+Use `.claude/skills/workflow-contract-integrity.md` before final validation.
 
 ### Step 6: Validate
 

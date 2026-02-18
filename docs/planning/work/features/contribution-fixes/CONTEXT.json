@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "feature": "contribution-fixes",
+  "displayName": "Contribution Fixes & Wiring",
+  "decisions": [
+    {
+      "area": "data-contract",
+      "decision": "Change frontend ContributionResponse.category from string to nested ContributionCategoryResponse object, render .name in table",
+      "rationale": "Backend ContributionResponse.java returns nested ContributionCategoryResponse with id/name/description/active/isMandatory. Frontend typed it as string, causing [object Object] rendering."
+    },
+    {
+      "area": "data-contract",
+      "decision": "Send contributionMonth as YYYY-MM-01 (first of month) instead of YYYY-MM",
+      "rationale": "Backend RecordContributionRequest.contributionMonth is LocalDate (YYYY-MM-DD). DB column is type date. Sending YYYY-MM causes Jackson parse failure. First-of-month is semantically correct for monthly tracking."
+    },
+    {
+      "area": "data-flow",
+      "decision": "Fix month filter comparison to use slice(0,7) on both sides",
+      "rationale": "Backend returns contributionMonth as 2026-02-01 (full date). Frontend month picker produces 2026-02. Direct === comparison never matches. Slicing both to 7 chars gives correct month matching."
+    },
+    {
+      "area": "cleanup",
+      "decision": "Delete utils/contributions.ts and tests/contributions-utils.test.ts",
+      "rationale": "Zero imports from src/. Uses 'PAID' status which doesn't exist in ContributionStatus enum (should be CONFIRMED). Superseded by inline summary in Contributions.tsx:107-113."
+    },
+    {
+      "area": "data-contract",
+      "decision": "Fix BulkContributionRequest type to match backend with shared defaults + per-item overrides",
+      "rationale": "Frontend type has flat contributions: RecordContributionRequest[]. Backend has shared defaults (paymentMode, contributionMonth, contributionDate, categoryId, batchReference) plus contributions: BulkContributionItemRequest[] where each item has memberId, amount, and optional overrides."
+    },
+    {
+      "area": "data-contract",
+      "decision": "Add ContributionCategoryRequest type for category CRUD",
+      "rationale": "Backend ContributionCategoryRequest has name (required), description, active, isMandatory. No frontend type exists yet."
+    },
+    {
+      "area": "feature",
+      "decision": "Wire ContributionCategories.tsx to live /api/v1/contribution-categories CRUD API",
+      "rationale": "Page uses hardcoded mock data with columns (amount, cadence) that don't exist in backend schema. Rewrite to fetch live categories, enable Add/Edit/Delete with modals."
+    },
+    {
+      "area": "feature",
+      "decision": "Wire ContributionOperations.tsx to live confirm/reverse/bulk endpoints",
+      "rationale": "Page uses hardcoded mock data with disabled buttons. Service functions already exist (confirmContribution, reverseContribution, recordBulkContributions). Wire page to fetch live data and enable actions."
+    }
+  ],
+  "constraints": [
+    "Backend DTOs are source of truth — frontend types must match exactly",
+    "No backend changes — all fixes are frontend-only",
+    "RecordContributionModal already tested in review pass 3 — preserve referenceNumber field",
+    "Must pass tsc --noEmit, vite build, npm test after changes",
+    "Backend ContributionCategory has no amount or cadence fields — remove those columns from categories page",
+    "Category CRUD requires ADMIN role — service functions use /api/v1/contribution-categories",
+    "Bulk contribution uses shared defaults (paymentMode, month, date, category) + per-item (memberId, amount)"
+  ],
+  "openQuestions": [],
+  "relatedCode": [
+    "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/dto/ContributionResponse.java",
+    "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/dto/RecordContributionRequest.java",
+    "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/dto/ContributionCategoryResponse.java",
+    "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/dto/ContributionCategoryRequest.java",
+    "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/dto/BulkContributionRequest.java",
+    "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/dto/BulkContributionItemRequest.java",
+    "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/controller/ContributionController.java",
+    "sacco-contribution/src/main/java/com/innercircle/sacco/contribution/controller/ContributionCategoryController.java",
+    "sacco-ui/src/types/contributions.ts",
+    "sacco-ui/src/services/contributionService.ts",
+    "sacco-ui/src/pages/Contributions.tsx",
+    "sacco-ui/src/pages/ContributionCategories.tsx",
+    "sacco-ui/src/pages/ContributionOperations.tsx",
+    "sacco-ui/src/components/RecordContributionModal.tsx",
+    "sacco-ui/src/utils/contributions.ts",
+    "sacco-ui/tests/contributions-utils.test.ts"
+  ],
+  "featureId": "cn-qg9w1z",
+  "timestamp": "2026-02-18T12:45:00Z"
+}

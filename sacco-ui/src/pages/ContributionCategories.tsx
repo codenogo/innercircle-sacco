@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Modal } from '../components/Modal'
 import { ApiError } from '../services/apiClient'
+import { getCategories as fetchAllCategories } from '../services/contributionService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import type {
   ContributionCategoryResponse,
@@ -27,7 +28,7 @@ export function ContributionCategories() {
   const loadCategories = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await request<ContributionCategoryResponse[]>('/api/v1/contribution-categories?activeOnly=false')
+      const data = await fetchAllCategories(false, request)
       setCategories(data)
     } catch (error) {
       setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to load categories.') })

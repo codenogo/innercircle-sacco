@@ -1,5 +1,5 @@
-export type PayoutStatus = 'PENDING' | 'APPROVED' | 'PROCESSING' | 'COMPLETED' | 'REJECTED'
-export type PayoutType = 'BANK_TRANSFER' | 'MPESA' | 'CASH' | 'SHARE_WITHDRAWAL'
+export type PayoutStatus = 'PENDING' | 'APPROVED' | 'PROCESSED' | 'FAILED'
+export type PayoutType = 'MERRY_GO_ROUND' | 'AD_HOC' | 'DIVIDEND'
 
 export interface PayoutResponse {
   id: string

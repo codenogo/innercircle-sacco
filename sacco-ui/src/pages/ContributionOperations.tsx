@@ -3,6 +3,13 @@ import { MonthPicker } from '../components/MonthPicker'
 import { Select } from '../components/Select'
 import { DatePicker } from '../components/DatePicker'
 import { ApiError } from '../services/apiClient'
+import {
+  confirmContribution,
+  getCategories,
+  getContributions,
+  recordBulkContributions,
+  reverseContribution,
+} from '../services/contributionService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import type { CursorPage } from '../types/users'
 import type { MemberResponse } from '../types/members'
@@ -110,11 +117,14 @@ export function ContributionOperations() {
     else setLoading(true)
 
     try {
-      const url = cursor
-        ? `/api/v1/contributions?size=50&cursor=${cursor}`
-        : '/api/v1/contributions?size=50'
-      const page = await request<CursorPage<ContributionResponse>>(url)
-      setContributions(prev => cursor ? [...prev, ...page.items] : page.items)
+      const page = await getContributions(cursor, 50, request)
+      setContributions(prev => {
+        if (!cursor) return page.items
+        const merged = new Map<string, ContributionResponse>()
+        prev.forEach(c => merged.set(c.id, c))
+        page.items.forEach(c => merged.set(c.id, c))
+        return Array.from(merged.values())
+      })
       setNextCursor(page.nextCursor)
       setHasMore(page.hasMore)
     } catch (err) {
@@ -138,10 +148,8 @@ export function ContributionOperations() {
   // --- Fetch categories ---
   const fetchCategories = useCallback(async () => {
     try {
-      const page = await request<CursorPage<ContributionCategoryResponse>>(
-        '/api/v1/contribution-categories?activeOnly=true',
-      )
-      setCategories(page.items)
+      const data = await getCategories(true, request)
+      setCategories(data)
     } catch {
       // Silent fallback
     }
@@ -149,14 +157,14 @@ export function ContributionOperations() {
 
   // --- Initial load ---
   useEffect(() => {
-    fetchContributions()
-    fetchMembers()
+    void fetchContributions()
+    void fetchMembers()
   }, [fetchContributions, fetchMembers])
 
   // --- Load categories when bulk form opens ---
   useEffect(() => {
     if (showBulkForm && categories.length === 0) {
-      fetchCategories()
+      void fetchCategories()
     }
   }, [showBulkForm, categories.length, fetchCategories])
 
@@ -174,10 +182,7 @@ export function ContributionOperations() {
     setActionInProgress(id)
     setFeedback(null)
     try {
-      const updated = await request<ContributionResponse>(
-        `/api/v1/contributions/${id}/confirm`,
-        { method: 'PATCH' },
-      )
+      const updated = await confirmContribution(id, request)
       setContributions(prev => prev.map(c => (c.id === id ? updated : c)))
       setFeedback({ type: 'success', message: 'Contribution confirmed successfully.' })
     } catch (err) {
@@ -193,10 +198,7 @@ export function ContributionOperations() {
     setActionInProgress(id)
     setFeedback(null)
     try {
-      const updated = await request<ContributionResponse>(
-        `/api/v1/contributions/${id}/reverse`,
-        { method: 'PATCH' },
-      )
+      const updated = await reverseContribution(id, request)
       setContributions(prev => prev.map(c => (c.id === id ? updated : c)))
       setFeedback({ type: 'success', message: 'Contribution reversed successfully.' })
     } catch (err) {
@@ -235,17 +237,14 @@ export function ContributionOperations() {
     }
 
     try {
-      await request<ContributionResponse[]>('/api/v1/contributions/bulk', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      })
+      await recordBulkContributions(payload, request)
       setFeedback({
         type: 'success',
         message: `Bulk entry submitted: ${payload.contributions.length} contribution(s) recorded.`,
       })
       setBulkRows([{ memberId: '', amount: '' }])
       setShowBulkForm(false)
-      fetchContributions()
+      void fetchContributions()
     } catch (err) {
       setFeedback({ type: 'error', message: toErrorMessage(err, 'Bulk submission failed') })
     } finally {
@@ -265,7 +264,7 @@ export function ContributionOperations() {
       <hr className="rule rule--strong" />
 
       {feedback && (
-        <div className={`ops-feedback ops-feedback--${feedback.type}`}>
+        <div className={`ops-feedback ops-feedback--${feedback.type}`} role="status">
           {feedback.message}
         </div>
       )}
@@ -322,7 +321,7 @@ export function ContributionOperations() {
                           type="button"
                           className="btn btn--secondary btn--small"
                           disabled={actionInProgress === c.id}
-                          onClick={() => handleConfirm(c.id)}
+                          onClick={() => void handleConfirm(c.id)}
                         >
                           Confirm
                         </button>
@@ -332,7 +331,7 @@ export function ContributionOperations() {
                           type="button"
                           className="btn btn--secondary btn--small"
                           disabled={actionInProgress === c.id}
-                          onClick={() => handleReverse(c.id)}
+                          onClick={() => void handleReverse(c.id)}
                         >
                           Reverse
                         </button>
@@ -353,7 +352,7 @@ export function ContributionOperations() {
             type="button"
             className="btn btn--secondary"
             disabled={loadingMore}
-            onClick={() => nextCursor && fetchContributions(nextCursor)}
+            onClick={() => { if (nextCursor) void fetchContributions(nextCursor) }}
           >
             {loadingMore ? 'Loading...' : 'Load More'}
           </button>
@@ -374,7 +373,7 @@ export function ContributionOperations() {
             New Bulk Entry
           </button>
         ) : (
-          <form onSubmit={handleBulkSubmit}>
+          <form onSubmit={e => void handleBulkSubmit(e)}>
             {/* Shared defaults */}
             <div className="field-row">
               <div className="field">

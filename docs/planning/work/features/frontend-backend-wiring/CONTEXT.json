@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "feature": "frontend-backend-wiring",
+  "displayName": "Wire All Remaining Backend APIs to Frontend",
+  "decisions": [
+    {
+      "area": "architecture",
+      "decision": "One service file per backend domain module",
+      "rationale": "Matches existing authService.ts pattern. Each service exports typed functions calling apiRequest."
+    },
+    {
+      "area": "api",
+      "decision": "Use existing apiClient.ts + useAuthenticatedApi hook",
+      "rationale": "Already handles Bearer token injection, 401 refresh, and JSON envelope unwrapping. No reason to change."
+    },
+    {
+      "area": "data-flow",
+      "decision": "Cursor-based pagination via useAuthenticatedApi for all list endpoints",
+      "rationale": "Backend uses CursorPage<T> consistently. Members page already demonstrates this pattern."
+    },
+    {
+      "area": "types",
+      "decision": "TypeScript interfaces per service file matching backend DTOs",
+      "rationale": "Keep response types co-located with the service that fetches them. Import types where needed in pages."
+    },
+    {
+      "area": "state",
+      "decision": "Local React state (useState/useEffect), no global state library",
+      "rationale": "App complexity doesn't warrant Redux/Zustand. Each page manages its own data lifecycle."
+    },
+    {
+      "area": "error-handling",
+      "decision": "Use existing ApiError class, add loading/error states to each page",
+      "rationale": "Consistent with Members page pattern. Show inline error messages and loading spinners."
+    },
+    {
+      "area": "dependencies",
+      "decision": "No new npm dependencies",
+      "rationale": "Pure fetch via apiClient.ts is sufficient. No need for axios, react-query, or swr."
+    },
+    {
+      "area": "migration",
+      "decision": "Replace mock data page-by-page, remove mock.ts imports as each page is wired",
+      "rationale": "Incremental approach — each page can be tested independently as it switches to real API."
+    }
+  ],
+  "constraints": [
+    "Backend runs on localhost:8080, Vite proxy already configured for /api",
+    "All list endpoints use cursor-based pagination (CursorPage<T>)",
+    "All responses wrapped in ApiResponse<T> envelope with { success, data, message }",
+    "Auth: Bearer JWT tokens with auto-refresh on 401",
+    "Role-based access: some endpoints require ADMIN or TREASURER roles"
+  ],
+  "openQuestions": [],
+  "relatedCode": [
+    "sacco-ui/src/services/apiClient.ts",
+    "sacco-ui/src/services/authService.ts",
+    "sacco-ui/src/services/useAuthenticatedApi.ts",
+    "sacco-ui/src/data/mock.ts",
+    "sacco-ui/src/pages/Members.tsx",
+    "sacco-ui/src/pages/Contributions.tsx",
+    "sacco-ui/src/pages/Loans.tsx",
+    "sacco-ui/src/pages/Payouts.tsx",
+    "sacco-ui/src/pages/Dashboard.tsx",
+    "sacco-ui/src/pages/Ledger.tsx",
+    "sacco-ui/src/pages/AuditTrail.tsx",
+    "sacco-ui/src/pages/Reports.tsx",
+    "sacco-ui/src/pages/Settings.tsx"
+  ],
+  "timestamp": "2026-02-18T00:00:00Z"
+}

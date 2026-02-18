@@ -1,0 +1,11 @@
+.settings-page {
+  max-width: 640px;
+}
+
+.penalty-value {
+  color: var(--deficit);
+}
+
+.settings-bottom-rule {
+  margin-top: var(--space-6);
+}

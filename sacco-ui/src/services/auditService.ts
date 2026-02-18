@@ -42,22 +42,3 @@ export async function getEntityHistory(
   )
 }
 
-export async function exportAuditCsv(params: AuditQueryParams = {}): Promise<Blob> {
-  const searchParams = new URLSearchParams()
-  if (params.cursor) searchParams.set('cursor', params.cursor)
-  if (params.entityType) searchParams.set('entityType', params.entityType)
-  if (params.entityId) searchParams.set('entityId', params.entityId)
-  if (params.actor) searchParams.set('actor', params.actor)
-  if (params.action) searchParams.set('action', params.action)
-  if (params.startDate) searchParams.set('startDate', params.startDate)
-  if (params.endDate) searchParams.set('endDate', params.endDate)
-  if (params.limit != null) searchParams.set('limit', String(params.limit))
-  const query = searchParams.toString()
-  const response = await fetch(`/api/v1/audit/export${query ? `?${query}` : ''}`, {
-    headers: { Accept: 'text/csv' },
-  })
-  if (!response.ok) {
-    throw new Error(`Export failed with status ${response.status}`)
-  }
-  return response.blob()
-}

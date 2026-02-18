@@ -2,6 +2,7 @@ package com.innercircle.sacco.payout.controller;
 
 import com.innercircle.sacco.common.dto.ApiResponse;
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.security.MemberAccessHelper;
 import com.innercircle.sacco.payout.dto.PayoutRequest;
 import com.innercircle.sacco.payout.dto.PayoutResponse;
 import com.innercircle.sacco.payout.entity.Payout;
@@ -11,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,14 +32,16 @@ import java.util.UUID;
 public class PayoutController {
 
     private final PayoutService payoutService;
+    private final MemberAccessHelper memberAccessHelper;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<PayoutResponse> createPayout(
             @Valid @RequestBody PayoutRequest request,
-            @RequestParam(defaultValue = "system") String actor
+            Authentication authentication
     ) {
+        String actor = memberAccessHelper.currentActor(authentication);
         Payout payout = payoutService.createPayout(
                 request.memberId(),
                 request.amount(),
@@ -51,8 +55,9 @@ public class PayoutController {
     @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<PayoutResponse> approvePayout(
             @PathVariable UUID payoutId,
-            @RequestParam(defaultValue = "system") String actor
+            Authentication authentication
     ) {
+        String actor = memberAccessHelper.currentActor(authentication);
         Payout payout = payoutService.approvePayout(payoutId, actor);
         return ApiResponse.ok(PayoutResponse.from(payout), "Payout approved successfully");
     }
@@ -61,15 +66,19 @@ public class PayoutController {
     @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<PayoutResponse> processPayout(
             @PathVariable UUID payoutId,
-            @RequestParam(defaultValue = "system") String actor
+            Authentication authentication
     ) {
+        String actor = memberAccessHelper.currentActor(authentication);
         Payout payout = payoutService.processPayout(payoutId, actor);
         return ApiResponse.ok(PayoutResponse.from(payout), "Payout processed successfully");
     }
 
     @GetMapping("/{payoutId}")
-    public ApiResponse<PayoutResponse> getPayoutById(@PathVariable UUID payoutId) {
+    public ApiResponse<PayoutResponse> getPayoutById(
+            @PathVariable UUID payoutId,
+            Authentication authentication) {
         Payout payout = payoutService.getPayoutById(payoutId);
+        memberAccessHelper.assertAccessToMember(payout.getMemberId(), authentication);
         return ApiResponse.ok(PayoutResponse.from(payout));
     }
 
@@ -77,8 +86,10 @@ public class PayoutController {
     public ApiResponse<CursorPage<PayoutResponse>> getPayoutHistory(
             @PathVariable UUID memberId,
             @RequestParam(required = false) String cursor,
-            @RequestParam(defaultValue = "20") int limit
+            @RequestParam(defaultValue = "20") int limit,
+            Authentication authentication
     ) {
+        memberAccessHelper.assertAccessToMember(memberId, authentication);
         CursorPage<Payout> payoutPage = payoutService.getPayoutHistory(memberId, cursor, limit);
         CursorPage<PayoutResponse> responsePage = CursorPage.of(
                 payoutPage.getItems().stream().map(PayoutResponse::from).toList(),
@@ -89,6 +100,7 @@ public class PayoutController {
     }
 
     @GetMapping("/status/{status}")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<CursorPage<PayoutResponse>> getPayoutsByStatus(
             @PathVariable PayoutStatus status,
             @RequestParam(required = false) String cursor,
@@ -104,6 +116,7 @@ public class PayoutController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<CursorPage<PayoutResponse>> getAllPayouts(
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int limit

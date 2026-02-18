@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FileText, Download, BarChart3, TrendingUp, Users, Wallet, Loader2, Search } from 'lucide-react'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
-import { useAuth } from '../hooks/useAuth'
 import { ApiError } from '../services/apiClient'
+import { localISODate } from '../utils/date'
 import {
   exportFinancialSummaryCsvUrl,
   exportMemberStatementPdfUrl,
-  downloadExport,
 } from '../services/reportService'
 import type { SaccoStateResponse } from '../types/dashboard'
 import type { MemberResponse } from '../types/members'
@@ -76,17 +75,21 @@ function toErrorMessage(error: unknown, fallback: string): string {
   return fallback
 }
 
-function defaultDateRange(): { fromDate: string; toDate: string } {
-  const now = new Date()
-  const toDate = now.toISOString().slice(0, 10)
-  const from = new Date(now.getFullYear(), now.getMonth(), 1)
-  const fromDate = from.toISOString().slice(0, 10)
+function defaultDateRange(now: Date = new Date()): { fromDate: string; toDate: string } {
+  const toDate = localISODate(now)
+  const fromDate = localISODate(new Date(now.getFullYear(), now.getMonth(), 1))
   return { fromDate, toDate }
 }
 
+function isDownloadAvailable(reportId: string, format: string): boolean {
+  return (
+    (reportId === 'financial-summary' && format === 'CSV')
+    || (reportId === 'member-statement' && format === 'PDF')
+  )
+}
+
 export function Reports() {
-  const { request } = useAuthenticatedApi()
-  const { session } = useAuth()
+  const { request, requestBlob } = useAuthenticatedApi()
 
   const [stats, setStats] = useState<SaccoStateResponse | null>(null)
   const [statsLoading, setStatsLoading] = useState(true)
@@ -149,15 +152,10 @@ export function Reports() {
   }, [memberQuery, members])
 
   async function triggerDownload(url: string, filename: string, downloadKey: string) {
-    const token = session?.accessToken
-    if (!token) {
-      setFeedback({ type: 'error', text: 'Not authenticated. Please log in again.' })
-      return
-    }
     setDownloading(prev => ({ ...prev, [downloadKey]: true }))
     setFeedback(null)
     try {
-      const blob = await downloadExport(url, token)
+      const blob = await requestBlob(url)
       const objectUrl = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = objectUrl
@@ -322,25 +320,33 @@ export function Reports() {
                   {r.formats.map(f => {
                     const key = `${r.id}-${f}`
                     const isDownloading = downloading[key] ?? false
+                    const isAvailable = isDownloadAvailable(r.id, f)
                     return (
                       <button
                         key={f}
                         type="button"
                         className="btn btn--secondary btn--small"
-                        disabled={isDownloading}
-                        onClick={() => handleDownload(r.id, f)}
+                        disabled={isDownloading || !isAvailable}
+                        onClick={() => {
+                          if (!isAvailable) return
+                          handleDownload(r.id, f)
+                        }}
                         aria-label={`Download ${r.title} as ${f}`}
+                        title={isAvailable ? undefined : `${f} export is coming soon`}
                       >
                         {isDownloading ? (
                           <Loader2 size={11} className="spinner" />
                         ) : (
                           <Download size={11} strokeWidth={2} />
                         )}
-                        {isDownloading ? 'Downloading...' : f}
+                        {isDownloading ? 'Downloading...' : isAvailable ? f : `${f} (Soon)`}
                       </button>
                     )
                   })}
                 </div>
+                {r.formats.some(f => !isDownloadAvailable(r.id, f)) && (
+                  <span className="reports-note">Some formats are not available yet.</span>
+                )}
               </div>
             )
           })}

@@ -5,7 +5,7 @@ import { apiRequest } from './apiClient'
 export async function getPayouts(cursor?: string, size?: number): Promise<CursorPage<PayoutResponse>> {
   const params = new URLSearchParams()
   if (cursor) params.set('cursor', cursor)
-  if (size != null) params.set('size', String(size))
+  if (size != null) params.set('limit', String(size))
   const query = params.toString()
   return apiRequest<CursorPage<PayoutResponse>>(`/api/v1/payouts${query ? `?${query}` : ''}`)
 }
@@ -13,7 +13,7 @@ export async function getPayouts(cursor?: string, size?: number): Promise<Cursor
 export async function getPayoutsByStatus(status: PayoutStatus, cursor?: string, size?: number): Promise<CursorPage<PayoutResponse>> {
   const params = new URLSearchParams()
   if (cursor) params.set('cursor', cursor)
-  if (size != null) params.set('size', String(size))
+  if (size != null) params.set('limit', String(size))
   const query = params.toString()
   return apiRequest<CursorPage<PayoutResponse>>(`/api/v1/payouts/status/${status}${query ? `?${query}` : ''}`)
 }
@@ -21,7 +21,7 @@ export async function getPayoutsByStatus(status: PayoutStatus, cursor?: string, 
 export async function getMemberPayouts(memberId: string, cursor?: string, size?: number): Promise<CursorPage<PayoutResponse>> {
   const params = new URLSearchParams()
   if (cursor) params.set('cursor', cursor)
-  if (size != null) params.set('size', String(size))
+  if (size != null) params.set('limit', String(size))
   const query = params.toString()
   return apiRequest<CursorPage<PayoutResponse>>(`/api/v1/payouts/member/${memberId}${query ? `?${query}` : ''}`)
 }

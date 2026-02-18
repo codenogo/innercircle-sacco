@@ -1,0 +1,42 @@
+/* ─── Ledger Page — the core accounts book ─── */
+
+.ledger-page {
+  max-width: 880px;
+}
+
+/* The journal table needs to feel most like the physical ledger */
+.ledger-journal {
+  font-size: var(--text-sm);
+}
+
+.journal-ref {
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.journal-desc {
+  color: var(--ink);
+  max-width: 240px;
+}
+
+.journal-account {
+  font-size: var(--text-xs);
+  color: var(--ink-secondary);
+  white-space: nowrap;
+}
+
+.journal-balance {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Totals row — double ruled line above, like accounting convention */
+.journal-totals {
+  border-top: 3px double var(--rule-strong);
+}
+
+.journal-totals td {
+  padding-top: var(--space-3);
+  font-weight: 600;
+}

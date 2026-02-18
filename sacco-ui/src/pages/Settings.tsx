@@ -43,15 +43,27 @@ export function Settings() {
       setLoading(true)
       setError(null)
       try {
-        const [me, prods, scheds, penalties, configs] = await Promise.all([
-          request<MeResponse>('/api/v1/auth/me'),
+        const me = await request<MeResponse>('/api/v1/me')
+        if (cancelled) return
+
+        setProfile(me)
+
+        if (!me.roles.includes('ADMIN')) {
+          setLoanProducts([])
+          setSchedules([])
+          setPenaltyRules([])
+          setSystemConfigs([])
+          return
+        }
+
+        const [prods, scheds, penalties, configs] = await Promise.all([
           request<LoanProductConfigResponse[]>('/api/v1/config/loan-products'),
           request<ContributionScheduleConfigResponse[]>('/api/v1/config/contribution-schedules'),
           request<PenaltyRuleResponse[]>('/api/v1/config/penalty-rules'),
           request<SystemConfigResponse[]>('/api/v1/config/system'),
         ])
         if (cancelled) return
-        setProfile(me)
+
         setLoanProducts(prods)
         setSchedules(scheds)
         setPenaltyRules(penalties)
@@ -96,6 +108,7 @@ export function Settings() {
     ? `${profile.member.firstName} ${profile.member.lastName}`.trim()
     : profile?.username ?? '-'
   const displayRole = profile?.roles?.length ? profile.roles.join(', ') : '-'
+  const isAdmin = Boolean(profile?.roles?.includes('ADMIN'))
 
   return (
     <div className="settings-page">
@@ -130,116 +143,134 @@ export function Settings() {
         </div>
       </div>
 
-      {/* Contribution Schedule */}
-      <div className="settings-group">
-        <h2 className="settings-group-title">Contribution Schedule</h2>
-        <hr className="rule" />
-        {schedules.length === 0 ? (
-          <div className="settings-row">
-            <span className="settings-row-label">No contribution schedules configured</span>
+      {isAdmin ? (
+        <>
+          {/* Contribution Schedule */}
+          <div className="settings-group">
+            <h2 className="settings-group-title">Contribution Schedule</h2>
+            <hr className="rule" />
+            {schedules.length === 0 ? (
+              <div className="settings-row">
+                <span className="settings-row-label">No contribution schedules configured</span>
+              </div>
+            ) : schedules.map(schedule => (
+              <div key={schedule.id}>
+                <div className="settings-row">
+                  <div>
+                    <span className="settings-row-label">{schedule.name}</span>
+                    <span className="settings-row-desc">
+                      {schedule.frequency} &middot; Penalty {schedule.penaltyEnabled ? 'enabled' : 'disabled'}
+                      {!schedule.active && ' \u00b7 Inactive'}
+                    </span>
+                  </div>
+                  <span className="settings-row-value">KES {fmtCurrency(schedule.amount)}</span>
+                </div>
+              </div>
+            ))}
           </div>
-        ) : schedules.map(schedule => (
-          <div key={schedule.id}>
-            <div className="settings-row">
-              <div>
-                <span className="settings-row-label">{schedule.name}</span>
-                <span className="settings-row-desc">
-                  {schedule.frequency} &middot; Penalty {schedule.penaltyEnabled ? 'enabled' : 'disabled'}
-                  {!schedule.active && ' \u00b7 Inactive'}
+
+          {/* Loan Products */}
+          <div className="settings-group">
+            <h2 className="settings-group-title">Loan Products</h2>
+            <hr className="rule" />
+            {loanProducts.length === 0 ? (
+              <div className="settings-row">
+                <span className="settings-row-label">No loan products configured</span>
+              </div>
+            ) : loanProducts.map(product => (
+              <div key={product.id} className="settings-row">
+                <div>
+                  <span className="settings-row-label">{product.name}</span>
+                  <span className="settings-row-desc">
+                    Max KES {fmtCurrency(product.maxAmount)} &middot; {product.maxTermMonths} months
+                    &middot; {product.interestMethod.replace('_', ' ')}
+                    {product.requiresGuarantor && ' \u00b7 Guarantor required'}
+                    {!product.active && ' \u00b7 Inactive'}
+                  </span>
+                </div>
+                <span className="settings-row-value">{product.annualInterestRate}% p.a.</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Penalties */}
+          <div className="settings-group">
+            <h2 className="settings-group-title">Penalties</h2>
+            <hr className="rule" />
+            {penaltyRules.length === 0 ? (
+              <div className="settings-row">
+                <span className="settings-row-label">No penalty rules configured</span>
+              </div>
+            ) : penaltyRules.map(rule => (
+              <div key={rule.id} className="settings-row">
+                <div>
+                  <span className="settings-row-label">{rule.name}</span>
+                  <span className="settings-row-desc">
+                    {rule.penaltyType.replace('_', ' ')}
+                    {rule.compounding && ' \u00b7 Compounding'}
+                    {!rule.active && ' \u00b7 Inactive'}
+                  </span>
+                </div>
+                <span className="settings-row-value penalty-value">
+                  {fmtRate(rule.rate, rule.calculationMethod)}
                 </span>
               </div>
-              <span className="settings-row-value">KES {fmtCurrency(schedule.amount)}</span>
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Loan Products */}
-      <div className="settings-group">
-        <h2 className="settings-group-title">Loan Products</h2>
-        <hr className="rule" />
-        {loanProducts.length === 0 ? (
-          <div className="settings-row">
-            <span className="settings-row-label">No loan products configured</span>
+          {/* System */}
+          <div className="settings-group">
+            <h2 className="settings-group-title">System</h2>
+            <hr className="rule" />
+            {systemConfigs.length === 0 ? (
+              <div className="settings-row">
+                <span className="settings-row-label">No system configuration found</span>
+              </div>
+            ) : (
+              <>
+                <div className="settings-row">
+                  <div>
+                    <span className="settings-row-label">SACCO Name</span>
+                  </div>
+                  <span className="settings-row-value">{configValue(systemConfigs, 'sacco.name')}</span>
+                </div>
+                <div className="settings-row">
+                  <div>
+                    <span className="settings-row-label">Registration Number</span>
+                  </div>
+                  <span className="settings-row-value data">{configValue(systemConfigs, 'sacco.registration.number')}</span>
+                </div>
+                <div className="settings-row">
+                  <div>
+                    <span className="settings-row-label">Financial Year</span>
+                  </div>
+                  <span className="settings-row-value">{configValue(systemConfigs, 'sacco.financial.year')}</span>
+                </div>
+                <div className="settings-row">
+                  <div>
+                    <span className="settings-row-label">Currency</span>
+                  </div>
+                  <span className="settings-row-value">{configValue(systemConfigs, 'sacco.currency')}</span>
+                </div>
+              </>
+            )}
           </div>
-        ) : loanProducts.map(product => (
-          <div key={product.id} className="settings-row">
+        </>
+      ) : (
+        <div className="settings-group">
+          <h2 className="settings-group-title">Administration Settings</h2>
+          <hr className="rule" />
+          <div className="settings-row">
             <div>
-              <span className="settings-row-label">{product.name}</span>
+              <span className="settings-row-label">Access</span>
               <span className="settings-row-desc">
-                Max KES {fmtCurrency(product.maxAmount)} &middot; {product.maxTermMonths} months
-                &middot; {product.interestMethod.replace('_', ' ')}
-                {product.requiresGuarantor && ' \u00b7 Guarantor required'}
-                {!product.active && ' \u00b7 Inactive'}
+                System configuration is available to administrators only.
               </span>
             </div>
-            <span className="settings-row-value">{product.annualInterestRate}% p.a.</span>
+            <span className="settings-row-value">Restricted</span>
           </div>
-        ))}
-      </div>
-
-      {/* Penalties */}
-      <div className="settings-group">
-        <h2 className="settings-group-title">Penalties</h2>
-        <hr className="rule" />
-        {penaltyRules.length === 0 ? (
-          <div className="settings-row">
-            <span className="settings-row-label">No penalty rules configured</span>
-          </div>
-        ) : penaltyRules.map(rule => (
-          <div key={rule.id} className="settings-row">
-            <div>
-              <span className="settings-row-label">{rule.name}</span>
-              <span className="settings-row-desc">
-                {rule.penaltyType.replace('_', ' ')}
-                {rule.compounding && ' \u00b7 Compounding'}
-                {!rule.active && ' \u00b7 Inactive'}
-              </span>
-            </div>
-            <span className="settings-row-value penalty-value">
-              {fmtRate(rule.rate, rule.calculationMethod)}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* System */}
-      <div className="settings-group">
-        <h2 className="settings-group-title">System</h2>
-        <hr className="rule" />
-        {systemConfigs.length === 0 ? (
-          <div className="settings-row">
-            <span className="settings-row-label">No system configuration found</span>
-          </div>
-        ) : (
-          <>
-            <div className="settings-row">
-              <div>
-                <span className="settings-row-label">SACCO Name</span>
-              </div>
-              <span className="settings-row-value">{configValue(systemConfigs, 'sacco.name')}</span>
-            </div>
-            <div className="settings-row">
-              <div>
-                <span className="settings-row-label">Registration Number</span>
-              </div>
-              <span className="settings-row-value data">{configValue(systemConfigs, 'sacco.registration.number')}</span>
-            </div>
-            <div className="settings-row">
-              <div>
-                <span className="settings-row-label">Financial Year</span>
-              </div>
-              <span className="settings-row-value">{configValue(systemConfigs, 'sacco.financial.year')}</span>
-            </div>
-            <div className="settings-row">
-              <div>
-                <span className="settings-row-label">Currency</span>
-              </div>
-              <span className="settings-row-value">{configValue(systemConfigs, 'sacco.currency')}</span>
-            </div>
-          </>
-        )}
-      </div>
+        </div>
+      )}
 
       <hr className="rule rule--strong settings-bottom-rule" />
     </div>

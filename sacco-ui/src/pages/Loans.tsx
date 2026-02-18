@@ -3,18 +3,21 @@ import { Landmark, Search } from 'lucide-react'
 import { NewLoanModal } from '../components/NewLoanModal'
 import { ApiError } from '../services/apiClient'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
+import { useAuthorization } from '../hooks/useAuthorization'
+import { useCurrentUser } from '../hooks/useCurrentUser'
 import type { CursorPage } from '../types/users'
-import type { LoanApplicationRequest, LoanResponse, LoanStatus } from '../types/loans'
+import type { LoanApplicationRequest, LoanResponse, LoanStatus, LoanSummaryResponse } from '../types/loans'
 import type { MemberResponse } from '../types/members'
 import './Loans.css'
 
 const PAGE_SIZE = 50
 
 const statusClass: Record<LoanStatus, string> = {
-  ACTIVE: 'badge--active',
+  DISBURSED: 'badge--active',
+  REPAYING: 'badge--active',
   PENDING: 'badge--pending',
   APPROVED: 'badge--pending',
-  COMPLETED: 'badge--completed',
+  CLOSED: 'badge--completed',
   DEFAULTED: 'badge--defaulted',
   REJECTED: 'badge--defaulted',
 }
@@ -48,6 +51,10 @@ function shortId(id: string): string {
 
 export function Loans() {
   const { request } = useAuthenticatedApi()
+  const { canAccess, isMemberOnly } = useAuthorization()
+  const { profile, loading: profileLoading } = useCurrentUser()
+  const memberId = profile?.member?.id ?? null
+  const canManageLoans = canAccess(['ADMIN', 'TREASURER'])
 
   const [loans, setLoans] = useState<LoanResponse[]>([])
   const [members, setMembers] = useState<MemberResponse[]>([])
@@ -62,6 +69,33 @@ export function Loans() {
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const loadLoans = useCallback(async (opts?: { append?: boolean; cursor?: string | null }) => {
+    if (isMemberOnly) {
+      if (!memberId) {
+        setLoans([])
+        setNextCursor(null)
+        setHasMore(false)
+        setError('Your account is not linked to a member profile.')
+        setLoading(false)
+        setLoadingMore(false)
+        return
+      }
+
+      setLoading(true)
+      setError(null)
+      try {
+        const summary = await request<LoanSummaryResponse>(`/api/v1/loans/member/${memberId}/summary`)
+        setLoans(summary.loans)
+        setNextCursor(null)
+        setHasMore(false)
+      } catch (err) {
+        setError(toErrorMessage(err, 'Unable to load your loans.'))
+      } finally {
+        setLoading(false)
+        setLoadingMore(false)
+      }
+      return
+    }
+
     const append = Boolean(opts?.append)
     const cursor = opts?.cursor
 
@@ -70,8 +104,8 @@ export function Loans() {
 
     try {
       const path = cursor
-        ? `/api/v1/loans?size=${PAGE_SIZE}&cursor=${encodeURIComponent(cursor)}`
-        : `/api/v1/loans?size=${PAGE_SIZE}`
+        ? `/api/v1/loans?limit=${PAGE_SIZE}&cursor=${encodeURIComponent(cursor)}`
+        : `/api/v1/loans?limit=${PAGE_SIZE}`
       const page = await request<CursorPage<LoanResponse>>(path)
 
       setLoans(prev => {
@@ -91,13 +125,19 @@ export function Loans() {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [request])
+  }, [isMemberOnly, memberId, request])
 
   useEffect(() => {
+    if (profileLoading) return
     void loadLoans({ append: false, cursor: null })
-  }, [loadLoans])
+  }, [loadLoans, profileLoading])
 
   useEffect(() => {
+    if (!canManageLoans) {
+      setMembers([])
+      return
+    }
+
     let cancelled = false
     async function fetchMembers() {
       try {
@@ -109,9 +149,13 @@ export function Loans() {
     }
     void fetchMembers()
     return () => { cancelled = true }
-  }, [request])
+  }, [canManageLoans, request])
 
   async function handleApplyLoan(payload: LoanApplicationRequest) {
+    if (!canManageLoans) {
+      throw new Error('You are not allowed to apply loans from this account.')
+    }
+
     setSubmittingLoan(true)
     setFeedback(null)
     try {
@@ -150,7 +194,7 @@ export function Loans() {
     })
   }, [loans, search])
 
-  const activeLoans = loans.filter(l => l.status === 'ACTIVE')
+  const activeLoans = loans.filter(l => l.status === 'DISBURSED' || l.status === 'REPAYING')
   const totalDisbursed = activeLoans.reduce((s, l) => s + Number(l.principalAmount), 0)
   const totalOutstanding = activeLoans.reduce((s, l) => s + Number(l.outstandingBalance), 0)
   const totalRepaid = activeLoans.reduce((s, l) => s + Number(l.totalRepaid), 0)
@@ -162,10 +206,12 @@ export function Loans() {
           <h1 className="page-title">Loans</h1>
           <p className="page-subtitle">{activeLoans.length} active loans</p>
         </div>
-        <button className="btn btn--primary" onClick={() => setShowModal(true)}>
-          <Landmark size={14} strokeWidth={2} />
-          New Loan Application
-        </button>
+        {canManageLoans && (
+          <button className="btn btn--primary" onClick={() => setShowModal(true)}>
+            <Landmark size={14} strokeWidth={2} />
+            New Loan Application
+          </button>
+        )}
       </div>
 
       <hr className="rule rule--strong" />
@@ -273,13 +319,15 @@ export function Loans() {
         <hr className="rule rule--strong" />
       </section>
 
-      <NewLoanModal
-        open={showModal}
-        onClose={() => setShowModal(false)}
-        members={memberList}
-        onSubmit={handleApplyLoan}
-        isSubmitting={submittingLoan}
-      />
+      {canManageLoans && (
+        <NewLoanModal
+          open={showModal}
+          onClose={() => setShowModal(false)}
+          members={memberList}
+          onSubmit={handleApplyLoan}
+          isSubmitting={submittingLoan}
+        />
+      )}
     </div>
   )
 }

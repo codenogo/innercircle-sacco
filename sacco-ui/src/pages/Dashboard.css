@@ -1,0 +1,236 @@
+/* ─── Dashboard — the opening page of the ledger ─── */
+
+.dashboard {
+  max-width: 720px;
+}
+
+/* ─── Header — like the top of a ledger page ─── */
+
+.dashboard-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.dashboard-title {
+  font-size: var(--text-lg);
+}
+
+.dashboard-meta {
+  display: flex;
+  gap: var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.dashboard-period,
+.dashboard-date {
+  font-style: italic;
+}
+
+/* ─── Sections ─── */
+
+.dashboard-section {
+  margin-top: var(--space-6);
+}
+
+.dashboard-section-title {
+  margin-bottom: var(--space-2);
+}
+
+/* ─── Fund Summary — dot leaders ─── */
+
+.fund-summary {
+  padding: var(--space-3) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.fund-summary-label {
+  white-space: nowrap;
+}
+
+.fund-summary-currency {
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+  letter-spacing: var(--tracking-wide);
+}
+
+.fund-summary-total {
+  padding-top: var(--space-2);
+  margin-top: var(--space-1);
+  border-top: 1px solid var(--rule);
+}
+
+.fund-summary-total .dot-leader-value {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* ─── Monthly Collection ─── */
+
+.collection-grid {
+  display: grid;
+  grid-template-columns: 1fr 180px;
+  gap: var(--space-6);
+  padding: var(--space-3) 0;
+  align-items: start;
+}
+
+.collection-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.collection-rate {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+}
+
+.collection-rate-number {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--mpesa-text);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.collection-rate-label {
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+
+.collection-bar {
+  width: 100%;
+  height: 3px;
+  background: var(--paper-inset);
+  border-radius: 2px;
+  margin-top: var(--space-1);
+  overflow: hidden;
+}
+
+.collection-bar-fill {
+  height: 100%;
+  background: var(--mpesa);
+  border-radius: 2px;
+  transition: width 600ms ease-out;
+}
+
+/* ─── Ledger Table — the heart of it ─── */
+
+.ledger-table {
+  width: 100%;
+  font-size: var(--text-base);
+}
+
+.ledger-table thead th {
+  padding: var(--space-2) 0;
+  text-align: left;
+  font-size: var(--text-xs);
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.ledger-table tbody tr {
+  border-bottom: 1px solid var(--rule-subtle);
+  transition: background var(--ease);
+}
+
+.ledger-table tbody tr:hover {
+  background: var(--rule-subtle);
+}
+
+/* Alternating row — like ruled ledger paper */
+.ledger-row--alt {
+  background: var(--paper-alt);
+}
+
+.ledger-table td {
+  padding: var(--space-2) 0;
+  padding-right: var(--space-4);
+  vertical-align: baseline;
+}
+
+.ledger-table-amount {
+  text-align: right;
+  padding-right: 0 !important;
+}
+
+.ledger-date {
+  font-size: var(--text-sm);
+  color: var(--ink-secondary);
+  white-space: nowrap;
+}
+
+/* Entry type badges */
+.entry-type {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.entry-type--in {
+  color: var(--mpesa-text);
+}
+
+.entry-type--out {
+  color: var(--deficit);
+}
+
+/* Negative amounts in parentheses — accounting convention */
+.amount--negative {
+  color: var(--deficit);
+}
+
+/* ─── Members Summary ─── */
+
+.member-summary {
+  padding: var(--space-3) 0;
+  font-size: var(--text-base);
+  color: var(--ink-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.member-summary strong {
+  color: var(--ink);
+}
+
+.member-summary-divider {
+  color: var(--rule-strong);
+}
+
+/* ─── Responsive ─── */
+
+@media (max-width: 768px) {
+  .dashboard-header {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .dashboard-meta {
+    gap: var(--space-3);
+    font-size: var(--text-xs);
+  }
+
+  .collection-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+
+  .collection-rate {
+    align-items: flex-start;
+    text-align: left;
+  }
+}

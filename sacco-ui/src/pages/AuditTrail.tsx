@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Download } from 'lucide-react'
 import { ApiError } from '../services/apiClient'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
-import { useAuth } from '../hooks/useAuth'
+import { localISODate } from '../utils/date'
 import type { CursorPage } from '../types/users'
 import type { AuditEventResponse, AuditEntityType } from '../types/audit'
 import './Operations.css'
@@ -30,8 +30,7 @@ function fmtTimestamp(value: string): string {
 }
 
 export function AuditTrail() {
-  const { request } = useAuthenticatedApi()
-  const { session } = useAuth()
+  const { request, requestBlob } = useAuthenticatedApi()
 
   const [events, setEvents] = useState<AuditEventResponse[]>([])
   const [typeFilter, setTypeFilter] = useState<EntityTypeFilter>('ALL')
@@ -97,19 +96,13 @@ export function AuditTrail() {
       if (endDate) params.set('endDate', endDate)
       const query = params.toString()
 
-      const token = session?.accessToken
-      const headers: Record<string, string> = { Accept: 'text/csv' }
-      if (token) headers['Authorization'] = `Bearer ${token}`
-
-      const response = await fetch(`/api/v1/audit/export${query ? `?${query}` : ''}`, { headers })
-      if (!response.ok) {
-        throw new Error(`Export failed with status ${response.status}`)
-      }
-      const blob = await response.blob()
+      const blob = await requestBlob(`/api/v1/audit/export${query ? `?${query}` : ''}`, {
+        headers: { Accept: 'text/csv' },
+      })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `audit-export-${new Date().toISOString().slice(0, 10)}.csv`
+      link.download = `audit-export-${localISODate()}.csv`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -119,7 +112,7 @@ export function AuditTrail() {
     } finally {
       setExporting(false)
     }
-  }, [typeFilter, startDate, endDate, session?.accessToken])
+  }, [typeFilter, startDate, endDate, requestBlob])
 
   // Track whether it's the initial mount to avoid double-fetch
   const mountedRef = useRef(false)

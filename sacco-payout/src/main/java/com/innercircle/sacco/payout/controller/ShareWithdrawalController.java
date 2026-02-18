@@ -2,6 +2,7 @@ package com.innercircle.sacco.payout.controller;
 
 import com.innercircle.sacco.common.dto.ApiResponse;
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.security.MemberAccessHelper;
 import com.innercircle.sacco.payout.dto.ShareWithdrawalRequest;
 import com.innercircle.sacco.payout.dto.ShareWithdrawalResponse;
 import com.innercircle.sacco.payout.entity.ShareWithdrawal;
@@ -11,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,14 +32,16 @@ import java.util.UUID;
 public class ShareWithdrawalController {
 
     private final ShareWithdrawalService shareWithdrawalService;
+    private final MemberAccessHelper memberAccessHelper;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<ShareWithdrawalResponse> requestWithdrawal(
             @Valid @RequestBody ShareWithdrawalRequest request,
-            @RequestParam(defaultValue = "system") String actor
+            Authentication authentication
     ) {
+        String actor = memberAccessHelper.currentActor(authentication);
         ShareWithdrawal withdrawal = shareWithdrawalService.requestWithdrawal(
                 request.memberId(),
                 request.amount(),
@@ -52,8 +56,9 @@ public class ShareWithdrawalController {
     @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<ShareWithdrawalResponse> approveWithdrawal(
             @PathVariable UUID withdrawalId,
-            @RequestParam(defaultValue = "system") String actor
+            Authentication authentication
     ) {
+        String actor = memberAccessHelper.currentActor(authentication);
         ShareWithdrawal withdrawal = shareWithdrawalService.approveWithdrawal(withdrawalId, actor);
         return ApiResponse.ok(ShareWithdrawalResponse.from(withdrawal), "Share withdrawal approved successfully");
     }
@@ -62,15 +67,19 @@ public class ShareWithdrawalController {
     @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<ShareWithdrawalResponse> processWithdrawal(
             @PathVariable UUID withdrawalId,
-            @RequestParam(defaultValue = "system") String actor
+            Authentication authentication
     ) {
+        String actor = memberAccessHelper.currentActor(authentication);
         ShareWithdrawal withdrawal = shareWithdrawalService.processWithdrawal(withdrawalId, actor);
         return ApiResponse.ok(ShareWithdrawalResponse.from(withdrawal), "Share withdrawal processed successfully");
     }
 
     @GetMapping("/{withdrawalId}")
-    public ApiResponse<ShareWithdrawalResponse> getWithdrawalById(@PathVariable UUID withdrawalId) {
+    public ApiResponse<ShareWithdrawalResponse> getWithdrawalById(
+            @PathVariable UUID withdrawalId,
+            Authentication authentication) {
         ShareWithdrawal withdrawal = shareWithdrawalService.getWithdrawalById(withdrawalId);
+        memberAccessHelper.assertAccessToMember(withdrawal.getMemberId(), authentication);
         return ApiResponse.ok(ShareWithdrawalResponse.from(withdrawal));
     }
 
@@ -78,8 +87,10 @@ public class ShareWithdrawalController {
     public ApiResponse<CursorPage<ShareWithdrawalResponse>> getWithdrawalsByMember(
             @PathVariable UUID memberId,
             @RequestParam(required = false) String cursor,
-            @RequestParam(defaultValue = "20") int limit
+            @RequestParam(defaultValue = "20") int limit,
+            Authentication authentication
     ) {
+        memberAccessHelper.assertAccessToMember(memberId, authentication);
         CursorPage<ShareWithdrawal> withdrawalPage = shareWithdrawalService.getWithdrawalsByMember(
                 memberId, cursor, limit
         );
@@ -92,6 +103,7 @@ public class ShareWithdrawalController {
     }
 
     @GetMapping("/status/{status}")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<CursorPage<ShareWithdrawalResponse>> getWithdrawalsByStatus(
             @PathVariable ShareWithdrawalStatus status,
             @RequestParam(required = false) String cursor,

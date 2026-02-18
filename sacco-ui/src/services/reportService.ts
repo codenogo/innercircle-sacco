@@ -29,12 +29,3 @@ export function exportFinancialSummaryCsvUrl(fromDate: string, toDate: string): 
   return `/api/v1/export/financial-summary/csv?${params}`
 }
 
-export async function downloadExport(url: string, token: string): Promise<Blob> {
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  if (!response.ok) {
-    throw new Error(`Export failed with status ${response.status}`)
-  }
-  return response.blob()
-}

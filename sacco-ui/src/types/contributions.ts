@@ -5,7 +5,7 @@ export interface ContributionResponse {
   id: string
   memberId: string
   amount: number
-  category: string
+  category: ContributionCategoryResponse
   paymentMode: PaymentMode
   contributionMonth: string
   status: ContributionStatus
@@ -35,15 +35,36 @@ export interface RecordContributionRequest {
   notes?: string
 }
 
+export interface BulkContributionItemRequest {
+  memberId: string
+  amount: number
+  paymentMode?: PaymentMode
+  contributionMonth?: string
+  contributionDate?: string
+  referenceNumber?: string
+  notes?: string
+}
+
 export interface BulkContributionRequest {
-  contributions: RecordContributionRequest[]
+  paymentMode: PaymentMode
+  contributionMonth: string
+  contributionDate: string
+  categoryId: string
+  batchReference?: string
+  contributions: BulkContributionItemRequest[]
+}
+
+export interface ContributionCategoryRequest {
+  name: string
+  description?: string
+  active?: boolean
+  isMandatory?: boolean
 }
 
 export interface ContributionCategoryResponse {
   id: string
   name: string
   description: string
-  mandatory: boolean
+  isMandatory: boolean
   active: boolean
-  createdAt: string
 }

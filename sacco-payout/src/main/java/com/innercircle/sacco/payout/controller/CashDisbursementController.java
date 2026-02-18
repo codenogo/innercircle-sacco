@@ -2,6 +2,7 @@ package com.innercircle.sacco.payout.controller;
 
 import com.innercircle.sacco.common.dto.ApiResponse;
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.security.MemberAccessHelper;
 import com.innercircle.sacco.payout.dto.CashDisbursementRequest;
 import com.innercircle.sacco.payout.dto.CashDisbursementResponse;
 import com.innercircle.sacco.payout.entity.CashDisbursement;
@@ -10,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,14 +33,16 @@ import java.util.UUID;
 public class CashDisbursementController {
 
     private final CashDisbursementService cashDisbursementService;
+    private final MemberAccessHelper memberAccessHelper;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<CashDisbursementResponse> recordDisbursement(
             @Valid @RequestBody CashDisbursementRequest request,
-            @RequestParam(defaultValue = "system") String actor
+            Authentication authentication
     ) {
+        String actor = memberAccessHelper.currentActor(authentication);
         CashDisbursement disbursement = cashDisbursementService.recordDisbursement(
                 request.memberId(),
                 request.amount(),
@@ -55,21 +59,28 @@ public class CashDisbursementController {
     @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<CashDisbursementResponse> signoff(
             @PathVariable UUID disbursementId,
-            @RequestParam String signoffBy
+            Authentication authentication
     ) {
+        String signoffBy = memberAccessHelper.currentActor(authentication);
         CashDisbursement disbursement = cashDisbursementService.signoff(disbursementId, signoffBy);
         return ApiResponse.ok(CashDisbursementResponse.from(disbursement), "Cash disbursement signed off successfully");
     }
 
     @GetMapping("/{disbursementId}")
-    public ApiResponse<CashDisbursementResponse> getDisbursementById(@PathVariable UUID disbursementId) {
+    public ApiResponse<CashDisbursementResponse> getDisbursementById(
+            @PathVariable UUID disbursementId,
+            Authentication authentication) {
         CashDisbursement disbursement = cashDisbursementService.getDisbursementById(disbursementId);
+        memberAccessHelper.assertAccessToMember(disbursement.getMemberId(), authentication);
         return ApiResponse.ok(CashDisbursementResponse.from(disbursement));
     }
 
     @GetMapping("/receipt/{receiptNumber}")
-    public ApiResponse<CashDisbursementResponse> getDisbursementByReceipt(@PathVariable String receiptNumber) {
+    public ApiResponse<CashDisbursementResponse> getDisbursementByReceipt(
+            @PathVariable String receiptNumber,
+            Authentication authentication) {
         CashDisbursement disbursement = cashDisbursementService.getDisbursementByReceipt(receiptNumber);
+        memberAccessHelper.assertAccessToMember(disbursement.getMemberId(), authentication);
         return ApiResponse.ok(CashDisbursementResponse.from(disbursement));
     }
 
@@ -77,8 +88,10 @@ public class CashDisbursementController {
     public ApiResponse<CursorPage<CashDisbursementResponse>> getDisbursementHistory(
             @PathVariable UUID memberId,
             @RequestParam(required = false) String cursor,
-            @RequestParam(defaultValue = "20") int limit
+            @RequestParam(defaultValue = "20") int limit,
+            Authentication authentication
     ) {
+        memberAccessHelper.assertAccessToMember(memberId, authentication);
         CursorPage<CashDisbursement> disbursementPage = cashDisbursementService.getDisbursementHistory(
                 memberId, cursor, limit
         );
@@ -91,6 +104,7 @@ public class CashDisbursementController {
     }
 
     @GetMapping("/date-range")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<CursorPage<CashDisbursementResponse>> getDisbursementsByDateRange(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,

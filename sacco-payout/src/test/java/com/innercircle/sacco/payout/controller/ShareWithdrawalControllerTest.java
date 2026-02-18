@@ -2,6 +2,7 @@ package com.innercircle.sacco.payout.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.security.MemberAccessHelper;
 import com.innercircle.sacco.payout.dto.ShareWithdrawalRequest;
 import com.innercircle.sacco.payout.entity.ShareWithdrawal;
 import com.innercircle.sacco.payout.entity.ShareWithdrawal.ShareWithdrawalStatus;
@@ -47,6 +48,9 @@ class ShareWithdrawalControllerTest {
     @MockitoBean
     private ShareWithdrawalService shareWithdrawalService;
 
+    @MockitoBean
+    private MemberAccessHelper memberAccessHelper;
+
     private UUID memberId;
     private UUID withdrawalId;
     private ShareWithdrawal testWithdrawal;
@@ -62,6 +66,8 @@ class ShareWithdrawalControllerTest {
         testWithdrawal.setStatus(ShareWithdrawalStatus.PENDING);
         testWithdrawal.setCreatedAt(Instant.now());
         testWithdrawal.setUpdatedAt(Instant.now());
+
+        when(memberAccessHelper.currentActor(any())).thenReturn("admin");
     }
 
     @Nested
@@ -82,8 +88,7 @@ class ShareWithdrawalControllerTest {
 
             mockMvc.perform(post("/api/v1/share-withdrawals")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request))
-                            .param("actor", "admin"))
+                            .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.id").value(withdrawalId.toString()))
@@ -97,7 +102,7 @@ class ShareWithdrawalControllerTest {
         void shouldUseDefaultActor() throws Exception {
             when(shareWithdrawalService.requestWithdrawal(
                     any(UUID.class), any(BigDecimal.class), any(ShareWithdrawalType.class),
-                    any(BigDecimal.class), eq("system")
+                    any(BigDecimal.class), eq("admin")
             )).thenReturn(testWithdrawal);
 
             ShareWithdrawalRequest request = new ShareWithdrawalRequest(
@@ -123,8 +128,7 @@ class ShareWithdrawalControllerTest {
             when(shareWithdrawalService.approveWithdrawal(eq(withdrawalId), eq("admin")))
                     .thenReturn(testWithdrawal);
 
-            mockMvc.perform(put("/api/v1/share-withdrawals/{withdrawalId}/approve", withdrawalId)
-                            .param("actor", "admin"))
+            mockMvc.perform(put("/api/v1/share-withdrawals/{withdrawalId}/approve", withdrawalId))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.status").value("APPROVED"))
@@ -144,8 +148,7 @@ class ShareWithdrawalControllerTest {
             when(shareWithdrawalService.processWithdrawal(eq(withdrawalId), eq("admin")))
                     .thenReturn(testWithdrawal);
 
-            mockMvc.perform(put("/api/v1/share-withdrawals/{withdrawalId}/process", withdrawalId)
-                            .param("actor", "admin"))
+            mockMvc.perform(put("/api/v1/share-withdrawals/{withdrawalId}/process", withdrawalId))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.status").value("PROCESSED"))
