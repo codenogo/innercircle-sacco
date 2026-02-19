@@ -1,9 +1,7 @@
 package com.innercircle.sacco.payout.entity;
 
-public enum WithdrawalStatus {
+public enum CashDisbursementStatus {
     PENDING,
     APPROVED,
-    PROCESSING,
-    COMPLETED,
-    FAILED
+    RECORDED
 }

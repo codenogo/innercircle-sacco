@@ -1,6 +1,7 @@
 package com.innercircle.sacco.payout.dto;
 
 import com.innercircle.sacco.payout.entity.CashDisbursement;
+import com.innercircle.sacco.payout.entity.CashDisbursementStatus;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -16,6 +17,9 @@ public record CashDisbursementResponse(
         String signoffBy,
         String receiptNumber,
         LocalDate disbursementDate,
+        CashDisbursementStatus status,
+        String approvedBy,
+        Instant approvedAt,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -29,6 +33,9 @@ public record CashDisbursementResponse(
                 disbursement.getSignoffBy(),
                 disbursement.getReceiptNumber(),
                 disbursement.getDisbursementDate(),
+                disbursement.getStatus(),
+                disbursement.getApprovedBy(),
+                disbursement.getApprovedAt(),
                 disbursement.getCreatedAt(),
                 disbursement.getUpdatedAt()
         );

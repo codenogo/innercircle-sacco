@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: payout-003
+      author: system
+      changes:
+        - addColumn:
+            tableName: bank_withdrawals
+            columns:
+              - column:
+                  name: approved_by
+                  type: varchar(255)
+              - column:
+                  name: approved_at
+                  type: timestamp

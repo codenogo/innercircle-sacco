@@ -3,6 +3,7 @@ package com.innercircle.sacco.payout.controller;
 import com.innercircle.sacco.common.dto.ApiResponse;
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.security.MemberAccessHelper;
+import com.innercircle.sacco.payout.dto.ApproveCashDisbursementRequest;
 import com.innercircle.sacco.payout.dto.CashDisbursementRequest;
 import com.innercircle.sacco.payout.dto.CashDisbursementResponse;
 import com.innercircle.sacco.payout.entity.CashDisbursement;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -52,6 +54,35 @@ public class CashDisbursementController {
                 request.disbursementDate(),
                 actor
         );
+        return ApiResponse.ok(CashDisbursementResponse.from(disbursement), "Cash disbursement recorded successfully");
+    }
+
+    @PutMapping("/{disbursementId}/approve")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
+    public ApiResponse<CashDisbursementResponse> approveDisbursement(
+            @PathVariable UUID disbursementId,
+            @RequestBody(required = false) ApproveCashDisbursementRequest request,
+            Authentication authentication
+    ) {
+        String actor = memberAccessHelper.currentActor(authentication);
+        boolean isAdmin = authentication != null && authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch("ROLE_ADMIN"::equals);
+        String overrideReason = request != null ? request.overrideReason() : null;
+        CashDisbursement disbursement = cashDisbursementService.approveDisbursement(
+                disbursementId, actor, overrideReason, isAdmin
+        );
+        return ApiResponse.ok(CashDisbursementResponse.from(disbursement), "Cash disbursement approved successfully");
+    }
+
+    @PutMapping("/{disbursementId}/record")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
+    public ApiResponse<CashDisbursementResponse> recordDisbursementComplete(
+            @PathVariable UUID disbursementId,
+            Authentication authentication
+    ) {
+        String actor = memberAccessHelper.currentActor(authentication);
+        CashDisbursement disbursement = cashDisbursementService.completeDisbursement(disbursementId, actor);
         return ApiResponse.ok(CashDisbursementResponse.from(disbursement), "Cash disbursement recorded successfully");
     }
 

@@ -118,7 +118,7 @@ class PayoutControllerTest {
         void shouldApprovePayoutAndReturn200() throws Exception {
             testPayout.setStatus(PayoutStatus.APPROVED);
             testPayout.setApprovedBy("admin");
-            when(payoutService.approvePayout(eq(payoutId), eq("admin"))).thenReturn(testPayout);
+            when(payoutService.approvePayout(eq(payoutId), eq("admin"), isNull(), eq(false))).thenReturn(testPayout);
 
             mockMvc.perform(put("/api/v1/payouts/{payoutId}/approve", payoutId))
                     .andExpect(status().isOk())

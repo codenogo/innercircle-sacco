@@ -12,6 +12,8 @@ public interface BankWithdrawalService {
     BankWithdrawal initiateWithdrawal(UUID memberId, BigDecimal amount, String bankName,
                                      String accountNumber, String actor);
 
+    BankWithdrawal approveWithdrawal(UUID withdrawalId, String actor, String overrideReason, boolean isAdmin);
+
     BankWithdrawal confirmWithdrawal(UUID withdrawalId, String referenceNumber, String actor);
 
     BankWithdrawal markReconciled(UUID withdrawalId, String actor);

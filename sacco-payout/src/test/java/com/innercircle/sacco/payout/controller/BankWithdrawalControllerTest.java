@@ -3,6 +3,7 @@ package com.innercircle.sacco.payout.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.security.MemberAccessHelper;
+import com.innercircle.sacco.payout.dto.ApproveBankWithdrawalRequest;
 import com.innercircle.sacco.payout.dto.BankWithdrawalRequest;
 import com.innercircle.sacco.payout.entity.BankWithdrawal;
 import com.innercircle.sacco.payout.entity.WithdrawalStatus;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -115,11 +117,35 @@ class BankWithdrawalControllerTest {
     }
 
     @Nested
+    @DisplayName("PUT /api/v1/bank-withdrawals/{withdrawalId}/approve")
+    class ApproveWithdrawalTests {
+
+        @Test
+        @DisplayName("should approve withdrawal and return 200")
+        void shouldApproveWithdrawalAndReturn200() throws Exception {
+            testWithdrawal.setStatus(WithdrawalStatus.APPROVED);
+            testWithdrawal.setApprovedBy("admin");
+            when(bankWithdrawalService.approveWithdrawal(eq(withdrawalId), eq("admin"), any(), anyBoolean()))
+                    .thenReturn(testWithdrawal);
+
+            ApproveBankWithdrawalRequest request = new ApproveBankWithdrawalRequest(null);
+
+            mockMvc.perform(put("/api/v1/bank-withdrawals/{withdrawalId}/approve", withdrawalId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.status").value("APPROVED"))
+                    .andExpect(jsonPath("$.message").value("Bank withdrawal approved successfully"));
+        }
+    }
+
+    @Nested
     @DisplayName("PUT /api/v1/bank-withdrawals/{withdrawalId}/confirm")
     class ConfirmWithdrawalTests {
 
         @Test
-        @DisplayName("should confirm withdrawal and return 200")
+        @DisplayName("should confirm an APPROVED withdrawal and return 200")
         void shouldConfirmWithdrawalAndReturn200() throws Exception {
             testWithdrawal.setStatus(WithdrawalStatus.COMPLETED);
             testWithdrawal.setReferenceNumber("REF-001");

@@ -81,6 +81,10 @@ databaseChangeLog:
   # Payout module
   - include:
       file: db/changelog/payout/001-create-payout-tables.yaml
+  - include:
+      file: db/changelog/payout/003-bank-withdrawal-add-approval.yaml
+  - include:
+      file: db/changelog/payout/004-cash-disbursement-add-status-workflow.yaml
 
   # Common cross-cutting migrations
   - include:

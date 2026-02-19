@@ -4,6 +4,7 @@ import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.event.PayoutProcessedEvent;
 import com.innercircle.sacco.common.event.PayoutStatusChangeEvent;
 import com.innercircle.sacco.common.exception.InvalidStateTransitionException;
+import com.innercircle.sacco.common.exception.MakerCheckerViolationException;
 import com.innercircle.sacco.payout.entity.Payout;
 import com.innercircle.sacco.payout.entity.PayoutStatus;
 import com.innercircle.sacco.payout.entity.PayoutType;
@@ -170,16 +171,17 @@ class PayoutServiceImplTest {
     class ApprovePayoutTests {
 
         @Test
-        @DisplayName("should approve a PENDING payout")
+        @DisplayName("should approve a PENDING payout by a different user")
         void shouldApprovePendingPayout() {
             Payout pendingPayout = createTestPayout(PayoutStatus.PENDING);
+            pendingPayout.setCreatedBy("treasurer");
             when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(pendingPayout));
 
             Payout approvedPayout = createTestPayout(PayoutStatus.APPROVED);
             approvedPayout.setApprovedBy("admin");
             when(payoutRepository.save(any(Payout.class))).thenReturn(approvedPayout);
 
-            Payout result = payoutService.approvePayout(payoutId, "admin");
+            Payout result = payoutService.approvePayout(payoutId, "admin", null, false);
 
             verify(payoutRepository).save(payoutCaptor.capture());
             Payout capturedPayout = payoutCaptor.getValue();
@@ -189,23 +191,68 @@ class PayoutServiceImplTest {
         }
 
         @Test
-        @DisplayName("should publish PayoutStatusChangeEvent with APPROVED action")
-        void shouldPublishPayoutStatusChangeEventOnApprove() {
+        @DisplayName("should throw MakerCheckerViolationException when creator tries to approve")
+        void shouldThrowWhenCreatorApprovesOwnPayout() {
             Payout pendingPayout = createTestPayout(PayoutStatus.PENDING);
+            pendingPayout.setCreatedBy("treasurer");
+            when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(pendingPayout));
+
+            assertThatThrownBy(() -> payoutService.approvePayout(payoutId, "treasurer", null, false))
+                    .isInstanceOf(MakerCheckerViolationException.class);
+
+            verify(payoutRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should allow ADMIN to override and approve their own payout with reason")
+        void shouldAllowAdminOverrideWithReason() {
+            Payout pendingPayout = createTestPayout(PayoutStatus.PENDING);
+            pendingPayout.setCreatedBy("admin");
             when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(pendingPayout));
 
             Payout approvedPayout = createTestPayout(PayoutStatus.APPROVED);
-            approvedPayout.setApprovedBy("treasurer");
+            approvedPayout.setApprovedBy("admin");
             when(payoutRepository.save(any(Payout.class))).thenReturn(approvedPayout);
 
-            payoutService.approvePayout(payoutId, "treasurer");
+            Payout result = payoutService.approvePayout(payoutId, "admin", "Emergency approval", true);
+
+            assertThat(result.getStatus()).isEqualTo(PayoutStatus.APPROVED);
+            verify(outboxWriter).write(statusChangeEventCaptor.capture(), eq("Payout"), any(UUID.class));
+            assertThat(statusChangeEventCaptor.getValue().action()).isEqualTo("OVERRIDE_APPROVED");
+        }
+
+        @Test
+        @DisplayName("should throw when ADMIN override attempted without reason")
+        void shouldThrowWhenAdminOverrideWithoutReason() {
+            Payout pendingPayout = createTestPayout(PayoutStatus.PENDING);
+            pendingPayout.setCreatedBy("admin");
+            when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(pendingPayout));
+
+            assertThatThrownBy(() -> payoutService.approvePayout(payoutId, "admin", null, true))
+                    .isInstanceOf(MakerCheckerViolationException.class);
+
+            verify(payoutRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should publish PayoutStatusChangeEvent with APPROVED action")
+        void shouldPublishPayoutStatusChangeEventOnApprove() {
+            Payout pendingPayout = createTestPayout(PayoutStatus.PENDING);
+            pendingPayout.setCreatedBy("treasurer");
+            when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(pendingPayout));
+
+            Payout approvedPayout = createTestPayout(PayoutStatus.APPROVED);
+            approvedPayout.setApprovedBy("admin");
+            when(payoutRepository.save(any(Payout.class))).thenReturn(approvedPayout);
+
+            payoutService.approvePayout(payoutId, "admin", null, false);
 
             verify(outboxWriter).write(statusChangeEventCaptor.capture(), eq("Payout"), any(UUID.class));
             PayoutStatusChangeEvent event = statusChangeEventCaptor.getValue();
             assertThat(event.payoutId()).isEqualTo(approvedPayout.getId());
             assertThat(event.memberId()).isEqualTo(approvedPayout.getMemberId());
             assertThat(event.action()).isEqualTo("APPROVED");
-            assertThat(event.actor()).isEqualTo("treasurer");
+            assertThat(event.actor()).isEqualTo("admin");
         }
 
         @Test
@@ -213,7 +260,7 @@ class PayoutServiceImplTest {
         void shouldThrowWhenPayoutNotFound() {
             when(payoutRepository.findById(payoutId)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> payoutService.approvePayout(payoutId, "admin"))
+            assertThatThrownBy(() -> payoutService.approvePayout(payoutId, "admin", null, false))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Payout not found");
         }
@@ -224,7 +271,7 @@ class PayoutServiceImplTest {
             Payout approvedPayout = createTestPayout(PayoutStatus.APPROVED);
             when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(approvedPayout));
 
-            assertThatThrownBy(() -> payoutService.approvePayout(payoutId, "admin"))
+            assertThatThrownBy(() -> payoutService.approvePayout(payoutId, "admin", null, false))
                     .isInstanceOf(InvalidStateTransitionException.class);
 
             verify(payoutRepository, never()).save(any());
@@ -236,7 +283,7 @@ class PayoutServiceImplTest {
             Payout processedPayout = createTestPayout(PayoutStatus.PROCESSED);
             when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(processedPayout));
 
-            assertThatThrownBy(() -> payoutService.approvePayout(payoutId, "admin"))
+            assertThatThrownBy(() -> payoutService.approvePayout(payoutId, "admin", null, false))
                     .isInstanceOf(InvalidStateTransitionException.class);
 
             verify(payoutRepository, never()).save(any());
@@ -248,7 +295,7 @@ class PayoutServiceImplTest {
             Payout failedPayout = createTestPayout(PayoutStatus.FAILED);
             when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(failedPayout));
 
-            assertThatThrownBy(() -> payoutService.approvePayout(payoutId, "admin"))
+            assertThatThrownBy(() -> payoutService.approvePayout(payoutId, "admin", null, false))
                     .isInstanceOf(InvalidStateTransitionException.class);
         }
     }

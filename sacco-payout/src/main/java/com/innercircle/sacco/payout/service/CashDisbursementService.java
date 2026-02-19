@@ -13,6 +13,11 @@ public interface CashDisbursementService {
                                        String disbursedBy, String receiptNumber,
                                        LocalDate disbursementDate, String actor);
 
+    CashDisbursement approveDisbursement(UUID disbursementId, String actor,
+                                        String overrideReason, boolean isAdmin);
+
+    CashDisbursement completeDisbursement(UUID disbursementId, String actor);
+
     CashDisbursement signoff(UUID disbursementId, String signoffBy);
 
     CursorPage<CashDisbursement> getDisbursementHistory(UUID memberId, String cursor, int limit);

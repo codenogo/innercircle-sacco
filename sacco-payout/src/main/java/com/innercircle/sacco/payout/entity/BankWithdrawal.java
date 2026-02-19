@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -46,6 +47,11 @@ public class BankWithdrawal extends BaseEntity {
 
     @Column(nullable = false)
     private boolean reconciled;
+
+    @Column(length = 255)
+    private String approvedBy;
+
+    private Instant approvedAt;
 
     public BankWithdrawal(UUID memberId, BigDecimal amount, String bankName, String accountNumber) {
         this.memberId = memberId;

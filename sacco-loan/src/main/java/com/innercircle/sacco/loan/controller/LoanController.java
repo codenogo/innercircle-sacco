@@ -3,6 +3,7 @@ package com.innercircle.sacco.loan.controller;
 import com.innercircle.sacco.common.dto.ApiResponse;
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.security.MemberAccessHelper;
+import com.innercircle.sacco.loan.dto.ApproveLoanRequest;
 import com.innercircle.sacco.loan.dto.LoanApplicationRequest;
 import com.innercircle.sacco.loan.dto.LoanResponse;
 import com.innercircle.sacco.loan.dto.LoanSummaryResponse;
@@ -54,13 +55,17 @@ public class LoanController {
     @PostMapping("/apply")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
-    public ApiResponse<LoanResponse> applyForLoan(@Valid @RequestBody LoanApplicationRequest request) {
+    public ApiResponse<LoanResponse> applyForLoan(
+            @Valid @RequestBody LoanApplicationRequest request,
+            Authentication authentication) {
+        String actor = memberAccessHelper.currentActor(authentication);
         LoanApplication loan = loanService.applyForLoan(
                 request.getMemberId(),
                 request.getLoanProductId(),
                 request.getPrincipalAmount(),
                 request.getTermMonths(),
-                request.getPurpose()
+                request.getPurpose(),
+                actor
         );
         return ApiResponse.ok(LoanResponse.from(loan), "Loan application submitted successfully");
     }
@@ -69,9 +74,14 @@ public class LoanController {
     @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<LoanResponse> approveLoan(
             @PathVariable UUID id,
+            @RequestBody(required = false) ApproveLoanRequest request,
             Authentication authentication) {
         UUID approvedBy = memberAccessHelper.resolveCurrentUserId(authentication);
-        LoanApplication loan = loanService.approveLoan(id, approvedBy);
+        String actor = memberAccessHelper.currentActor(authentication);
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        String overrideReason = request != null ? request.getOverrideReason() : null;
+        LoanApplication loan = loanService.approveLoan(id, approvedBy, actor, overrideReason, isAdmin);
         return ApiResponse.ok(LoanResponse.from(loan), "Loan approved successfully");
     }
 
@@ -79,9 +89,14 @@ public class LoanController {
     @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<LoanResponse> rejectLoan(
             @PathVariable UUID id,
+            @RequestBody(required = false) ApproveLoanRequest request,
             Authentication authentication) {
         UUID rejectedBy = memberAccessHelper.resolveCurrentUserId(authentication);
-        LoanApplication loan = loanService.rejectLoan(id, rejectedBy);
+        String actor = memberAccessHelper.currentActor(authentication);
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        String overrideReason = request != null ? request.getOverrideReason() : null;
+        LoanApplication loan = loanService.rejectLoan(id, rejectedBy, actor, overrideReason, isAdmin);
         return ApiResponse.ok(LoanResponse.from(loan), "Loan rejected");
     }
 

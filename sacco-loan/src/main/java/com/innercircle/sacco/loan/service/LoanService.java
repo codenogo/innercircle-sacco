@@ -11,11 +11,13 @@ import java.util.UUID;
 public interface LoanService {
 
     LoanApplication applyForLoan(UUID memberId, UUID loanProductId, BigDecimal principalAmount,
-                                  Integer termMonths, String purpose);
+                                  Integer termMonths, String purpose, String actor);
 
-    LoanApplication approveLoan(UUID loanId, UUID approvedBy);
+    LoanApplication approveLoan(UUID loanId, UUID approvedBy, String actor,
+                                 String overrideReason, boolean isAdmin);
 
-    LoanApplication rejectLoan(UUID loanId, UUID rejectedBy);
+    LoanApplication rejectLoan(UUID loanId, UUID rejectedBy, String actor,
+                                String overrideReason, boolean isAdmin);
 
     LoanApplication disburseLoan(UUID loanId, String actor);
 

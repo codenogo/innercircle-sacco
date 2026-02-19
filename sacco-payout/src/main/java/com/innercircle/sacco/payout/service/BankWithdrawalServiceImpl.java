@@ -1,8 +1,10 @@
 package com.innercircle.sacco.payout.service;
 
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.guard.MakerCheckerGuard;
 import com.innercircle.sacco.payout.entity.BankWithdrawal;
 import com.innercircle.sacco.payout.entity.WithdrawalStatus;
+import com.innercircle.sacco.payout.event.BankWithdrawalApprovedEvent;
 import com.innercircle.sacco.payout.event.BankWithdrawalConfirmedEvent;
 import com.innercircle.sacco.payout.event.BankWithdrawalInitiatedEvent;
 import com.innercircle.sacco.payout.repository.BankWithdrawalRepository;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -47,12 +50,44 @@ public class BankWithdrawalServiceImpl implements BankWithdrawalService {
 
     @Override
     @Transactional
-    public BankWithdrawal confirmWithdrawal(UUID withdrawalId, String referenceNumber, String actor) {
+    public BankWithdrawal approveWithdrawal(UUID withdrawalId, String actor, String overrideReason, boolean isAdmin) {
         BankWithdrawal withdrawal = withdrawalRepository.findById(withdrawalId)
                 .orElseThrow(() -> new IllegalArgumentException("Withdrawal not found: " + withdrawalId));
 
         if (withdrawal.getStatus() != WithdrawalStatus.PENDING) {
-            throw new IllegalStateException("Only pending withdrawals can be confirmed");
+            throw new IllegalStateException("Only pending withdrawals can be approved");
+        }
+
+        MakerCheckerGuard.assertOrOverride(
+                withdrawal.getCreatedBy(), actor, overrideReason, isAdmin,
+                "BankWithdrawal", withdrawal.getId()
+        );
+
+        withdrawal.setStatus(WithdrawalStatus.APPROVED);
+        withdrawal.setApprovedBy(actor);
+        withdrawal.setApprovedAt(Instant.now());
+
+        BankWithdrawal savedWithdrawal = withdrawalRepository.save(withdrawal);
+
+        outboxWriter.write(new BankWithdrawalApprovedEvent(
+                savedWithdrawal.getId(),
+                savedWithdrawal.getMemberId(),
+                savedWithdrawal.getAmount(),
+                UUID.randomUUID(),
+                actor
+        ), "BankWithdrawal", savedWithdrawal.getId());
+
+        return savedWithdrawal;
+    }
+
+    @Override
+    @Transactional
+    public BankWithdrawal confirmWithdrawal(UUID withdrawalId, String referenceNumber, String actor) {
+        BankWithdrawal withdrawal = withdrawalRepository.findById(withdrawalId)
+                .orElseThrow(() -> new IllegalArgumentException("Withdrawal not found: " + withdrawalId));
+
+        if (withdrawal.getStatus() != WithdrawalStatus.APPROVED) {
+            throw new IllegalStateException("Only approved withdrawals can be confirmed");
         }
 
         withdrawal.setStatus(WithdrawalStatus.COMPLETED);
