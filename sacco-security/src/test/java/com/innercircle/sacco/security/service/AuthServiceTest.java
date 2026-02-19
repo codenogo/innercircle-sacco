@@ -32,6 +32,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -178,14 +180,23 @@ class AuthServiceTest {
                     .expiresAt(Instant.now().plusSeconds(86400))
                     .revoked(false)
                     .build();
+            existingToken.setId(UUID.randomUUID());
 
             UserAccount userAccount = createUserAccount(userId, "testuser", true, true, "MEMBER");
 
             when(refreshTokenRepository.findByToken("valid-refresh-token")).thenReturn(Optional.of(existingToken));
+            when(refreshTokenRepository.rotateIfActive(any(UUID.class), any(UUID.class), any(Instant.class), any(Instant.class)))
+                    .thenReturn(1);
             when(userAccountRepository.findById(userId)).thenReturn(Optional.of(userAccount));
             when(jwtService.generateAccessToken(userAccount)).thenReturn("new-access-token");
             when(jwtService.generateRefreshToken()).thenReturn("new-refresh-token");
-            when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(inv -> {
+                RefreshToken token = inv.getArgument(0);
+                if (token.getId() == null) {
+                    token.setId(UUID.randomUUID());
+                }
+                return token;
+            });
 
             LoginResponse response = authService.refreshAccessToken(request);
 
@@ -193,7 +204,12 @@ class AuthServiceTest {
             assertThat(response.refreshToken()).isEqualTo("new-refresh-token");
             assertThat(response.tokenType()).isEqualTo("Bearer");
             assertThat(response.expiresIn()).isEqualTo(3600L);
-            assertThat(existingToken.getRevoked()).isTrue();
+            verify(refreshTokenRepository).rotateIfActive(
+                    eq(existingToken.getId()),
+                    any(UUID.class),
+                    any(Instant.class),
+                    any(Instant.class)
+            );
         }
 
         @Test
@@ -235,11 +251,150 @@ class AuthServiceTest {
         }
 
         @Test
+        @DisplayName("should return latest token when already-revoked token is retried within grace period")
+        void shouldReturnLatestTokenWhenAlreadyRevokedTokenRetriedWithinGracePeriod() {
+            RefreshTokenRequest request = new RefreshTokenRequest("revoked-token");
+            UUID userId = UUID.randomUUID();
+            UUID replacementTokenId = UUID.randomUUID();
+
+            RefreshToken revokedToken = RefreshToken.builder()
+                    .userId(userId)
+                    .token("revoked-token")
+                    .expiresAt(Instant.now().plusSeconds(86400))
+                    .revoked(true)
+                    .replacedByTokenId(replacementTokenId)
+                    .revokedAt(Instant.now())
+                    .build();
+
+            RefreshToken replacementToken = RefreshToken.builder()
+                    .userId(userId)
+                    .token("replacement-refresh-token")
+                    .expiresAt(Instant.now().plusSeconds(86400))
+                    .revoked(false)
+                    .build();
+            replacementToken.setId(replacementTokenId);
+
+            UserAccount userAccount = createUserAccount(userId, "testuser", true, true, "MEMBER");
+
+            when(refreshTokenRepository.findByToken("revoked-token")).thenReturn(Optional.of(revokedToken));
+            when(refreshTokenRepository.findById(replacementTokenId)).thenReturn(Optional.of(replacementToken));
+            when(userAccountRepository.findById(userId)).thenReturn(Optional.of(userAccount));
+            when(jwtService.generateAccessToken(userAccount)).thenReturn("new-access-token");
+
+            LoginResponse response = authService.refreshAccessToken(request);
+
+            assertThat(response.accessToken()).isEqualTo("new-access-token");
+            assertThat(response.refreshToken()).isEqualTo("replacement-refresh-token");
+            verify(refreshTokenRepository, never()).rotateIfActive(any(UUID.class), any(UUID.class), any(Instant.class), any(Instant.class));
+        }
+
+        @Test
         @DisplayName("should throw BadCredentialsException when refresh token is unknown")
         void shouldThrowWhenRefreshTokenUnknown() {
             RefreshTokenRequest request = new RefreshTokenRequest("unknown-token");
 
             when(refreshTokenRepository.findByToken("unknown-token")).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> authService.refreshAccessToken(request))
+                    .isInstanceOf(BadCredentialsException.class)
+                    .hasMessage("Invalid refresh token");
+        }
+
+        @Test
+        @DisplayName("should return latest token when refresh token is consumed concurrently")
+        void shouldReturnLatestTokenWhenRefreshTokenConsumedConcurrently() {
+            RefreshTokenRequest request = new RefreshTokenRequest("valid-refresh-token");
+            UUID userId = UUID.randomUUID();
+            UUID originalTokenId = UUID.randomUUID();
+            UUID replacementTokenId = UUID.randomUUID();
+
+            RefreshToken existingToken = RefreshToken.builder()
+                    .userId(userId)
+                    .token("valid-refresh-token")
+                    .expiresAt(Instant.now().plusSeconds(86400))
+                    .revoked(false)
+                    .build();
+            existingToken.setId(originalTokenId);
+
+            RefreshToken rotatedTokenState = RefreshToken.builder()
+                    .userId(userId)
+                    .token("valid-refresh-token")
+                    .expiresAt(Instant.now().plusSeconds(86400))
+                    .revoked(true)
+                    .replacedByTokenId(replacementTokenId)
+                    .revokedAt(Instant.now())
+                    .build();
+            rotatedTokenState.setId(originalTokenId);
+
+            RefreshToken replacementToken = RefreshToken.builder()
+                    .userId(userId)
+                    .token("replacement-refresh-token")
+                    .expiresAt(Instant.now().plusSeconds(86400))
+                    .revoked(false)
+                    .build();
+            replacementToken.setId(replacementTokenId);
+
+            UserAccount userAccount = createUserAccount(userId, "testuser", true, true, "MEMBER");
+
+            when(refreshTokenRepository.findByToken("valid-refresh-token")).thenReturn(Optional.of(existingToken));
+            when(refreshTokenRepository.rotateIfActive(any(UUID.class), any(UUID.class), any(Instant.class), any(Instant.class)))
+                    .thenReturn(0);
+            when(refreshTokenRepository.findById(originalTokenId)).thenReturn(Optional.of(rotatedTokenState));
+            when(refreshTokenRepository.findById(replacementTokenId)).thenReturn(Optional.of(replacementToken));
+            when(userAccountRepository.findById(userId)).thenReturn(Optional.of(userAccount));
+            when(jwtService.generateAccessToken(userAccount)).thenReturn("new-access-token");
+            when(jwtService.generateRefreshToken()).thenReturn("unused-refresh-token");
+            when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(inv -> {
+                RefreshToken token = inv.getArgument(0);
+                if (token.getId() == null) {
+                    token.setId(UUID.randomUUID());
+                }
+                return token;
+            });
+
+            LoginResponse response = authService.refreshAccessToken(request);
+
+            assertThat(response.accessToken()).isEqualTo("new-access-token");
+            assertThat(response.refreshToken()).isEqualTo("replacement-refresh-token");
+        }
+
+        @Test
+        @DisplayName("should throw BadCredentialsException when consumed token is retried after grace period")
+        void shouldThrowWhenConsumedTokenRetriedAfterGracePeriod() {
+            RefreshTokenRequest request = new RefreshTokenRequest("valid-refresh-token");
+            UUID originalTokenId = UUID.randomUUID();
+            UUID replacementTokenId = UUID.randomUUID();
+
+            RefreshToken existingToken = RefreshToken.builder()
+                    .userId(UUID.randomUUID())
+                    .token("valid-refresh-token")
+                    .expiresAt(Instant.now().plusSeconds(86400))
+                    .revoked(false)
+                    .build();
+            existingToken.setId(originalTokenId);
+
+            RefreshToken rotatedTokenState = RefreshToken.builder()
+                    .userId(existingToken.getUserId())
+                    .token("valid-refresh-token")
+                    .expiresAt(Instant.now().plusSeconds(86400))
+                    .revoked(true)
+                    .replacedByTokenId(replacementTokenId)
+                    .revokedAt(Instant.now().minusSeconds(60))
+                    .build();
+            rotatedTokenState.setId(originalTokenId);
+
+            when(refreshTokenRepository.findByToken("valid-refresh-token")).thenReturn(Optional.of(existingToken));
+            when(refreshTokenRepository.rotateIfActive(any(UUID.class), any(UUID.class), any(Instant.class), any(Instant.class)))
+                    .thenReturn(0);
+            when(refreshTokenRepository.findById(originalTokenId)).thenReturn(Optional.of(rotatedTokenState));
+            when(jwtService.generateRefreshToken()).thenReturn("unused-refresh-token");
+            when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(inv -> {
+                RefreshToken token = inv.getArgument(0);
+                if (token.getId() == null) {
+                    token.setId(UUID.randomUUID());
+                }
+                return token;
+            });
 
             assertThatThrownBy(() -> authService.refreshAccessToken(request))
                     .isInstanceOf(BadCredentialsException.class)

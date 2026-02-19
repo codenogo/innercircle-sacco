@@ -152,6 +152,12 @@ class LedgerControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.content").isArray())
+                    .andExpect(jsonPath("$.data.number").value(0))
+                    .andExpect(jsonPath("$.data.size").value(20))
+                    .andExpect(jsonPath("$.data.totalElements").value(1))
+                    .andExpect(jsonPath("$.data.totalPages").value(1))
+                    .andExpect(jsonPath("$.data.first").value(true))
+                    .andExpect(jsonPath("$.data.last").value(true))
                     .andExpect(jsonPath("$.data.content[0].entryNumber").value("JE000001"))
                     .andExpect(jsonPath("$.data.content[0].transactionType").value("CONTRIBUTION"))
                     .andExpect(jsonPath("$.data.content[0].posted").value(true))
@@ -174,7 +180,13 @@ class LedgerControllerTest {
                             .param("size", "10"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.data.content").isArray());
+                    .andExpect(jsonPath("$.data.content").isArray())
+                    .andExpect(jsonPath("$.data.number").value(1))
+                    .andExpect(jsonPath("$.data.size").value(10))
+                    .andExpect(jsonPath("$.data.totalElements").value(11))
+                    .andExpect(jsonPath("$.data.totalPages").value(2))
+                    .andExpect(jsonPath("$.data.first").value(false))
+                    .andExpect(jsonPath("$.data.last").value(true));
         }
 
         @Test
@@ -220,6 +232,12 @@ class LedgerControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.content").isArray())
+                    .andExpect(jsonPath("$.data.number").value(0))
+                    .andExpect(jsonPath("$.data.size").value(0))
+                    .andExpect(jsonPath("$.data.totalElements").value(0))
+                    .andExpect(jsonPath("$.data.totalPages").value(1))
+                    .andExpect(jsonPath("$.data.first").value(true))
+                    .andExpect(jsonPath("$.data.last").value(true))
                     .andExpect(jsonPath("$.data.content.length()").value(0));
         }
     }

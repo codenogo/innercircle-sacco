@@ -34,4 +34,10 @@ public class RefreshToken extends BaseEntity {
     @Column(nullable = false)
     @Builder.Default
     private Boolean revoked = false;
+
+    @Column(name = "replaced_by_token_id")
+    private UUID replacedByTokenId;
+
+    @Column(name = "revoked_at")
+    private Instant revokedAt;
 }

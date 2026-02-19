@@ -24,6 +24,12 @@ import java.util.UUID;
 @Service
 public class FinancialReportServiceImpl implements FinancialReportService {
 
+    private static final String SUM_CONFIRMED_SHARE_CONTRIBUTIONS_SQL =
+            "SELECT COALESCE(SUM(c.amount), 0) " +
+                    "FROM contributions c " +
+                    "JOIN contribution_categories cc ON cc.id = c.category_id " +
+                    "WHERE c.status = 'CONFIRMED' AND UPPER(cc.name) LIKE 'SHARE%'";
+
     private final JdbcTemplate jdbc;
 
     public FinancialReportServiceImpl(JdbcTemplate jdbc) {
@@ -140,7 +146,7 @@ public class FinancialReportServiceImpl implements FinancialReportService {
         long activeMemberCount = queryCount("SELECT COUNT(*) FROM members WHERE status = 'ACTIVE'");
 
         BigDecimal totalShareCapital = querySum(
-                "SELECT COALESCE(SUM(balance), 0) FROM accounts WHERE active = true AND account_code = '2001'");
+                SUM_CONFIRMED_SHARE_CONTRIBUTIONS_SQL);
 
         return new TreasurerDashboardResponse(
                 totalCollections, totalDisbursements, pendingApprovals,
@@ -198,7 +204,7 @@ public class FinancialReportServiceImpl implements FinancialReportService {
         int activeMembers = (int) queryCount("SELECT COUNT(*) FROM members WHERE status = 'ACTIVE'");
 
         BigDecimal totalShareCapital = querySum(
-                "SELECT COALESCE(SUM(balance), 0) FROM accounts WHERE active = true AND account_code = '2001'");
+                SUM_CONFIRMED_SHARE_CONTRIBUTIONS_SQL);
 
         BigDecimal totalOutstandingLoans = querySum(
                 "SELECT COALESCE(SUM(la.principal_amount - COALESCE((SELECT SUM(lr.amount) FROM loan_repayments lr WHERE lr.loan_id = la.id), 0)), 0) " +

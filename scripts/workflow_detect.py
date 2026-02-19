@@ -92,19 +92,53 @@ def _node_commands(dir_path: Path) -> dict[str, str]:
     return cmds
 
 
+def _safe_read_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return ""
+
+
+def _maven_has_spotless(pom_path: Path) -> bool:
+    text = _safe_read_text(pom_path)
+    return "spotless-maven-plugin" in text
+
+
+def _is_maven_aggregator(pom_path: Path) -> bool:
+    text = _safe_read_text(pom_path).lower()
+    if "<packaging>pom</packaging>" in text:
+        return True
+    if "<modules>" in text and "</modules>" in text:
+        return True
+    return False
+
+
+def _gradle_has_spotless(dir_path: Path) -> bool:
+    for name in ("build.gradle", "build.gradle.kts"):
+        path = dir_path / name
+        if path.exists() and "spotless" in _safe_read_text(path).lower():
+            return True
+    return False
+
+
 def _java_commands(dir_path: Path) -> dict[str, str]:
     cmds: dict[str, str] = {}
-    if (dir_path / "pom.xml").exists():
+    pom_path = dir_path / "pom.xml"
+    if pom_path.exists():
+        if _is_maven_aggregator(pom_path):
+            return cmds
         cmds["test"] = "mvn -q test -DskipITs"
         cmds["build"] = "mvn -q -DskipTests package"
-        cmds["format"] = "mvn -q spotless:apply"
-        cmds["lint"] = "mvn -q spotless:check"
+        if _maven_has_spotless(pom_path):
+            cmds["format"] = "mvn -q spotless:apply"
+            cmds["lint"] = "mvn -q spotless:check"
         return cmds
     if (dir_path / "build.gradle").exists() or (dir_path / "build.gradle.kts").exists():
         cmds["test"] = "./gradlew -q test"
         cmds["build"] = "./gradlew -q build -x test"
-        cmds["format"] = "./gradlew -q spotlessApply"
-        cmds["lint"] = "./gradlew -q spotlessCheck"
+        if _gradle_has_spotless(dir_path):
+            cmds["format"] = "./gradlew -q spotlessApply"
+            cmds["lint"] = "./gradlew -q spotlessCheck"
         return cmds
     return cmds
 

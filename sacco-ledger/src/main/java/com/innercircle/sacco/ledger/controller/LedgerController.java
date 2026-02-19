@@ -1,6 +1,7 @@
 package com.innercircle.sacco.ledger.controller;
 
 import com.innercircle.sacco.common.dto.ApiResponse;
+import com.innercircle.sacco.common.dto.PageResponse;
 import com.innercircle.sacco.ledger.dto.BalanceSheetResponse;
 import com.innercircle.sacco.ledger.dto.IncomeStatementResponse;
 import com.innercircle.sacco.ledger.dto.JournalEntryResponse;
@@ -44,7 +45,7 @@ public class LedgerController {
     }
 
     @GetMapping("/journal-entries")
-    public ApiResponse<Page<JournalEntryResponse>> getJournalEntries(
+    public ApiResponse<PageResponse<JournalEntryResponse>> getJournalEntries(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "transactionDate,desc") String sort) {
@@ -59,8 +60,8 @@ public class LedgerController {
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortField));
         Page<JournalEntry> entries = journalEntryRepository.findByPostedTrue(pageable);
 
-        Page<JournalEntryResponse> response = entries.map(this::mapToResponse);
-        return ApiResponse.ok(response);
+        Page<JournalEntryResponse> responsePage = entries.map(this::mapToResponse);
+        return ApiResponse.ok(PageResponse.from(responsePage));
     }
 
     @GetMapping("/trial-balance")

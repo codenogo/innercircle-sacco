@@ -1,5 +1,6 @@
 package com.innercircle.sacco.security.service;
 
+import com.innercircle.sacco.common.util.UuidGenerator;
 import com.innercircle.sacco.security.dto.LoginRequest;
 import com.innercircle.sacco.security.dto.LoginResponse;
 import com.innercircle.sacco.security.dto.RefreshTokenRequest;
@@ -18,11 +19,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class AuthService {
+
+    private static final long ACCESS_TOKEN_EXPIRY_SECONDS = 3600L;
+    private static final long REFRESH_TOKEN_EXPIRY_SECONDS = 7 * 24 * 60 * 60L;
+    private static final long REFRESH_RETRY_GRACE_SECONDS = 5L;
 
     private final SaccoUserDetailsService userDetailsService;
     private final PasswordEncoder passwordEncoder;
@@ -67,7 +74,7 @@ public class AuthService {
         RefreshToken refreshToken = RefreshToken.builder()
                 .userId(userAccount.getId())
                 .token(refreshTokenString)
-                .expiresAt(Instant.now().plusSeconds(7 * 24 * 60 * 60)) // 7 days
+                .expiresAt(Instant.now().plusSeconds(REFRESH_TOKEN_EXPIRY_SECONDS))
                 .revoked(false)
                 .build();
 
@@ -80,7 +87,7 @@ public class AuthService {
                 accessToken,
                 refreshTokenString,
                 "Bearer",
-                3600L
+                ACCESS_TOKEN_EXPIRY_SECONDS
         );
     }
 
@@ -93,53 +100,93 @@ public class AuthService {
                     return new BadCredentialsException("Invalid refresh token");
                 });
 
-        // Validate: not revoked
-        if (refreshToken.getRevoked()) {
-            log.warn("Refresh token has been revoked: userId={}", refreshToken.getUserId());
-            throw new BadCredentialsException("Invalid refresh token");
-        }
+        Instant now = Instant.now();
 
         // Validate: not expired
-        if (refreshToken.getExpiresAt().isBefore(Instant.now())) {
+        if (refreshToken.getExpiresAt().isBefore(now)) {
             log.warn("Refresh token has expired: userId={}", refreshToken.getUserId());
             throw new BadCredentialsException("Refresh token expired");
         }
 
-        // Revoke old refresh token
-        refreshToken.setRevoked(true);
-        refreshTokenRepository.save(refreshToken);
+        RefreshToken refreshTokenToIssue = rotateOrResolveRefreshToken(refreshToken, now);
 
         // Load UserAccount by userId
-        UserAccount userAccount = userAccountRepository.findById(refreshToken.getUserId())
+        UserAccount userAccount = userAccountRepository.findById(refreshTokenToIssue.getUserId())
                 .orElseThrow(() -> {
-                    log.error("User not found for refresh token: userId={}", refreshToken.getUserId());
+                    log.error("User not found for refresh token: userId={}", refreshTokenToIssue.getUserId());
                     return new BadCredentialsException("Invalid refresh token");
                 });
 
         // Generate new access token
         String newAccessToken = jwtService.generateAccessToken(userAccount);
 
-        // Generate new refresh token
-        String newRefreshTokenString = jwtService.generateRefreshToken();
-
-        // Create and persist new refresh token entity
-        RefreshToken newRefreshToken = RefreshToken.builder()
-                .userId(userAccount.getId())
-                .token(newRefreshTokenString)
-                .expiresAt(Instant.now().plusSeconds(7 * 24 * 60 * 60)) // 7 days
-                .revoked(false)
-                .build();
-
-        refreshTokenRepository.save(newRefreshToken);
-
         log.info("Token refresh successful for user '{}'", userAccount.getUsername());
 
         // Return new login response
         return new LoginResponse(
                 newAccessToken,
-                newRefreshTokenString,
+                refreshTokenToIssue.getToken(),
                 "Bearer",
-                3600L
+                ACCESS_TOKEN_EXPIRY_SECONDS
         );
+    }
+
+    private RefreshToken rotateOrResolveRefreshToken(RefreshToken refreshToken, Instant now) {
+        if (Boolean.TRUE.equals(refreshToken.getRevoked())) {
+            return resolveConcurrentRefreshRetry(refreshToken, now)
+                    .orElseThrow(() -> {
+                        log.warn("Refresh token has been revoked: userId={}", refreshToken.getUserId());
+                        return new BadCredentialsException("Invalid refresh token");
+                    });
+        }
+
+        String newRefreshTokenString = jwtService.generateRefreshToken();
+        RefreshToken newRefreshToken = RefreshToken.builder()
+                .userId(refreshToken.getUserId())
+                .token(newRefreshTokenString)
+                .expiresAt(now.plusSeconds(REFRESH_TOKEN_EXPIRY_SECONDS))
+                .revoked(false)
+                .build();
+        newRefreshToken.setId(UuidGenerator.generateV7());
+        RefreshToken savedNewRefreshToken = refreshTokenRepository.save(newRefreshToken);
+
+        // Atomically rotate old token. Only one request can claim this token.
+        int updatedRows = refreshTokenRepository.rotateIfActive(
+                refreshToken.getId(),
+                savedNewRefreshToken.getId(),
+                now,
+                now
+        );
+
+        if (updatedRows == 1) {
+            return savedNewRefreshToken;
+        }
+
+        // This request lost the race; remove its unused successor token and serve the winner's token if within grace.
+        refreshTokenRepository.deleteById(savedNewRefreshToken.getId());
+        RefreshToken latestTokenState = refreshTokenRepository.findById(refreshToken.getId()).orElse(refreshToken);
+        return resolveConcurrentRefreshRetry(latestTokenState, now)
+                .orElseThrow(() -> {
+                    log.warn("Refresh token was already consumed by another request: userId={}", refreshToken.getUserId());
+                    return new BadCredentialsException("Invalid refresh token");
+                });
+    }
+
+    private Optional<RefreshToken> resolveConcurrentRefreshRetry(RefreshToken refreshToken, Instant now) {
+        Instant revokedAt = refreshToken.getRevokedAt();
+        UUID replacementTokenId = refreshToken.getReplacedByTokenId();
+
+        if (!Boolean.TRUE.equals(refreshToken.getRevoked()) || revokedAt == null || replacementTokenId == null) {
+            return Optional.empty();
+        }
+
+        Instant earliestAllowedReplay = now.minusSeconds(REFRESH_RETRY_GRACE_SECONDS);
+        if (revokedAt.isBefore(earliestAllowedReplay)) {
+            return Optional.empty();
+        }
+
+        return refreshTokenRepository.findById(replacementTokenId)
+                .filter(token -> !Boolean.TRUE.equals(token.getRevoked()))
+                .filter(token -> !token.getExpiresAt().isBefore(now));
     }
 }

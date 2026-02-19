@@ -710,7 +710,7 @@ def _entropy_cfg(wf: dict[str, Any]) -> dict[str, Any]:
 def _checks_runtime_cfg(wf: dict[str, Any]) -> dict[str, Any]:
     """Runtime config for check scope, changed-file fallback, and command timeout."""
     defaults: dict[str, Any] = {
-        "checkScope": "auto",  # auto -> all in CI, changed locally
+        "checkScope": "auto",  # auto -> changed locally, all in CI (with feature-scoped CI narrowing when available)
         "changedFilesFallback": "none",  # none|head
         "commandTimeoutSec": DEFAULT_COMMAND_TIMEOUT_SEC,
         "outputCompaction": {
@@ -850,6 +850,39 @@ def _changed_relpaths(root: Path, *, fallback: str = "none") -> set[str]:
     return names
 
 
+def _git_ref_exists(root: Path, ref: str) -> bool:
+    rc, _ = run_shell(f"git rev-parse --verify --quiet {ref}", cwd=root, timeout_sec=30)
+    return rc == 0
+
+
+def _changed_relpaths_against_base(root: Path) -> set[str]:
+    """
+    Return changed files in HEAD compared to a likely default branch.
+    Used for feature-scoped CI runs where working tree is clean.
+    """
+    base_ref = ""
+    for candidate in ("origin/main", "origin/master", "main", "master"):
+        if _git_ref_exists(root, candidate):
+            base_ref = candidate
+            break
+    if not base_ref:
+        return set()
+
+    rc, out = run_shell(f"git merge-base HEAD {base_ref}", cwd=root, timeout_sec=30)
+    if rc != 0:
+        return set()
+    merge_base = out.strip().splitlines()[-1] if out.strip() else ""
+    if not merge_base:
+        return set()
+
+    return set(
+        _git_name_only(
+            root,
+            f"git diff --name-only --diff-filter=ACMR {merge_base}...HEAD",
+        )
+    )
+
+
 def _changed_files(root: Path, *, fallback: str = "none") -> list[Path]:
     """Return changed/untracked files, with configurable fallback when tree is clean."""
     names = _changed_relpaths(root, fallback=fallback)
@@ -903,6 +936,23 @@ def _command_prefers_repo_root(pkg_path: str, cmd: str) -> bool:
         return False
     marker = normalized + "/"
     return marker in cmd
+
+
+def _is_spotless_not_configured(cmd: str, output: str) -> bool:
+    lower_cmd = cmd.lower()
+    if "spotless" not in lower_cmd:
+        return False
+    lower_out = output.lower()
+    patterns = (
+        "no plugin found for prefix 'spotless'",
+        'task "spotlesscheck" not found',
+        "task 'spotlesscheck' not found",
+        'task "spotlessapply" not found',
+        "task 'spotlessapply' not found",
+        "could not find method spotless",
+        "plugin with id 'com.diffplug.spotless' not found",
+    )
+    return any(p in lower_out for p in patterns)
 
 
 def _path_matches_patterns(relpath: str, patterns: list[str]) -> bool:
@@ -1141,12 +1191,19 @@ def run_package_checks(
                 saved_tokens = 0
                 savings_pct = 0.0
 
+            result = "pass" if rc == 0 else "fail"
+            reason = ""
+            if rc != 0 and _is_spotless_not_configured(cmd, out):
+                result = "skipped"
+                reason = "spotless plugin not configured"
+
             pkg_res["checks"].append(
                 {
                     "name": check_name,
-                    "result": "pass" if rc == 0 else "fail",
+                    "result": result,
                     "cmd": cmd,
                     "cwd": _relative_display_path(check_cwd, root) if check_cwd != root else ".",
+                    "reason": reason or None,
                     "exitCode": rc,
                     "output": compact_out,
                     "outputReducer": reducer,
@@ -1635,6 +1692,11 @@ def main() -> int:
     token_telemetry_cfg = checks_cfg.get("tokenTelemetry") if isinstance(checks_cfg.get("tokenTelemetry"), dict) else {}
     token_telemetry_enabled = bool(token_telemetry_cfg.get("enabled", True))
     hook_opt_cfg = checks_cfg.get("hookOptimization") if isinstance(checks_cfg.get("hookOptimization"), dict) else {}
+    feature_for_scope: str | None = None
+    if args.cmd == "verify-ci":
+        feature_for_scope = args.feature
+    elif args.cmd == "review":
+        feature_for_scope = args.feature or infer_feature_from_state(root)
 
     if args.cmd == "discover":
         report = _discover_command_usage(
@@ -1695,11 +1757,23 @@ def main() -> int:
         print("Optional setup: python3 scripts/workflow_detect.py --write-workflow")
         per_pkg: list[dict[str, Any]] = []
     else:
-        changed_relpaths = (
-            _changed_relpaths(root, fallback=changed_files_fallback)
-            if effective_check_scope == "changed"
-            else None
-        )
+        changed_relpaths: set[str] | None = None
+        if effective_check_scope == "changed":
+            changed_relpaths = _changed_relpaths(root, fallback=changed_files_fallback)
+        elif in_ci and (feature_for_scope or args.cmd == "review"):
+            scoped = _changed_relpaths_against_base(root)
+            if not scoped and changed_files_fallback != "none":
+                scoped = _changed_relpaths(root, fallback=changed_files_fallback)
+            if scoped:
+                changed_relpaths = scoped
+                scope_label = feature_for_scope or "review"
+                print(
+                    "CI feature-scoped package checks: "
+                    f"{len(scoped)} changed file(s) against base for `{scope_label}`."
+                )
+            else:
+                print("CI feature-scoped package checks unavailable; running all packages.")
+
         if effective_check_scope == "changed" and not changed_relpaths:
             print("No local changes detected; package checks skipped (checkScope=changed).")
         per_pkg = run_package_checks(
@@ -1716,8 +1790,7 @@ def main() -> int:
         return write_verify_ci(root, args.feature, per_pkg, invariant_findings)
 
     if args.cmd == "review":
-        feature = args.feature or infer_feature_from_state(root)
-        return write_review(root, feature, per_pkg, invariant_findings, review_principles)
+        return write_review(root, feature_for_scope, per_pkg, invariant_findings, review_principles)
 
     return 2
 

@@ -19,6 +19,8 @@ databaseChangeLog:
       file: db/changelog/security/006-add-member-id-to-users.yaml
   - include:
       file: db/changelog/security/007-create-refresh-tokens.yaml
+  - include:
+      file: db/changelog/security/008-add-refresh-token-rotation-metadata.yaml
 
   # Member module
   - include:
