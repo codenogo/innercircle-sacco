@@ -180,7 +180,7 @@
 
 .datepicker-day--selected {
   background: var(--mpesa);
-  color: #fff;
+  color: var(--text-on-accent);
   font-weight: 600;
 }
 

@@ -108,7 +108,7 @@
   bottom: var(--space-2);
   width: 3px;
   background: var(--mpesa);
-  border-radius: 0 2px 2px 0;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
 .sidebar-link svg {
@@ -246,7 +246,7 @@
     position: fixed;
     inset: 0;
     z-index: 90;
-    background: rgba(30, 32, 48, 0.25);
+    background: var(--backdrop-light);
     animation: modal-fade-in 150ms ease-out;
   }
 }

@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "feature": "shared-datatable",
+  "displayName": "Shared DataTable Component",
+  "decisions": [
+    {
+      "area": "architecture",
+      "decision": "Create a shared <DataTable> React component in sacco-ui/src/components/DataTable.tsx with companion DataTable.css",
+      "rationale": "All 16 tables across the app use ledger-table class with duplicated thead/tbody/colgroup markup. A shared component eliminates repetition and ensures consistent UX (virtualization, sticky headers, scroll containers) across all pages."
+    },
+    {
+      "area": "api",
+      "decision": "Column-definition driven API: DataTable<T> receives columns: ColumnDef<T>[], data: T[], with render functions per column for cell content",
+      "rationale": "Pages use diverse cell patterns (badges, stacked text, action buttons, currency amounts, truncated IDs). Render functions keep the component presentational while allowing full customization per page."
+    },
+    {
+      "area": "api",
+      "decision": "DataTable is presentational only — parent component owns data fetching, filter state, and pagination logic",
+      "rationale": "Each page has different filter controls (date ranges, custom Select dropdowns, text search). Coupling data fetching into DataTable would create an overly complex god-component. Filters stay in the page; DataTable just renders rows."
+    },
+    {
+      "area": "api",
+      "decision": "Virtualization is always on via @tanstack/react-virtual useVirtualizer",
+      "rationale": "User chose 'All data tables' for virtualization scope. The virtualizer has negligible overhead for small datasets and significant benefit for large ones. Always-on simplifies the API."
+    },
+    {
+      "area": "api",
+      "decision": "Optional features via props: expandableRows (with renderExpanded callback), stickyTotals (footer row outside scroll), sortable columns (via onSort callback), loading/skeleton state, empty state message",
+      "rationale": "Only Ledger uses expandable rows. Only Ledger and LedgerStatements use totals footer. 6 pages have sort headers. Making these opt-in keeps the component lean for simple tables."
+    },
+    {
+      "area": "api",
+      "decision": "Column widths defined as CSS custom properties on wrapper element, referenced by both colgroup and any sticky footer grid",
+      "rationale": "Pattern proven in Ledger.css — single source of truth for column widths between table layout and grid footer. Prevents width drift."
+    },
+    {
+      "area": "api",
+      "decision": "SkeletonTableRows remains the loading skeleton, rendered inside tbody when loading=true prop is set",
+      "rationale": "Already used by 9 pages. DataTable will render it automatically based on a loading boolean prop."
+    },
+    {
+      "area": "api",
+      "decision": "Alternating row striping via a getRowClassName callback prop, not automatic",
+      "rationale": "Ledger alternates by journal entry (groups of rows), not by individual row index. Other pages may want simple odd/even. A callback gives control to the parent."
+    },
+    {
+      "area": "ux",
+      "decision": "Scroll container height defaults to calc(100vh - 260px), overridable via maxHeight prop",
+      "rationale": "Most pages need the table to fill remaining viewport. 260px accounts for header + filter bar + page summary. Pages with different layouts can override."
+    },
+    {
+      "area": "ux",
+      "decision": "Sticky thead with position: sticky, top: 0, z-index: 10 — always enabled",
+      "rationale": "No table currently has sticky headers except Ledger. All data tables benefit from persistent column headers during scroll."
+    },
+    {
+      "area": "ux",
+      "decision": "Table frame wrapper with border, border-radius, overflow: hidden — always rendered by DataTable",
+      "rationale": "Provides clean visual containment. Matches the Ledger pattern and gives a consistent card-like appearance across all tables."
+    },
+    {
+      "area": "migration",
+      "decision": "Migrate all 16 tables incrementally — start with high-traffic pages (Members, Contributions, Loans) then remaining pages",
+      "rationale": "Incremental migration validates the API against real page diversity. High-traffic pages provide the best signal for API fitness."
+    }
+  ],
+  "constraints": [
+    "Must not break existing page-specific CSS — DataTable CSS should be additive, not override page styles",
+    "DataTable must support table-layout: fixed with colgroup for precise column control",
+    "The component must be generic: DataTable<T> with TypeScript generics for row type",
+    "No data fetching or filter logic inside DataTable — strictly presentational",
+    "Virtualization via @tanstack/react-virtual useVirtualizer — no other virtualization library",
+    "Must support aria attributes: role, aria-live on totals, aria-hidden on spacer rows",
+    "Mobile responsive: horizontal scroll wrapper at 768px breakpoint (existing pattern from components.css)",
+    "Keep cursor-based pagination (Load More button) outside DataTable — parent controls it"
+  ],
+  "openQuestions": [],
+  "relatedCode": [
+    "sacco-ui/src/pages/Ledger.tsx",
+    "sacco-ui/src/pages/Ledger.css",
+    "sacco-ui/src/styles/components.css",
+    "sacco-ui/src/components/Skeleton.tsx",
+    "sacco-ui/src/pages/Members.tsx",
+    "sacco-ui/src/pages/Contributions.tsx",
+    "sacco-ui/src/pages/Loans.tsx",
+    "sacco-ui/src/pages/AuditTrail.tsx",
+    "sacco-ui/src/pages/Payouts.tsx",
+    "sacco-ui/src/pages/PettyCash.tsx",
+    "sacco-ui/src/pages/UsersAdmin.tsx",
+    "sacco-ui/src/pages/ContributionCategories.tsx",
+    "sacco-ui/src/pages/ContributionOperations.tsx",
+    "sacco-ui/src/pages/LoanWorkflow.tsx",
+    "sacco-ui/src/pages/LoanBatch.tsx",
+    "sacco-ui/src/pages/LoanBenefits.tsx",
+    "sacco-ui/src/pages/LedgerStatements.tsx",
+    "sacco-ui/src/pages/Dashboard.tsx",
+    "sacco-ui/src/pages/RoleDashboards.tsx"
+  ],
+  "timestamp": "2026-02-19T00:00:00Z"
+}

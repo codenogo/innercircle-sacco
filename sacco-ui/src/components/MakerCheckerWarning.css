@@ -7,7 +7,7 @@
 }
 
 .maker-checker-warning__icon {
-  color: var(--warning, #b45309);
+  color: var(--caution);
 }
 
 .maker-checker-warning__message {

@@ -19,15 +19,15 @@ Grounded in the physical world of Kenyan financial record-keeping. Fountain pen 
 |-------|-------|-----|
 | `--ink` | `#1e2030` | Primary text |
 | `--ink-secondary` | `#4d4f62` | Supporting text |
-| `--ink-muted` | `#7d7f92` | Metadata, labels |
+| `--ink-muted` | `#6b6d80` | Metadata, labels |
 | `--ink-faint` | `#a8aab8` | Placeholders, disabled |
 
 ### Paper — warm cream, ledger page
 | Token | Value | Use |
 |-------|-------|-----|
-| `--paper` | `#faf7f1` | Base surface, sidebar, cards |
-| `--paper-alt` | `#f5f2ec` | Alternating table rows |
-| `--paper-inset` | `#f0ede7` | Input backgrounds, recessed areas |
+| `--paper` | `#f5f0e5` | Base surface, main content |
+| `--paper-alt` | `#ede7db` | Sidebar background, alternating table rows |
+| `--paper-inset` | `#e5dfd3` | Input backgrounds, recessed areas |
 
 ### Rule — faded blue, printed lines in an accounts book
 | Token | Value | Use |
@@ -51,6 +51,16 @@ Grounded in the physical world of Kenyan financial record-keeping. Fountain pen 
 | `--deficit-soft` | `rgba(185, 74, 61, 0.08)` | Error background tint |
 | `--caution` | `#c08a15` | Warnings, pending states |
 | `--caution-soft` | `rgba(192, 138, 21, 0.08)` | Warning background tint |
+| `--info` | `#4a6fa5` | Informational states |
+| `--info-soft` | `rgba(74, 111, 165, 0.08)` | Info background tint |
+
+### Interactive
+| Token | Value | Use |
+|-------|-------|-----|
+| `--hover` | `rgba(90, 110, 150, 0.08)` | Row hover, subtle interactive feedback |
+| `--backdrop` | `rgba(45, 40, 32, 0.40)` | Modal/overlay backdrop |
+| `--backdrop-light` | `rgba(30, 32, 48, 0.25)` | Mobile sidebar backdrop |
+| `--text-on-accent` | `#fff` | White text on `--mpesa` backgrounds |
 
 ---
 
@@ -82,13 +92,30 @@ Three faces, three jobs:
 
 ---
 
-## Depth Strategy: Borders Only
+## Depth Strategy: Borders + Pragmatic Shadows
 
-No shadows. Ledger books are flat. Ruled lines define structure.
+Ruled lines are the primary structural element — most surfaces are flat, separated by `--rule` borders. Shadows are reserved for elements that genuinely float above the page: modals, dropdown panels, and interactive hover feedback.
 
-- Borders use `--rule` tokens (faded blue rgba), not solid hex colors
+### Borders
+- Use `--rule` tokens (faded blue rgba), not solid hex colors
 - Horizontal rules (`<hr class="rule">`) are the primary structural element
 - Three intensities: `--rule-subtle` (whisper), `--rule` (default), `--rule-strong` (section breaks)
+
+### Shadows — for floating elements only
+| Token | Value | Use |
+|-------|-------|-----|
+| `--shadow-sm` | `0 1px 2px rgba(90, 80, 60, 0.06), 0 1px 3px rgba(90, 80, 60, 0.04)` | Button hover lift, subtle card elevation |
+| `--shadow-md` | `0 2px 4px rgba(90, 80, 60, 0.07), 0 4px 8px rgba(90, 80, 60, 0.05)` | Auth card, elevated panels |
+| `--shadow-lg` | `0 4px 8px rgba(90, 80, 60, 0.08), 0 8px 16px rgba(90, 80, 60, 0.06)` | Modals, dropdown panels, popovers |
+| `--shadow-xl` | `0 8px 16px rgba(90, 80, 60, 0.10), 0 16px 32px rgba(90, 80, 60, 0.08)` | Reserved for maximum elevation |
+
+Shadow colors use warm `rgba(90, 80, 60, ...)` — sepia-toned to match the paper palette. Never blue/gray shadows.
+
+### Inset Shadows — form input depth
+| Token | Value | Use |
+|-------|-------|-----|
+| `--inset-shadow` | `inset 0 1px 2px rgba(30, 32, 48, 0.06)` | Default input resting state |
+| `--inset-shadow-hover` | `inset 0 1px 2px rgba(30, 32, 48, 0.04)` | Input hover (slightly lighter) |
 
 ---
 
@@ -115,9 +142,22 @@ Barely there. Accounts books have sharp corners.
 
 | Token | Value | Use |
 |-------|-------|-----|
-| `--radius-sm` | 2px | Inputs, buttons, avatars |
-| `--radius-md` | 3px | Cards, auth card |
+| `--radius-sm` | 2px | Inputs, buttons, avatars, scrollbar thumbs |
+| `--radius-md` | 3px | Cards, auth card, dropdown panels |
 | `--radius-lg` | 4px | Modals, largest containers |
+
+---
+
+## Transitions
+
+| Token | Value | Use |
+|-------|-------|-----|
+| `--ease` | `150ms ease-out` | Default micro-interactions |
+| `--ease-fast` | `100ms ease-out` | Button backgrounds, badge color |
+| `--ease-medium` | `250ms ease-out` | Shadows, transforms, layout shifts |
+| `--ease-slow` | `400ms ease-out` | Page-level transitions (rare) |
+
+No bounce. No spring. Quiet and instant.
 
 ---
 
@@ -125,23 +165,25 @@ Barely there. Accounts books have sharp corners.
 
 These make InnerCircle feel like a ledger, not a template:
 
-1. **Ruled lines** (`<hr class="rule">`) — faded blue horizontal rules as the primary structural element, replacing shadows and card borders
+1. **Ruled lines** (`<hr class="rule">`) — faded blue horizontal rules as the primary structural element, replacing card borders where possible
 2. **Dot leaders** (`.dot-leader`) — dotted line connecting label to value (label ........... amount), like handwritten ledger entries
 3. **Alternating cream rows** (`.ledger-row--alt` / `--paper-alt`) — table rows alternate between `--paper` and `--paper-alt`, like ruled ledger paper
 4. **Accounting parentheses** — outflows shown as `(50,000)` not `-50,000`
 5. **KES prefix in muted small caps** — currency code as quiet context, amount as the focus
-6. **Active nav tab** — 2px green left border on active sidebar item, like a ledger book tab
+6. **Active nav tab** — 3px green left border on active sidebar item, like a ledger book tab
+7. **Warm sepia shadows** — when shadows are used, they use warm `rgba(90, 80, 60, ...)` tones, not neutral grays
 
 ---
 
 ## Component Patterns
 
 ### Sidebar
-- Same `--paper` background as main content (not a different color)
+- `--paper-alt` background (slightly warmer than main content)
 - Separated from content by a single `--rule` border
 - Nav links: `--text-sm`, `--ink-secondary`, icon + label
-- Active state: `--ink` text, `--rule-subtle` background, 2px `--mpesa` left border
+- Active state: `--ink` text, `--mpesa-soft` gradient background, 3px `--mpesa` left border with `--radius-sm` rounding
 - User info at bottom: avatar with initials, name, role in uppercase `--text-xs`
+- Mobile: slides in from left with `--backdrop-light` overlay
 
 ### Dashboard
 - Page header: serif title left, italic date/period right, separated by `rule--strong`
@@ -184,17 +226,21 @@ Every app page follows this structure:
 - Status: `COMPLETED` (green), `PENDING` (amber), `PROCESSING` (amber), `REJECTED` (red)
 
 ### General Ledger
-- Account filter dropdown (All Accounts, Member Savings, Loan Receivable, Cash at Bank, Interest Revenue)
-- Journal table with 7 columns: Ref, Date, Description, Account, Debit, Credit, Balance
+- TanStack Table with virtual scrolling for millions of rows
+- Column-level search filters: each column header has an inline text/select filter
+- Expandable journal entries: click a row to reveal all lines of the multi-line journal entry in a sub-table
+- Infinite scroll with "Load More" button at the bottom
+- 7 columns: Ref, Date, Description, Account, Debit, Credit, Balance
 - Running balance column in bold (`font-weight: 600`)
 - **Double-ruled totals row** — `border-top: 3px double var(--rule-strong)` — accounting convention
-- This page is wider (`max-width: 880px`) to fit the debit/credit/balance columns
+- Uses `--mpesa` for focus rings on filter inputs (not generic blue accent)
 
 ### Reports
 - Quick stats grid: 4 columns showing key metrics (label uppercase `--text-xs`, value `--text-md` bold mono)
 - Report cards: bordered containers with icon + title + description, PDF/CSV export buttons on the right
-- Card hover: `--rule-strong` border + `--rule-subtle` background
+- Card hover: `--rule-strong` border + `--rule-subtle` background + `--shadow-sm`
 - 6 reports: Financial Summary, Contribution Report, Loan Portfolio, Member Statement, Member Register, Trial Balance
+- Member selection modal uses `--backdrop` overlay
 
 ### Settings
 - Grouped sections with `.settings-group-title` (serif `--text-md` weight 600)
@@ -206,27 +252,47 @@ Every app page follows this structure:
 
 ### Auth Pages (Login, Signup, Forgot/Reset Password)
 - `AuthLayout`: centered on `--paper-alt` background
-- Auth card: `--paper` background, `--rule` border, `--radius-md`
+- Auth card: `--paper` background, `--rule` border, `--radius-md`, `--shadow-md`
 - IC monogram + brand name at top, `rule--strong` separator
-- Inputs: `--paper-inset` background, `--rule` border, `--rule-strong` on hover/focus
-- Submit button: `--mpesa` background, white text, weight 600
+- Inputs: `--paper-inset` background, `--rule` border, `var(--inset-shadow)` resting state
+- Input hover: `--rule-strong` border, `var(--inset-shadow-hover)`
+- Input focus: `--mpesa` border, `--paper` background, focus ring `0 0 0 3px var(--mpesa-soft)`
+- Submit button: `--mpesa` background, `--text-on-accent` text, weight 600
 - Footer links: `--rule-subtle` top border, `--ink-muted` text, `--mpesa-text` links
 - Success states: green circle icon, heading, muted description
 - Labels: uppercase, `--text-xs`, `--ink-muted`
 
 ### Form Fields
 - Label above input, `--space-1` gap
-- Input: `--paper-inset` bg, 1px `--rule` border, `--radius-sm`
-- Focus: border becomes `--rule-strong`, background becomes `--paper`
+- Input: `--paper-inset` bg, 1px `--rule` border, `--radius-sm`, `var(--inset-shadow)`
+- Hover: `--rule-strong` border, `var(--inset-shadow-hover)`
+- Focus: `--mpesa` border, `--paper` background, `0 0 0 3px var(--mpesa-soft)` ring
 - Hint text: `--text-xs`, `--ink-faint`
 - Error text: `--text-xs`, `--deficit`
 - Side-by-side fields: `.field-row` grid, 2 columns, `--space-3` gap
 
----
+### Modals
+- `--backdrop` overlay with `backdrop-filter: blur(2px)`
+- Card: `--paper` background, `--rule` border, `--radius-md`, `--shadow-lg`
+- Three sizes: `--sm` (380px), `--md` (480px), `--lg` (560px)
+- Mobile: bottom-sheet style, full width, rounded top corners only
+- Slide-up animation with subtle spring (`250ms cubic-bezier(0.34, 1.56, 0.64, 1)`)
 
-## Transitions
+### Custom Select
+- Trigger: `--paper-inset` background, `--rule` border, `var(--inset-shadow)`
+- Open state: `--mpesa` border, `--paper` background, focus ring
+- Panel: `--paper` background, `--rule` border, `--radius-md`, `--shadow-lg`
+- Options: `--rule-subtle` hover background, `--mpesa-text` selected text
+- Searchable with inline search input
+- Filter variant (`.filter-select-wrap`): compact size for use in filter bars
 
-`--ease: 150ms ease-out` for all micro-interactions. No bounce. No spring. Quiet and instant.
+### Status Badges
+- Inline-flex with icon gap, uppercase `--text-xs`, `--radius-sm`
+- Active/Paid/Approved: `--mpesa-text` on `--mpesa-soft`
+- Pending/Partial: `--caution` on `--caution-soft`
+- Overdue/Rejected/Defaulted: `--deficit` on `--deficit-soft`
+- Inactive: `--ink-muted` on `--paper-inset`
+- Borders at 0.15 opacity of the semantic color base
 
 ---
 
@@ -237,11 +303,24 @@ Every app page follows this structure:
 | `src/styles/tokens.css` | All design tokens |
 | `src/styles/reset.css` | CSS reset |
 | `src/styles/global.css` | Global styles, utilities, signature elements |
+| `src/styles/components.css` | Shared component patterns (buttons, badges, filter bars, tables, empty states) |
+| `src/styles/skeleton.css` | Loading skeleton animation |
+| `src/styles/spinner.css` | Loading spinner |
+| `src/styles/progress.css` | Progress bar |
+| `src/styles/toast.css` | Toast notifications |
+| `src/styles/alert.css` | Alert banners (success, error, warning, info) |
+| `src/styles/tooltip.css` | Tooltip styles |
 | `src/styles/auth.css` | Shared auth form styles |
 | `src/layouts/AppShell.tsx/.css` | Main app layout with sidebar |
 | `src/layouts/AuthLayout.tsx/.css` | Centered auth page layout |
 | `src/components/Sidebar.tsx/.css` | Navigation sidebar |
+| `src/components/Modal.tsx/.css` | Dialog modals |
+| `src/components/Select.tsx/.css` | Custom dropdown select |
+| `src/components/DatePicker.tsx/.css` | Calendar date picker |
+| `src/components/MonthPicker.tsx/.css` | Month/year selector |
+| `src/components/MakerCheckerWarning.css` | Dual-authorization warning |
 | `src/pages/Dashboard.tsx/.css` | Ledger-style dashboard |
+| `src/pages/Ledger.tsx/.css` | General ledger (TanStack Table + virtual scroll) |
 | `src/pages/Login.tsx` | Sign in |
 | `src/pages/Signup.tsx` | Create account |
 | `src/pages/ForgotPassword.tsx` | Request password reset |

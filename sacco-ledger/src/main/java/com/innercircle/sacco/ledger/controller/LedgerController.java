@@ -16,6 +16,10 @@ import com.innercircle.sacco.ledger.service.FinancialStatementService;
 import jakarta.persistence.criteria.Join;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -28,7 +32,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -62,52 +70,58 @@ public class LedgerController {
             @RequestParam(required = false) String entryNumber,
             @RequestParam(required = false) TransactionType transactionType) {
 
-        // Parse sort parameter
-        String[] sortParts = sort.split(",");
-        String sortField = sortParts[0];
-        Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("asc")
-                ? Sort.Direction.ASC
-                : Sort.Direction.DESC;
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortField));
-
-        // Build dynamic Specification — always filter to posted entries
-        Specification<JournalEntry> spec = (root, query, cb) -> cb.isTrue(root.get("posted"));
-
-        if (entryNumber != null && !entryNumber.isBlank()) {
-            String pattern = "%" + entryNumber.trim().toLowerCase() + "%";
-            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("entryNumber")), pattern));
-        }
-
-        if (description != null && !description.isBlank()) {
-            String pattern = "%" + description.trim().toLowerCase() + "%";
-            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("description")), pattern));
-        }
-
-        if (transactionType != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("transactionType"), transactionType));
-        }
-
-        if (dateFrom != null) {
-            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("transactionDate"), dateFrom));
-        }
-
-        if (dateTo != null) {
-            spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("transactionDate"), dateTo));
-        }
-
-        if (accountId != null) {
-            spec = spec.and((root, query, cb) -> {
-                Join<JournalEntry, JournalLine> lines = root.join("journalLines");
-                query.distinct(true);
-                return cb.equal(lines.get("account").get("id"), accountId);
-            });
-        }
+        Sort parsedSort = parseSort(sort);
+        Pageable pageable = PageRequest.of(page, size, parsedSort);
+        Specification<JournalEntry> spec = buildJournalEntrySpecification(
+                accountId,
+                dateFrom,
+                dateTo,
+                description,
+                entryNumber,
+                transactionType
+        );
 
         Page<JournalEntry> entries = journalEntryRepository.findAll(spec, pageable);
 
         Page<JournalEntryResponse> responsePage = entries.map(this::mapToResponse);
         return ApiResponse.ok(PageResponse.from(responsePage));
+    }
+
+    @GetMapping("/journal-entries/export")
+    @Transactional(readOnly = true)
+    public ResponseEntity<byte[]> exportJournalEntries(
+            @RequestParam(defaultValue = "transactionDate,desc") String sort,
+            @RequestParam(required = false) UUID accountId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @RequestParam(required = false) String description,
+            @RequestParam(required = false) String entryNumber,
+            @RequestParam(required = false) TransactionType transactionType) {
+
+        Sort parsedSort = parseSort(sort);
+        Specification<JournalEntry> spec = buildJournalEntrySpecification(
+                accountId,
+                dateFrom,
+                dateTo,
+                description,
+                entryNumber,
+                transactionType
+        );
+
+        List<JournalEntry> entries = journalEntryRepository.findAll(spec, parsedSort);
+        byte[] csvBytes = generateJournalEntriesCsv(entries);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("text/csv"));
+        headers.setContentDisposition(
+                ContentDisposition.attachment()
+                        .filename("journal-entries-" + DateTimeFormatter.BASIC_ISO_DATE.format(LocalDate.now()) + ".csv")
+                        .build()
+        );
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(csvBytes);
     }
 
     @GetMapping("/trial-balance")
@@ -165,5 +179,91 @@ public class LedgerController {
                 .creditAmount(line.getCreditAmount().toString())
                 .description(line.getDescription())
                 .build();
+    }
+
+    private Sort parseSort(String sort) {
+        String[] sortParts = sort.split(",");
+        String sortField = sortParts[0];
+        Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("asc")
+                ? Sort.Direction.ASC
+                : Sort.Direction.DESC;
+        return Sort.by(direction, sortField);
+    }
+
+    private Specification<JournalEntry> buildJournalEntrySpecification(
+            UUID accountId,
+            LocalDate dateFrom,
+            LocalDate dateTo,
+            String description,
+            String entryNumber,
+            TransactionType transactionType) {
+        Specification<JournalEntry> spec = (root, query, cb) -> cb.isTrue(root.get("posted"));
+
+        if (entryNumber != null && !entryNumber.isBlank()) {
+            String pattern = "%" + entryNumber.trim().toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("entryNumber")), pattern));
+        }
+
+        if (description != null && !description.isBlank()) {
+            String pattern = "%" + description.trim().toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("description")), pattern));
+        }
+
+        if (transactionType != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("transactionType"), transactionType));
+        }
+
+        if (dateFrom != null) {
+            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("transactionDate"), dateFrom));
+        }
+
+        if (dateTo != null) {
+            spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("transactionDate"), dateTo));
+        }
+
+        if (accountId != null) {
+            spec = spec.and((root, query, cb) -> {
+                Join<JournalEntry, JournalLine> lines = root.join("journalLines");
+                query.distinct(true);
+                return cb.equal(lines.get("account").get("id"), accountId);
+            });
+        }
+
+        return spec;
+    }
+
+    private byte[] generateJournalEntriesCsv(List<JournalEntry> entries) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        PrintWriter writer = new PrintWriter(baos, false, StandardCharsets.UTF_8);
+
+        writer.println("Entry Ref,Date,Type,Description,Account Code,Account Name,Debit,Credit");
+        for (JournalEntry entry : entries) {
+            for (JournalLine line : entry.getJournalLines()) {
+                writer.printf(
+                        "%s,%s,%s,%s,%s,%s,%s,%s%n",
+                        escapeCsv(entry.getEntryNumber()),
+                        escapeCsv(entry.getTransactionDate().toString()),
+                        escapeCsv(entry.getTransactionType().name()),
+                        escapeCsv(entry.getDescription()),
+                        escapeCsv(line.getAccount().getAccountCode()),
+                        escapeCsv(line.getAccount().getAccountName()),
+                        line.getDebitAmount(),
+                        line.getCreditAmount()
+                );
+            }
+        }
+
+        writer.flush();
+        return baos.toByteArray();
+    }
+
+    private String escapeCsv(String value) {
+        if (value == null) {
+            return "";
+        }
+        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
     }
 }

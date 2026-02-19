@@ -33,11 +33,14 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -240,6 +243,41 @@ class LedgerControllerTest {
                     .andExpect(jsonPath("$.data.first").value(true))
                     .andExpect(jsonPath("$.data.last").value(true))
                     .andExpect(jsonPath("$.data.content.length()").value(0));
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/ledger/journal-entries/export")
+    class ExportJournalEntriesTests {
+
+        @Test
+        @DisplayName("should export filtered journal entries as CSV")
+        void shouldExportJournalEntriesAsCsv() throws Exception {
+            when(journalEntryRepository.findAll(any(Specification.class), any(Sort.class)))
+                    .thenReturn(List.of(testJournalEntry));
+
+            mockMvc.perform(get("/api/v1/ledger/journal-entries/export")
+                            .param("description", "contribution")
+                            .param("sort", "transactionDate,desc"))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string("Content-Type", containsString("text/csv")))
+                    .andExpect(header().string("Content-Disposition", containsString("attachment;")))
+                    .andExpect(content().string(containsString("Entry Ref,Date,Type,Description,Account Code,Account Name,Debit,Credit")))
+                    .andExpect(content().string(containsString("JE000001")))
+                    .andExpect(content().string(containsString("Cash")))
+                    .andExpect(content().string(containsString("Member Shares")));
+        }
+
+        @Test
+        @DisplayName("should export header only when no entries match")
+        void shouldExportHeaderOnlyWhenNoEntriesMatch() throws Exception {
+            when(journalEntryRepository.findAll(any(Specification.class), any(Sort.class)))
+                    .thenReturn(List.of());
+
+            mockMvc.perform(get("/api/v1/ledger/journal-entries/export"))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string("Content-Type", containsString("text/csv")))
+                    .andExpect(content().string("Entry Ref,Date,Type,Description,Account Code,Account Name,Debit,Credit\n"));
         }
     }
 
