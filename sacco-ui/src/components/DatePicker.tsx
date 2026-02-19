@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type CSSProperties } from 'react'
+import { createPortal } from 'react-dom'
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import './DatePicker.css'
 
@@ -10,6 +11,13 @@ interface DatePickerProps {
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const WEEKDAYS = ['Mo','Tu','We','Th','Fr','Sa','Su']
+const PANEL_GAP = 4
+const VIEWPORT_MARGIN = 8
+const PANEL_HEIGHT_ESTIMATE = 320
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max)
+}
 
 function toISO(y: number, m: number, d: number) {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
@@ -40,19 +48,63 @@ export function DatePicker({ value, onChange, required }: DatePickerProps) {
   const [viewYear, setViewYear] = useState(parsed[0])
   const [viewMonth, setViewMonth] = useState(parsed[1] - 1) // 0-indexed
   const [open, setOpen] = useState(false)
+  const [panelStyle, setPanelStyle] = useState<CSSProperties>({})
+  const [panelPlacement, setPanelPlacement] = useState<'top' | 'bottom'>('bottom')
 
   const wrapRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
 
   // Close on outside click
   useEffect(() => {
     if (!open) return
     function handleClick(e: MouseEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
+      const target = e.target as Node
+      if (wrapRef.current?.contains(target)) return
+      if (panelRef.current?.contains(target)) return
+      setOpen(false)
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+
+    function updatePanelPosition() {
+      if (!triggerRef.current) return
+
+      const triggerRect = triggerRef.current.getBoundingClientRect()
+      const panelWidth = Math.max(260, Math.min(320, triggerRect.width))
+      const spaceBelow = window.innerHeight - triggerRect.bottom - VIEWPORT_MARGIN
+      const spaceAbove = triggerRect.top - VIEWPORT_MARGIN
+      const openAbove = spaceBelow < PANEL_HEIGHT_ESTIMATE && spaceAbove > spaceBelow
+
+      const desiredTop = openAbove
+        ? triggerRect.top - PANEL_HEIGHT_ESTIMATE - PANEL_GAP
+        : triggerRect.bottom + PANEL_GAP
+      const maxTop = Math.max(VIEWPORT_MARGIN, window.innerHeight - PANEL_HEIGHT_ESTIMATE - VIEWPORT_MARGIN)
+      const top = clamp(desiredTop, VIEWPORT_MARGIN, maxTop)
+      const maxLeft = Math.max(VIEWPORT_MARGIN, window.innerWidth - panelWidth - VIEWPORT_MARGIN)
+      const left = clamp(triggerRect.left, VIEWPORT_MARGIN, maxLeft)
+
+      setPanelPlacement(openAbove ? 'top' : 'bottom')
+      setPanelStyle({
+        position: 'fixed',
+        top,
+        left,
+        width: panelWidth,
+        zIndex: 2100,
+      })
+    }
+
+    updatePanelPosition()
+    window.addEventListener('resize', updatePanelPosition)
+    window.addEventListener('scroll', updatePanelPosition, true)
+    return () => {
+      window.removeEventListener('resize', updatePanelPosition)
+      window.removeEventListener('scroll', updatePanelPosition, true)
+    }
   }, [open])
 
   // Close on Escape
@@ -120,6 +172,7 @@ export function DatePicker({ value, onChange, required }: DatePickerProps) {
   return (
     <div className="datepicker" ref={wrapRef}>
       <button
+        ref={triggerRef}
         type="button"
         className={`datepicker-trigger ${open ? 'datepicker-trigger--open' : ''} ${!value ? 'datepicker-trigger--placeholder' : ''}`}
         onClick={() => setOpen(o => !o)}
@@ -135,8 +188,14 @@ export function DatePicker({ value, onChange, required }: DatePickerProps) {
       {/* Hidden native input for form validation */}
       {required && <input type="text" required value={value} tabIndex={-1} style={{ position: 'absolute', opacity: 0, height: 0, width: 0, pointerEvents: 'none' }} onChange={() => {}} />}
 
-      {open && (
-        <div className="datepicker-panel" role="dialog" aria-label="Choose date">
+      {open && createPortal(
+        <div
+          ref={panelRef}
+          className={`datepicker-panel ${panelPlacement === 'top' ? 'datepicker-panel--top' : ''}`}
+          style={panelStyle}
+          role="dialog"
+          aria-label="Choose date"
+        >
           <div className="datepicker-header">
             <button type="button" className="datepicker-nav" onClick={prevMonth} aria-label="Previous month">
               <ChevronLeft size={16} strokeWidth={2} />
@@ -189,7 +248,8 @@ export function DatePicker({ value, onChange, required }: DatePickerProps) {
               Today
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

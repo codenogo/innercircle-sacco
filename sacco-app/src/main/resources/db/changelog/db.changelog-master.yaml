@@ -43,6 +43,8 @@ databaseChangeLog:
       file: db/changelog/contribution/001-create-contributions-table.yaml
   - include:
       file: db/changelog/contribution/002-create-contribution-categories-table.yaml
+  - include:
+      file: db/changelog/contribution/003-align-contribution-schema-with-categories.yaml
 
   # Audit module
   - include:
@@ -61,6 +63,8 @@ databaseChangeLog:
       file: db/changelog/ledger/005-seed-bad-debt-expense.yaml
   - include:
       file: db/changelog/ledger/006-add-account-member-fields.yaml
+  - include:
+      file: db/changelog/ledger/007-seed-petty-cash-float-account.yaml
 
   # Loan module
   - include:
@@ -83,6 +87,8 @@ databaseChangeLog:
   # Payout module
   - include:
       file: db/changelog/payout/001-create-payout-tables.yaml
+  - include:
+      file: db/changelog/payout/002-create-petty-cash-vouchers-table.yaml
   - include:
       file: db/changelog/payout/003-bank-withdrawal-add-approval.yaml
   - include:

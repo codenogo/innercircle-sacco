@@ -1,0 +1,60 @@
+.petty-cash-page {
+  max-width: 960px;
+}
+
+.petty-cash-summary {
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+}
+
+.petty-cash-feedback {
+  margin: var(--space-3) 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--rule);
+  font-size: var(--text-sm);
+}
+
+.petty-cash-feedback--success {
+  color: var(--mpesa-text);
+  background: var(--mpesa-soft);
+  border-color: rgba(26, 127, 56, 0.2);
+}
+
+.petty-cash-feedback--error {
+  color: var(--deficit);
+  background: var(--deficit-soft);
+  border-color: rgba(183, 66, 55, 0.2);
+}
+
+.petty-cash-purpose {
+  display: block;
+  font-weight: 500;
+}
+
+.petty-cash-purpose-sub {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-muted);
+  font-size: var(--text-xs);
+}
+
+.petty-cash-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.petty-cash-form-grid {
+  display: grid;
+  gap: var(--space-2);
+}
+
+@media (max-width: 900px) {
+  .petty-cash-page .ledger-table {
+    display: block;
+    overflow-x: auto;
+  }
+}

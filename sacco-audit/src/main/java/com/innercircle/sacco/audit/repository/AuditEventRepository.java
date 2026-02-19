@@ -43,8 +43,8 @@ public interface AuditEventRepository extends JpaRepository<AuditEvent, UUID> {
            "AND (:entityId IS NULL OR ae.entityId = :entityId) " +
            "AND (:actor IS NULL OR ae.actor = :actor) " +
            "AND (:action IS NULL OR ae.action = :action) " +
-           "AND (:startDate IS NULL OR ae.timestamp >= :startDate) " +
-           "AND (:endDate IS NULL OR ae.timestamp <= :endDate) " +
+           "AND ae.timestamp >= COALESCE(:startDate, ae.timestamp) " +
+           "AND ae.timestamp <= COALESCE(:endDate, ae.timestamp) " +
            "ORDER BY ae.id ASC")
     List<AuditEvent> findWithFilters(
             @Param("cursor") UUID cursor,

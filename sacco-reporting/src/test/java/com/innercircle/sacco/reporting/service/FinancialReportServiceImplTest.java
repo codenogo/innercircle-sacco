@@ -282,7 +282,8 @@ class FinancialReportServiceImplTest {
                 .thenReturn(new BigDecimal("500000"))   // totalShareCapital
                 .thenReturn(new BigDecimal("200000"))   // totalOutstandingLoans
                 .thenReturn(new BigDecimal("1000000"))  // totalContributions
-                .thenReturn(new BigDecimal("300000"))   // totalPayouts
+                .thenReturn(new BigDecimal("250000"))   // payoutDisbursements
+                .thenReturn(new BigDecimal("50000"))    // pettyCashDisbursements
                 .thenReturn(new BigDecimal("150000"))   // totalRepaid
                 .thenReturn(new BigDecimal("200000"));  // totalDisbursed
 
@@ -306,7 +307,8 @@ class FinancialReportServiceImplTest {
                 .thenReturn(BigDecimal.ZERO)    // totalShareCapital
                 .thenReturn(BigDecimal.ZERO)    // totalOutstandingLoans
                 .thenReturn(BigDecimal.ZERO)    // totalContributions
-                .thenReturn(BigDecimal.ZERO)    // totalPayouts
+                .thenReturn(BigDecimal.ZERO)    // payoutDisbursements
+                .thenReturn(BigDecimal.ZERO)    // pettyCashDisbursements
                 .thenReturn(BigDecimal.ZERO)    // totalRepaid
                 .thenReturn(BigDecimal.ZERO);   // totalDisbursed (zero => recovery rate = 0)
 
@@ -323,6 +325,7 @@ class FinancialReportServiceImplTest {
                 .thenReturn(0L);    // membersOneYearAgo (zero => growth rate = 0)
 
         when(jdbc.queryForObject(anyString(), eq(BigDecimal.class), any(Object[].class)))
+                .thenReturn(BigDecimal.ZERO)
                 .thenReturn(BigDecimal.ZERO)
                 .thenReturn(BigDecimal.ZERO)
                 .thenReturn(BigDecimal.ZERO)
@@ -346,7 +349,8 @@ class FinancialReportServiceImplTest {
                 .thenReturn(new BigDecimal("100000"))   // totalShareCapital
                 .thenReturn(new BigDecimal("50000"))    // totalOutstandingLoans
                 .thenReturn(new BigDecimal("200000"))   // totalContributions
-                .thenReturn(new BigDecimal("50000"))    // totalPayouts
+                .thenReturn(new BigDecimal("40000"))    // payoutDisbursements
+                .thenReturn(new BigDecimal("10000"))    // pettyCashDisbursements
                 .thenReturn(new BigDecimal("75000"))    // totalRepaid
                 .thenReturn(new BigDecimal("100000"));  // totalDisbursed
         // recovery = 75000/100000 * 100 = 75.00%

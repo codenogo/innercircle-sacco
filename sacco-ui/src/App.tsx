@@ -6,6 +6,7 @@ import { Members } from './pages/Members'
 import { Contributions } from './pages/Contributions'
 import { Loans } from './pages/Loans'
 import { Payouts } from './pages/Payouts'
+import { PettyCash } from './pages/PettyCash'
 import { Ledger } from './pages/Ledger'
 import { Reports } from './pages/Reports'
 import { Settings } from './pages/Settings'
@@ -58,6 +59,14 @@ export function App() {
         <Route path="loans" element={<Loans />} />
         <Route path="payouts" element={<Payouts />} />
         <Route
+          path="petty-cash"
+          element={(
+            <RequireRole allowed={['ADMIN', 'TREASURER']}>
+              <PettyCash />
+            </RequireRole>
+          )}
+        />
+        <Route
           path="ledger"
           element={(
             <RequireRole allowed={['ADMIN', 'TREASURER']}>
@@ -93,7 +102,7 @@ export function App() {
         <Route
           path="contribution-categories"
           element={(
-            <RequireRole allowed={['ADMIN']}>
+            <RequireRole allowed={['ADMIN', 'TREASURER']}>
               <ContributionCategories />
             </RequireRole>
           )}

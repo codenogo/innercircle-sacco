@@ -51,20 +51,27 @@
 /* ─── Dropdown panel ─── */
 
 .datepicker-panel {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  z-index: 1100;
-  width: 280px;
   background: var(--paper);
   border: 1px solid var(--rule);
   border-radius: var(--radius-md);
   padding: var(--space-3);
   animation: datepicker-in 120ms ease-out;
+  box-shadow: var(--shadow-lg);
+  max-height: calc(100vh - 16px);
+  overflow: hidden;
+}
+
+.datepicker-panel--top {
+  animation: datepicker-in-top 120ms ease-out;
 }
 
 @keyframes datepicker-in {
   from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes datepicker-in-top {
+  from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
@@ -221,6 +228,6 @@
 
 @media (max-width: 480px) {
   .datepicker-panel {
-    width: 260px;
+    max-width: calc(100vw - 16px);
   }
 }

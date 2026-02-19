@@ -56,9 +56,8 @@ const operationLinks: OperationLink[] = [
     description: 'Create and maintain contribution category definitions.',
     api: '/api/v1/contribution-categories',
     icon: HandCoins,
-    allowed: ['ADMIN'],
-    status: 'preview',
-    previewNote: 'UI preview only',
+    allowed: ['ADMIN', 'TREASURER'],
+    status: 'ready',
   },
   {
     to: '/contribution-ops',
@@ -67,8 +66,7 @@ const operationLinks: OperationLink[] = [
     api: '/api/v1/contributions/*',
     icon: CircleDollarSign,
     allowed: ['ADMIN', 'TREASURER'],
-    status: 'preview',
-    previewNote: 'UI preview only',
+    status: 'ready',
   },
   {
     to: '/loan-workflow',
@@ -109,6 +107,15 @@ const operationLinks: OperationLink[] = [
     allowed: ['ADMIN', 'TREASURER'],
     status: 'preview',
     previewNote: 'UI preview only',
+  },
+  {
+    to: '/petty-cash',
+    title: 'Petty Cash Workflow',
+    description: 'Voucher submission, approval, disbursement, settlement, and rejection.',
+    api: '/api/v1/petty-cash/*',
+    icon: Wallet,
+    allowed: ['ADMIN', 'TREASURER'],
+    status: 'ready',
   },
   {
     to: '/ledger-statements',

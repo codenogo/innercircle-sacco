@@ -1,0 +1,54 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-align-contribution-schema-with-categories
+      author: system
+      preConditions:
+        - onFail: MARK_RAN
+        - onError: MARK_RAN
+        - tableExists:
+            tableName: contributions
+        - tableExists:
+            tableName: contribution_categories
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              INSERT INTO contribution_categories (
+                id, name, description, active, is_mandatory, created_at, updated_at, created_by, version
+              )
+              SELECT
+                gen_random_uuid(),
+                'SHARE CAPITAL',
+                'Default category used for migrated contribution records',
+                TRUE,
+                TRUE,
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP,
+                'system-migration',
+                0
+              WHERE NOT EXISTS (SELECT 1 FROM contribution_categories);
+
+              UPDATE contributions
+              SET category_id = (
+                SELECT id
+                FROM contribution_categories
+                ORDER BY is_mandatory DESC, created_at ASC
+                LIMIT 1
+              )
+              WHERE category_id IS NULL;
+
+              UPDATE contributions
+              SET payment_mode = 'MPESA'
+              WHERE payment_mode IS NULL;
+
+              UPDATE contributions
+              SET contribution_month = DATE_TRUNC('month', contribution_date)::date
+              WHERE contribution_month IS NULL;
+
+              ALTER TABLE contributions
+              ALTER COLUMN category_id SET NOT NULL,
+              ALTER COLUMN payment_mode SET NOT NULL,
+              ALTER COLUMN contribution_month SET NOT NULL;
+
+              ALTER TABLE contributions
+              DROP COLUMN IF EXISTS type;

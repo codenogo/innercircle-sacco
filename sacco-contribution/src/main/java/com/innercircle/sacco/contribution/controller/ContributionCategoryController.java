@@ -26,7 +26,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/contribution-categories")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
 public class ContributionCategoryController {
 
     private final ContributionCategoryService categoryService;

@@ -10,6 +10,7 @@ import com.innercircle.sacco.common.event.LoanReversalEvent;
 import com.innercircle.sacco.common.event.PayoutProcessedEvent;
 import com.innercircle.sacco.common.event.PenaltyAppliedEvent;
 import com.innercircle.sacco.common.event.PenaltyWaivedEvent;
+import com.innercircle.sacco.common.event.PettyCashWorkflowEvent;
 import com.innercircle.sacco.common.exception.ResourceNotFoundException;
 import com.innercircle.sacco.ledger.entity.Account;
 import com.innercircle.sacco.ledger.entity.JournalEntry;
@@ -24,6 +25,7 @@ import org.springframework.context.event.EventListener;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Locale;
 
 @Component
 @RequiredArgsConstructor
@@ -43,6 +45,9 @@ public class FinancialEventListener {
     private static final String ACCOUNT_INTEREST_RECEIVABLE = "1003";
     private static final String ACCOUNT_MEMBER_ACCOUNT = "2002";
     private static final String ACCOUNT_BAD_DEBT_EXPENSE = "5003";
+    private static final String ACCOUNT_PETTY_CASH_FLOAT = "1004";
+    private static final String ACCOUNT_OPERATING_EXPENSE = "5001";
+    private static final String ACCOUNT_ADMIN_EXPENSE = "5002";
 
     @EventListener
     public void handleContributionReceived(ContributionReceivedEvent event) {
@@ -418,8 +423,87 @@ public class FinancialEventListener {
         ledgerService.postEntry(created.getId());
     }
 
+    @EventListener
+    public void handlePettyCashWorkflow(PettyCashWorkflowEvent event) {
+        if ("DISBURSED".equals(event.action())) {
+            log.info("Posting petty cash disbursement to ledger: {}", event.voucherId());
+
+            Account pettyCashFloatAccount = getAccountByCode(ACCOUNT_PETTY_CASH_FLOAT);
+            Account cashAccount = getAccountByCode(ACCOUNT_CASH);
+
+            JournalEntry entry = new JournalEntry();
+            entry.setTransactionDate(LocalDate.now());
+            entry.setDescription("Petty cash disbursed - " + event.referenceNumber());
+            entry.setTransactionType(TransactionType.PETTY_CASH_DISBURSEMENT);
+            entry.setReferenceId(event.voucherId());
+
+            // DR Petty Cash Float
+            JournalLine debitLine = new JournalLine();
+            debitLine.setAccount(pettyCashFloatAccount);
+            debitLine.setDebitAmount(event.amount());
+            debitLine.setCreditAmount(BigDecimal.ZERO);
+            debitLine.setDescription("Petty cash float funded - " + event.referenceNumber());
+            entry.addJournalLine(debitLine);
+
+            // CR Cash
+            JournalLine creditLine = new JournalLine();
+            creditLine.setAccount(cashAccount);
+            creditLine.setDebitAmount(BigDecimal.ZERO);
+            creditLine.setCreditAmount(event.amount());
+            creditLine.setDescription("Cash paid out - " + event.referenceNumber());
+            entry.addJournalLine(creditLine);
+
+            JournalEntry created = ledgerService.createJournalEntry(entry);
+            ledgerService.postEntry(created.getId());
+            return;
+        }
+
+        if ("SETTLED".equals(event.action())) {
+            log.info("Posting petty cash settlement to ledger: {}", event.voucherId());
+
+            Account expenseAccount = getAccountByCode(resolvePettyCashExpenseAccountCode(event.expenseType()));
+            Account pettyCashFloatAccount = getAccountByCode(ACCOUNT_PETTY_CASH_FLOAT);
+
+            JournalEntry entry = new JournalEntry();
+            entry.setTransactionDate(LocalDate.now());
+            entry.setDescription("Petty cash settled - " + event.referenceNumber());
+            entry.setTransactionType(TransactionType.PETTY_CASH_SETTLEMENT);
+            entry.setReferenceId(event.voucherId());
+
+            // DR Expense account
+            JournalLine debitLine = new JournalLine();
+            debitLine.setAccount(expenseAccount);
+            debitLine.setDebitAmount(event.amount());
+            debitLine.setCreditAmount(BigDecimal.ZERO);
+            debitLine.setDescription("Petty cash expense - " + event.referenceNumber());
+            entry.addJournalLine(debitLine);
+
+            // CR Petty Cash Float
+            JournalLine creditLine = new JournalLine();
+            creditLine.setAccount(pettyCashFloatAccount);
+            creditLine.setDebitAmount(BigDecimal.ZERO);
+            creditLine.setCreditAmount(event.amount());
+            creditLine.setDescription("Petty cash float cleared - " + event.referenceNumber());
+            entry.addJournalLine(creditLine);
+
+            JournalEntry created = ledgerService.createJournalEntry(entry);
+            ledgerService.postEntry(created.getId());
+        }
+    }
+
     private Account getAccountByCode(String accountCode) {
         return accountRepository.findByAccountCode(accountCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Account", accountCode));
+    }
+
+    private String resolvePettyCashExpenseAccountCode(String expenseType) {
+        if (expenseType == null) {
+            return ACCOUNT_OPERATING_EXPENSE;
+        }
+
+        return switch (expenseType.toUpperCase(Locale.ROOT)) {
+            case "ADMINISTRATION" -> ACCOUNT_ADMIN_EXPENSE;
+            default -> ACCOUNT_OPERATING_EXPENSE;
+        };
     }
 }

@@ -12,6 +12,7 @@
   border-right: 1px solid var(--rule);
   padding: var(--space-4) 0;
   z-index: 10;
+  overflow: hidden;
 }
 
 /* ─── Brand ─── */
@@ -62,10 +63,12 @@
 
 .sidebar-nav {
   flex: 1;
+  min-height: 0;
   padding: var(--space-3) 0;
   display: flex;
   flex-direction: column;
   gap: 1px;
+  overflow-y: auto;
 }
 
 .sidebar-link {
@@ -121,6 +124,7 @@
 
 .sidebar-footer {
   padding: 0;
+  flex-shrink: 0;
 }
 
 .sidebar-footer > .rule {

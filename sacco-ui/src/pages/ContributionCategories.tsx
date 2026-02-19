@@ -20,7 +20,7 @@ function toErrorMessage(error: unknown, fallback: string): string {
 export function ContributionCategories() {
   const { request } = useAuthenticatedApi()
   const { canAccess } = useAuthorization()
-  const canManageCategories = canAccess(['ADMIN'])
+  const canManageCategories = canAccess(['ADMIN', 'TREASURER'])
 
   const [categories, setCategories] = useState<ContributionCategoryResponse[]>([])
   const [loading, setLoading] = useState(true)
@@ -64,7 +64,7 @@ export function ContributionCategories() {
         <hr className="rule rule--strong" />
 
         <div className="ops-feedback ops-feedback--error" role="status">
-          Only admins can manage contribution categories.
+          Only admins and treasurers can manage contribution categories.
         </div>
       </div>
     )

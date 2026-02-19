@@ -24,11 +24,12 @@ import java.util.UUID;
 @Service
 public class FinancialReportServiceImpl implements FinancialReportService {
 
-    private static final String SUM_CONFIRMED_SHARE_CONTRIBUTIONS_SQL =
-            "SELECT COALESCE(SUM(c.amount), 0) " +
-                    "FROM contributions c " +
-                    "JOIN contribution_categories cc ON cc.id = c.category_id " +
-                    "WHERE c.status = 'CONFIRMED' AND UPPER(cc.name) LIKE 'SHARE%'";
+    private static final String ACCOUNT_CASH_CODE = "1001";
+    private static final String ACCOUNT_MEMBER_SHARES_CODE = "2001";
+    private static final String SUM_MEMBER_SHARE_CAPITAL_SQL =
+            "SELECT COALESCE(SUM(balance), 0) FROM accounts WHERE account_code = '" + ACCOUNT_MEMBER_SHARES_CODE + "'";
+    private static final String SUM_AVAILABLE_CASH_SQL =
+            "SELECT COALESCE(SUM(balance), 0) FROM accounts WHERE account_code = '" + ACCOUNT_CASH_CODE + "'";
 
     private final JdbcTemplate jdbc;
 
@@ -126,9 +127,14 @@ public class FinancialReportServiceImpl implements FinancialReportService {
                 "SELECT COALESCE(SUM(amount), 0) FROM contributions WHERE status = 'CONFIRMED' AND contribution_date BETWEEN ? AND ?",
                 startOfMonth, endOfMonth);
 
-        BigDecimal totalDisbursements = querySum(
+        BigDecimal payoutDisbursements = querySum(
                 "SELECT COALESCE(SUM(amount), 0) FROM payouts WHERE status = 'PROCESSED' AND processed_at BETWEEN ? AND ?",
                 startOfMonth.atStartOfDay(), endOfMonth.plusDays(1).atStartOfDay());
+        BigDecimal pettyCashDisbursements = querySum(
+                "SELECT COALESCE(SUM(amount), 0) FROM petty_cash_vouchers " +
+                        "WHERE status IN ('DISBURSED', 'SETTLED') AND disbursed_at BETWEEN ? AND ?",
+                startOfMonth.atStartOfDay(), endOfMonth.plusDays(1).atStartOfDay());
+        BigDecimal totalDisbursements = payoutDisbursements.add(pettyCashDisbursements);
 
         int pendingApprovals = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM loan_applications WHERE status = 'PENDING'",
@@ -140,13 +146,11 @@ public class FinancialReportServiceImpl implements FinancialReportService {
                         "WHERE la.status IN ('DISBURSED','REPAYING') AND rs.paid = false AND rs.due_date < CURRENT_DATE",
                 Integer.class);
 
-        BigDecimal cashPosition = querySum(
-                "SELECT COALESCE(SUM(CASE WHEN account_type = 'ASSET' THEN balance ELSE -balance END), 0) FROM accounts");
+        BigDecimal cashPosition = querySum(SUM_AVAILABLE_CASH_SQL);
 
         long activeMemberCount = queryCount("SELECT COUNT(*) FROM members WHERE status = 'ACTIVE'");
 
-        BigDecimal totalShareCapital = querySum(
-                SUM_CONFIRMED_SHARE_CONTRIBUTIONS_SQL);
+        BigDecimal totalShareCapital = querySum(SUM_MEMBER_SHARE_CAPITAL_SQL);
 
         return new TreasurerDashboardResponse(
                 totalCollections, totalDisbursements, pendingApprovals,
@@ -203,8 +207,7 @@ public class FinancialReportServiceImpl implements FinancialReportService {
         int totalMembers = (int) queryCount("SELECT COUNT(*) FROM members");
         int activeMembers = (int) queryCount("SELECT COUNT(*) FROM members WHERE status = 'ACTIVE'");
 
-        BigDecimal totalShareCapital = querySum(
-                SUM_CONFIRMED_SHARE_CONTRIBUTIONS_SQL);
+        BigDecimal totalShareCapital = querySum(SUM_MEMBER_SHARE_CAPITAL_SQL);
 
         BigDecimal totalOutstandingLoans = querySum(
                 "SELECT COALESCE(SUM(la.principal_amount - COALESCE((SELECT SUM(lr.amount) FROM loan_repayments lr WHERE lr.loan_id = la.id), 0)), 0) " +
@@ -213,8 +216,12 @@ public class FinancialReportServiceImpl implements FinancialReportService {
         BigDecimal totalContributions = querySum(
                 "SELECT COALESCE(SUM(amount), 0) FROM contributions WHERE status = 'CONFIRMED'");
 
-        BigDecimal totalPayouts = querySum(
+        BigDecimal payoutDisbursements = querySum(
                 "SELECT COALESCE(SUM(amount), 0) FROM payouts WHERE status = 'PROCESSED'");
+        BigDecimal pettyCashDisbursements = querySum(
+                "SELECT COALESCE(SUM(amount), 0) FROM petty_cash_vouchers " +
+                        "WHERE status IN ('DISBURSED', 'SETTLED') AND disbursed_at IS NOT NULL");
+        BigDecimal totalPayouts = payoutDisbursements.add(pettyCashDisbursements);
 
         // Loan recovery rate: total repayments / total loans disbursed (all time)
         BigDecimal totalRepaid = querySum(

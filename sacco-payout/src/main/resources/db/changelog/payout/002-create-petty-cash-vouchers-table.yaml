@@ -1,0 +1,128 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-create-petty-cash-vouchers-table
+      author: system
+      preConditions:
+        - onFail: MARK_RAN
+        - onError: MARK_RAN
+        - not:
+            tableExists:
+              tableName: petty_cash_vouchers
+      changes:
+        - createTable:
+            tableName: petty_cash_vouchers
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: reference_number
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: purpose
+                  type: varchar(500)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expense_type
+                  type: varchar(40)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(30)
+                  defaultValue: SUBMITTED
+                  constraints:
+                    nullable: false
+              - column:
+                  name: request_date
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: approved_by
+                  type: varchar(100)
+              - column:
+                  name: disbursed_by
+                  type: varchar(100)
+              - column:
+                  name: settled_by
+                  type: varchar(100)
+              - column:
+                  name: rejected_by
+                  type: varchar(100)
+              - column:
+                  name: disbursed_at
+                  type: timestamp with time zone
+              - column:
+                  name: settled_at
+                  type: timestamp with time zone
+              - column:
+                  name: rejected_at
+                  type: timestamp with time zone
+              - column:
+                  name: receipt_number
+                  type: varchar(100)
+              - column:
+                  name: rejection_reason
+                  type: varchar(500)
+              - column:
+                  name: notes
+                  type: varchar(500)
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+              - column:
+                  name: version
+                  type: bigint
+
+        - addUniqueConstraint:
+            tableName: petty_cash_vouchers
+            columnNames: receipt_number
+            constraintName: uk_petty_cash_vouchers_receipt_number
+
+        - createIndex:
+            tableName: petty_cash_vouchers
+            indexName: idx_petty_cash_vouchers_status
+            columns:
+              - column:
+                  name: status
+
+        - createIndex:
+            tableName: petty_cash_vouchers
+            indexName: idx_petty_cash_vouchers_request_date
+            columns:
+              - column:
+                  name: request_date
+
+        - createIndex:
+            tableName: petty_cash_vouchers
+            indexName: idx_petty_cash_vouchers_expense_type
+            columns:
+              - column:
+                  name: expense_type
+
+      rollback:
+        - dropTable:
+            tableName: petty_cash_vouchers

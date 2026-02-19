@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { CircleDollarSign, HandCoins, Plus } from 'lucide-react'
 import { Spinner } from '../components/Spinner'
 import { SkeletonRow } from '../components/Skeleton'
 import { RecordContributionModal } from '../components/RecordContributionModal'
@@ -71,6 +72,8 @@ export function Contributions() {
   const { profile, loading: profileLoading } = useCurrentUser()
   const memberId = profile?.member?.id ?? null
   const canRecordContribution = canAccess(['ADMIN', 'TREASURER'])
+  const canUseContributionOps = canAccess(['ADMIN', 'TREASURER'])
+  const canManageCategories = canAccess(['ADMIN', 'TREASURER'])
 
   const [contributions, setContributions] = useState<ContributionResponse[]>([])
   const [loading, setLoading] = useState(true)
@@ -223,12 +226,26 @@ export function Contributions() {
           <h1 className="page-title">Contributions</h1>
           <p className="page-subtitle">Monthly contribution tracking</p>
         </div>
-        {canRecordContribution && (
-          <button className="btn btn--primary" onClick={() => setShowModal(true)}>
-            <Plus size={14} strokeWidth={2} />
-            Record Contribution
-          </button>
-        )}
+        <div className="contrib-actions">
+          {canUseContributionOps && (
+            <Link to="/contribution-ops" className="btn btn--secondary">
+              <CircleDollarSign size={14} strokeWidth={1.75} />
+              Contribution Ops
+            </Link>
+          )}
+          {canManageCategories && (
+            <Link to="/contribution-categories" className="btn btn--secondary">
+              <HandCoins size={14} strokeWidth={1.75} />
+              Categories
+            </Link>
+          )}
+          {canRecordContribution && (
+            <button className="btn btn--primary" onClick={() => setShowModal(true)}>
+              <Plus size={14} strokeWidth={2} />
+              Record Contribution
+            </button>
+          )}
+        </div>
       </div>
 
       <hr className="rule rule--strong" />

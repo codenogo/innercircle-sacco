@@ -9,6 +9,7 @@ import com.innercircle.sacco.common.event.LoanReversalEvent;
 import com.innercircle.sacco.common.event.PayoutProcessedEvent;
 import com.innercircle.sacco.common.event.PenaltyAppliedEvent;
 import com.innercircle.sacco.common.event.PenaltyWaivedEvent;
+import com.innercircle.sacco.common.event.PettyCashWorkflowEvent;
 import com.innercircle.sacco.common.exception.ResourceNotFoundException;
 import com.innercircle.sacco.ledger.entity.Account;
 import com.innercircle.sacco.ledger.entity.AccountType;
@@ -36,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -62,6 +64,9 @@ class FinancialEventListenerTest {
     private Account penaltyIncomeAccount;
     private Account memberAccountAccount;
     private Account badDebtExpenseAccount;
+    private Account pettyCashFloatAccount;
+    private Account operatingExpenseAccount;
+    private Account adminExpenseAccount;
 
     @BeforeEach
     void setUp() {
@@ -74,6 +79,9 @@ class FinancialEventListenerTest {
         penaltyIncomeAccount = createAccount("4003", "Penalty Income", AccountType.REVENUE);
         memberAccountAccount = createAccount("2002", "Member Account", AccountType.LIABILITY);
         badDebtExpenseAccount = createAccount("5003", "Bad Debt Expense", AccountType.EXPENSE);
+        pettyCashFloatAccount = createAccount("1004", "Petty Cash Float", AccountType.ASSET);
+        operatingExpenseAccount = createAccount("5001", "Operating Expenses", AccountType.EXPENSE);
+        adminExpenseAccount = createAccount("5002", "Administrative Expenses", AccountType.EXPENSE);
     }
 
     @Nested
@@ -1207,6 +1215,109 @@ class FinancialEventListenerTest {
             financialEventListener.handleBenefitsDistributed(event);
 
             verify(ledgerService).postEntry(entryId);
+        }
+    }
+
+    @Nested
+    @DisplayName("handlePettyCashWorkflow")
+    class HandlePettyCashWorkflowTests {
+
+        @Test
+        @DisplayName("should create journal entry for petty cash disbursement")
+        void shouldCreateJournalEntryForPettyCashDisbursement() {
+            UUID voucherId = UUID.randomUUID();
+            BigDecimal amount = new BigDecimal("1000.00");
+            PettyCashWorkflowEvent event = new PettyCashWorkflowEvent(
+                    voucherId, "DISBURSED", amount, "ADMINISTRATION", "PC-12345678", null, UUID.randomUUID(), "admin"
+            );
+
+            setupAccountLookup("1004", pettyCashFloatAccount);
+            setupAccountLookup("1001", cashAccount);
+            setupLedgerService();
+
+            financialEventListener.handlePettyCashWorkflow(event);
+
+            verify(ledgerService).createJournalEntry(journalEntryCaptor.capture());
+            JournalEntry captured = journalEntryCaptor.getValue();
+
+            assertEquals(TransactionType.PETTY_CASH_DISBURSEMENT, captured.getTransactionType());
+            assertEquals(voucherId, captured.getReferenceId());
+            assertEquals("Petty cash disbursed - PC-12345678", captured.getDescription());
+            assertEquals(2, captured.getJournalLines().size());
+
+            JournalLine debitLine = captured.getJournalLines().get(0);
+            assertEquals(pettyCashFloatAccount, debitLine.getAccount());
+            assertEquals(amount, debitLine.getDebitAmount());
+            assertEquals(BigDecimal.ZERO, debitLine.getCreditAmount());
+
+            JournalLine creditLine = captured.getJournalLines().get(1);
+            assertEquals(cashAccount, creditLine.getAccount());
+            assertEquals(BigDecimal.ZERO, creditLine.getDebitAmount());
+            assertEquals(amount, creditLine.getCreditAmount());
+        }
+
+        @Test
+        @DisplayName("should create journal entry for settled admin petty cash voucher")
+        void shouldCreateJournalEntryForSettledAdminVoucher() {
+            UUID voucherId = UUID.randomUUID();
+            BigDecimal amount = new BigDecimal("750.00");
+            PettyCashWorkflowEvent event = new PettyCashWorkflowEvent(
+                    voucherId, "SETTLED", amount, "ADMINISTRATION", "PC-87654321", "RCT-001", UUID.randomUUID(), "admin"
+            );
+
+            setupAccountLookup("5002", adminExpenseAccount);
+            setupAccountLookup("1004", pettyCashFloatAccount);
+            setupLedgerService();
+
+            financialEventListener.handlePettyCashWorkflow(event);
+
+            verify(ledgerService).createJournalEntry(journalEntryCaptor.capture());
+            JournalEntry captured = journalEntryCaptor.getValue();
+
+            assertEquals(TransactionType.PETTY_CASH_SETTLEMENT, captured.getTransactionType());
+            assertEquals(voucherId, captured.getReferenceId());
+            assertEquals(2, captured.getJournalLines().size());
+
+            JournalLine debitLine = captured.getJournalLines().get(0);
+            assertEquals(adminExpenseAccount, debitLine.getAccount());
+            assertEquals(amount, debitLine.getDebitAmount());
+            assertEquals(BigDecimal.ZERO, debitLine.getCreditAmount());
+
+            JournalLine creditLine = captured.getJournalLines().get(1);
+            assertEquals(pettyCashFloatAccount, creditLine.getAccount());
+            assertEquals(BigDecimal.ZERO, creditLine.getDebitAmount());
+            assertEquals(amount, creditLine.getCreditAmount());
+        }
+
+        @Test
+        @DisplayName("should default to operating expense account for non-admin expense types")
+        void shouldDefaultToOperatingExpenseAccount() {
+            PettyCashWorkflowEvent event = new PettyCashWorkflowEvent(
+                    UUID.randomUUID(), "SETTLED", new BigDecimal("500.00"), "TRANSPORT", "PC-00000001", "RCT-002", UUID.randomUUID(), "admin"
+            );
+
+            setupAccountLookup("5001", operatingExpenseAccount);
+            setupAccountLookup("1004", pettyCashFloatAccount);
+            setupLedgerService();
+
+            financialEventListener.handlePettyCashWorkflow(event);
+
+            verify(ledgerService).createJournalEntry(journalEntryCaptor.capture());
+            JournalEntry captured = journalEntryCaptor.getValue();
+            assertEquals(operatingExpenseAccount, captured.getJournalLines().get(0).getAccount());
+        }
+
+        @Test
+        @DisplayName("should ignore non-posting workflow actions")
+        void shouldIgnoreNonPostingWorkflowActions() {
+            PettyCashWorkflowEvent event = new PettyCashWorkflowEvent(
+                    UUID.randomUUID(), "CREATED", new BigDecimal("1000.00"), "OPERATIONS", "PC-12345678", null, UUID.randomUUID(), "admin"
+            );
+
+            financialEventListener.handlePettyCashWorkflow(event);
+
+            verify(ledgerService, never()).createJournalEntry(any(JournalEntry.class));
+            verify(ledgerService, never()).postEntry(any(UUID.class));
         }
     }
 

@@ -1,0 +1,48 @@
+databaseChangeLog:
+  - changeSet:
+      id: 007-seed-petty-cash-float-account
+      author: system
+      preConditions:
+        - onFail: MARK_RAN
+        - onError: MARK_RAN
+        - tableExists:
+            tableName: accounts
+        - sqlCheck:
+            expectedResult: "0"
+            sql: "SELECT COUNT(*) FROM accounts WHERE account_code = '1004'"
+      changes:
+        - insert:
+            tableName: accounts
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: account_code
+                  value: "1004"
+              - column:
+                  name: account_name
+                  value: "Petty Cash Float"
+              - column:
+                  name: account_type
+                  value: "ASSET"
+              - column:
+                  name: balance
+                  value: "0.00"
+              - column:
+                  name: description
+                  value: "Cash allocated for petty cash disbursements"
+              - column:
+                  name: active
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+
+      rollback:
+        - delete:
+            tableName: accounts
+            where: "account_code = '1004'"

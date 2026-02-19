@@ -1,0 +1,50 @@
+databaseChangeLog:
+  - changeSet:
+      id: 008-add-refresh-token-rotation-metadata
+      author: system
+      validCheckSum:
+        - "9:039f8ebd561f881e33077277ea56dc60"
+        - "9:7210f1b7ea60b894da5d48852679821e"
+      preConditions:
+        - onFail: MARK_RAN
+        - onError: MARK_RAN
+        - tableExists:
+            tableName: refresh_tokens
+      changes:
+        - addColumn:
+            tableName: refresh_tokens
+            columns:
+              - column:
+                  name: replaced_by_token_id
+                  type: uuid
+              - column:
+                  name: revoked_at
+                  type: timestamp with time zone
+
+        - createIndex:
+            indexName: idx_refresh_tokens_replaced_by
+            tableName: refresh_tokens
+            columns:
+              - column:
+                  name: replaced_by_token_id
+
+        - createIndex:
+            indexName: idx_refresh_tokens_revoked_at
+            tableName: refresh_tokens
+            columns:
+              - column:
+                  name: revoked_at
+
+      rollback:
+        - dropIndex:
+            tableName: refresh_tokens
+            indexName: idx_refresh_tokens_revoked_at
+        - dropIndex:
+            tableName: refresh_tokens
+            indexName: idx_refresh_tokens_replaced_by
+        - dropColumn:
+            tableName: refresh_tokens
+            columnName: revoked_at
+        - dropColumn:
+            tableName: refresh_tokens
+            columnName: replaced_by_token_id
