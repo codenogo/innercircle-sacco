@@ -88,7 +88,7 @@
 .sidebar-link--active {
   color: var(--ink);
   font-weight: 600;
-  background: var(--rule-subtle);
+  background: linear-gradient(to right, var(--mpesa-soft), transparent 80%);
 }
 
 .sidebar-link:focus-visible {
@@ -103,9 +103,9 @@
   left: 0;
   top: var(--space-2);
   bottom: var(--space-2);
-  width: 2px;
+  width: 3px;
   background: var(--mpesa);
-  border-radius: 0 1px 1px 0;
+  border-radius: 0 2px 2px 0;
 }
 
 .sidebar-link svg {

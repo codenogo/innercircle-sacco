@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Landmark, Search } from 'lucide-react'
+import { Spinner } from '../components/Spinner'
+import { SkeletonRow } from '../components/Skeleton'
 import { NewLoanModal } from '../components/NewLoanModal'
+import { MakerCheckerWarning } from '../components/MakerCheckerWarning'
 import { ApiError } from '../services/apiClient'
 import { getAllMembers } from '../services/memberService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { useAuthorization } from '../hooks/useAuthorization'
 import { useCurrentUser } from '../hooks/useCurrentUser'
+import { isMakerCheckerViolation } from '../types/makerChecker'
 import type { CursorPage } from '../types/users'
 import type { LoanApplicationRequest, LoanResponse, LoanStatus, LoanSummaryResponse } from '../types/loans'
 import type { MemberResponse } from '../types/members'
@@ -68,6 +72,8 @@ export function Loans() {
   const [hasMore, setHasMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [overrideTarget, setOverrideTarget] = useState<{ id: string; action: 'approve' | 'reject' } | null>(null)
 
   const loadLoans = useCallback(async (opts?: { append?: boolean; cursor?: string | null }) => {
     if (isMemberOnly) {
@@ -176,6 +182,45 @@ export function Loans() {
     }
   }
 
+  async function handleLoanAction(loanId: string, action: 'approve' | 'reject') {
+    setActionLoading(loanId)
+    setFeedback(null)
+    try {
+      const updated = await request<LoanResponse>(`/api/v1/loans/${loanId}/${action}`, {
+        method: 'PATCH',
+      })
+      setLoans(prev => prev.map(l => l.id === loanId ? updated : l))
+      setFeedback({ type: 'success', text: `Loan ${action === 'approve' ? 'approved' : 'rejected'} successfully.` })
+    } catch (err) {
+      if (isMakerCheckerViolation(err)) {
+        setOverrideTarget({ id: loanId, action })
+      } else {
+        setFeedback({ type: 'error', text: toErrorMessage(err, `Unable to ${action} loan.`) })
+      }
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  async function handleLoanOverride(reason: string) {
+    if (!overrideTarget) return
+    const { id, action } = overrideTarget
+    setActionLoading(id)
+    try {
+      const updated = await request<LoanResponse>(`/api/v1/loans/${id}/${action}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ overrideReason: reason }),
+      })
+      setLoans(prev => prev.map(l => l.id === id ? updated : l))
+      setOverrideTarget(null)
+      setFeedback({ type: 'success', text: `Loan ${action === 'approve' ? 'approved' : 'rejected'} with admin override.` })
+    } catch (err) {
+      setFeedback({ type: 'error', text: toErrorMessage(err, `Unable to ${action} loan with override.`) })
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
   const memberList = members.map(m => ({ id: m.id, name: `${m.firstName} ${m.lastName}`.trim() }))
 
   const filtered = useMemo(() => {
@@ -279,13 +324,14 @@ export function Loans() {
               <th className="label">Disbursed</th>
               <th className="label ledger-table-amount">Principal</th>
               <th className="label ledger-table-amount">Balance</th>
+              {canManageLoans && <th className="label">Actions</th>}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="table-empty">Loading loans...</td></tr>
+              <tr><td colSpan={canManageLoans ? 8 : 7}><SkeletonRow cells={4} /><SkeletonRow cells={4} /><SkeletonRow cells={4} /></td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={7} className="table-empty">No loans match your search.</td></tr>
+              <tr><td colSpan={canManageLoans ? 8 : 7} className="table-empty">No loans match your search.</td></tr>
             ) : filtered.map((loan, i) => (
               <tr key={loan.id} className={i % 2 === 1 ? 'ledger-row--alt' : ''}>
                 <td className="data loan-id">{shortId(loan.id)}</td>
@@ -299,6 +345,30 @@ export function Loans() {
                 <td className={`amount ledger-table-amount ${loan.status === 'DEFAULTED' ? 'amount--negative' : ''}`}>
                   {Number(loan.outstandingBalance) > 0 ? fmt(loan.outstandingBalance) : '—'}
                 </td>
+                {canManageLoans && (
+                  <td>
+                    {loan.status === 'PENDING' && (
+                      <div className="table-actions">
+                        <button
+                          type="button"
+                          className="btn btn--ghost btn--small"
+                          disabled={actionLoading === loan.id}
+                          onClick={() => void handleLoanAction(loan.id, 'approve')}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn--ghost btn--small btn--danger-text"
+                          disabled={actionLoading === loan.id}
+                          onClick={() => void handleLoanAction(loan.id, 'reject')}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -312,7 +382,7 @@ export function Loans() {
               disabled={loadingMore || !nextCursor}
               onClick={() => void loadLoans({ append: true, cursor: nextCursor })}
             >
-              {loadingMore ? 'Loading...' : 'Load More'}
+              {loadingMore ? <><Spinner size="sm" /> Loading...</> : 'Load More'}
             </button>
           </div>
         )}
@@ -329,6 +399,15 @@ export function Loans() {
           isSubmitting={submittingLoan}
         />
       )}
+
+      <MakerCheckerWarning
+        open={overrideTarget !== null}
+        onClose={() => setOverrideTarget(null)}
+        isAdmin={canAccess(['ADMIN'])}
+        onOverride={handleLoanOverride}
+        submitting={actionLoading !== null}
+        action={overrideTarget?.action ?? 'approve'}
+      />
     </div>
   )
 }

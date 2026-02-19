@@ -77,6 +77,24 @@
   /* ─── Transitions ─── */
   --ease: 150ms ease-out;
 
+  /* ─── Elevation — paper lifting off the desk ─── */
+  --shadow-sm:  0 1px 2px rgba(90, 80, 60, 0.06), 0 1px 3px rgba(90, 80, 60, 0.04);
+  --shadow-md:  0 2px 4px rgba(90, 80, 60, 0.07), 0 4px 8px rgba(90, 80, 60, 0.05);
+  --shadow-lg:  0 4px 8px rgba(90, 80, 60, 0.08), 0 8px 16px rgba(90, 80, 60, 0.06);
+  --shadow-xl:  0 8px 16px rgba(90, 80, 60, 0.10), 0 16px 32px rgba(90, 80, 60, 0.08);
+
+  /* ─── Transitions — restrained, pen-on-paper timing ─── */
+  --ease-fast:   100ms ease-out;
+  --ease-medium: 250ms ease-out;
+  --ease-slow:   400ms ease-out;
+
+  /* ─── Semantic — extended ─── */
+  --info:       #4a6fa5;
+  --info-soft:  rgba(74, 111, 165, 0.08);
+
+  /* ─── Focus — consistent ring ─── */
+  --focus-ring: 0 0 0 3px var(--mpesa-soft);
+
   /* ─── Sidebar ─── */
   --sidebar-width: 220px;
 }

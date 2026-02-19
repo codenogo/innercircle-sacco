@@ -2,6 +2,12 @@
 @import './tokens.css';
 @import './auth.css';
 @import './components.css';
+@import './skeleton.css';
+@import './spinner.css';
+@import './progress.css';
+@import './toast.css';
+@import './alert.css';
+@import './tooltip.css';
 
 body {
   font-family: var(--font-body);
@@ -80,7 +86,8 @@ body {
 .dot-leader::after {
   content: '';
   flex: 1;
-  border-bottom: 1px dotted var(--ink-faint);
+  border-bottom: 1px dotted var(--ink-muted);
+  opacity: 0.5;
   margin-bottom: 0.2em;
 }
 

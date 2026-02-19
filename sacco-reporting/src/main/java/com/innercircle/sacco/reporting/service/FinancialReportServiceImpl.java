@@ -140,7 +140,7 @@ public class FinancialReportServiceImpl implements FinancialReportService {
         long activeMemberCount = queryCount("SELECT COUNT(*) FROM members WHERE status = 'ACTIVE'");
 
         BigDecimal totalShareCapital = querySum(
-                "SELECT COALESCE(SUM(amount), 0) FROM contributions WHERE status = 'CONFIRMED' AND contribution_type = 'SHARE'");
+                "SELECT COALESCE(SUM(balance), 0) FROM accounts WHERE active = true AND account_code = '2001'");
 
         return new TreasurerDashboardResponse(
                 totalCollections, totalDisbursements, pendingApprovals,
@@ -198,7 +198,7 @@ public class FinancialReportServiceImpl implements FinancialReportService {
         int activeMembers = (int) queryCount("SELECT COUNT(*) FROM members WHERE status = 'ACTIVE'");
 
         BigDecimal totalShareCapital = querySum(
-                "SELECT COALESCE(SUM(amount), 0) FROM contributions WHERE status = 'CONFIRMED' AND contribution_type = 'SHARE'");
+                "SELECT COALESCE(SUM(balance), 0) FROM accounts WHERE active = true AND account_code = '2001'");
 
         BigDecimal totalOutstandingLoans = querySum(
                 "SELECT COALESCE(SUM(la.principal_amount - COALESCE((SELECT SUM(lr.amount) FROM loan_repayments lr WHERE lr.loan_id = la.id), 0)), 0) " +

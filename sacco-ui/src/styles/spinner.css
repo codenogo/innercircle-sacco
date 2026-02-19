@@ -1,0 +1,47 @@
+/* ─── Spinner — shared loading indicator ─── */
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.spinner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  animation: spin 0.8s linear infinite;
+  color: var(--mpesa);
+}
+
+/* ─── Sizes ─── */
+
+.spinner--sm {
+  width: 14px;
+  height: 14px;
+}
+
+.spinner--md {
+  width: 20px;
+  height: 20px;
+}
+
+.spinner--lg {
+  width: 28px;
+  height: 28px;
+}
+
+/* ─── Muted variant ─── */
+
+.spinner--muted {
+  color: var(--ink-faint);
+}
+
+/* ─── Inline with text ─── */
+
+.spinner-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}

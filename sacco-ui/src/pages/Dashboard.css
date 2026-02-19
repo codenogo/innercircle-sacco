@@ -143,10 +143,27 @@
 .ledger-table tbody tr {
   border-bottom: 1px solid var(--rule-subtle);
   transition: background var(--ease);
+  position: relative;
 }
 
 .ledger-table tbody tr:hover {
-  background: var(--rule-subtle);
+  background: rgba(90, 110, 150, 0.08);
+}
+
+.ledger-table tbody tr::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--mpesa);
+  opacity: 0;
+  transition: opacity var(--ease-fast);
+}
+
+.ledger-table tbody tr:hover::before {
+  opacity: 1;
 }
 
 /* Alternating row — like ruled ledger paper */

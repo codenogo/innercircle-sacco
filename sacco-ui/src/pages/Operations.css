@@ -18,6 +18,16 @@
   color: var(--ink-secondary);
 }
 
+.ops-link-card:not(.ops-link-card--disabled) .report-card {
+  transition: border-color var(--ease-fast), background var(--ease-fast),
+              box-shadow var(--ease-medium), transform var(--ease-medium);
+}
+
+.ops-link-card:not(.ops-link-card--disabled):hover .report-card {
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
 .ops-link-card--disabled {
   opacity: 0.72;
   cursor: not-allowed;

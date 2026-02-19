@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ArrowUpRight, ArrowDownRight, TrendingUp } from 'lucide-react'
+import { SkeletonRow, SkeletonStat } from '../components/Skeleton'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { ApiError } from '../services/apiClient'
 import type { TreasurerDashboardResponse, SaccoStateResponse } from '../types/dashboard'
@@ -59,7 +60,13 @@ export function Dashboard() {
           </div>
         </header>
         <hr className="rule rule--strong" />
-        <p className="table-empty">Loading dashboard...</p>
+        <div style={{ padding: 'var(--space-4) 0', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+          <SkeletonStat />
+          <SkeletonStat />
+          <SkeletonRow cells={4} />
+          <SkeletonRow cells={4} />
+          <SkeletonRow cells={4} />
+        </div>
       </div>
     )
   }

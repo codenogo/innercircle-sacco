@@ -28,15 +28,17 @@ export async function applyForLoan(payload: LoanApplicationRequest): Promise<Loa
   })
 }
 
-export async function approveLoan(id: string): Promise<LoanResponse> {
+export async function approveLoan(id: string, overrideReason?: string): Promise<LoanResponse> {
   return apiRequest<LoanResponse>(`/api/v1/loans/${id}/approve`, {
     method: 'PATCH',
+    ...(overrideReason ? { body: JSON.stringify({ overrideReason }) } : {}),
   })
 }
 
-export async function rejectLoan(id: string): Promise<LoanResponse> {
+export async function rejectLoan(id: string, overrideReason?: string): Promise<LoanResponse> {
   return apiRequest<LoanResponse>(`/api/v1/loans/${id}/reject`, {
     method: 'PATCH',
+    ...(overrideReason ? { body: JSON.stringify({ overrideReason }) } : {}),
   })
 }
 

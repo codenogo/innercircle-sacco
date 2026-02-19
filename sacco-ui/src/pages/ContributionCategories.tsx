@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Modal } from '../components/Modal'
+import { SkeletonRow } from '../components/Skeleton'
 import { ApiError } from '../services/apiClient'
 import { getCategories as fetchAllCategories } from '../services/contributionService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
@@ -173,7 +174,7 @@ export function ContributionCategories() {
         </thead>
         <tbody>
           {loading ? (
-            <tr><td colSpan={4} className="table-empty">Loading categories...</td></tr>
+            <tr><td colSpan={4}><SkeletonRow cells={4} /><SkeletonRow cells={4} /><SkeletonRow cells={4} /></td></tr>
           ) : categories.length === 0 ? (
             <tr><td colSpan={4} className="table-empty">No categories found.</td></tr>
           ) : categories.map((category, i) => (

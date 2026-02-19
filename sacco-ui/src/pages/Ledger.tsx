@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { PenLine } from 'lucide-react'
+import { SkeletonRow } from '../components/Skeleton'
 import { NewJournalEntryModal } from '../components/NewJournalEntryModal'
 import { ApiError } from '../services/apiClient'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
@@ -167,7 +168,7 @@ export function Ledger() {
         </thead>
         <tbody>
           {loading ? (
-            <tr><td colSpan={6} className="table-empty">Loading journal entries...</td></tr>
+            <tr><td colSpan={6}><SkeletonRow cells={4} /><SkeletonRow cells={4} /><SkeletonRow cells={4} /></td></tr>
           ) : filtered.length === 0 ? (
             <tr><td colSpan={6} className="table-empty">No entries for this account.</td></tr>
           ) : filtered.map((line, i) => (

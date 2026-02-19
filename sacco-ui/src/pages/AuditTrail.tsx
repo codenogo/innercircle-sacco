@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Download } from 'lucide-react'
+import { Spinner } from '../components/Spinner'
+import { SkeletonRow } from '../components/Skeleton'
 import { ApiError } from '../services/apiClient'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { localISODate } from '../utils/date'
@@ -198,7 +200,7 @@ export function AuditTrail() {
         </thead>
         <tbody>
           {loading ? (
-            <tr><td colSpan={5} className="table-empty">Loading audit events...</td></tr>
+            <tr><td colSpan={5}><SkeletonRow cells={5} /><SkeletonRow cells={5} /><SkeletonRow cells={5} /></td></tr>
           ) : events.length === 0 ? (
             <tr><td colSpan={5} className="table-empty">No events found.</td></tr>
           ) : events.map((event, i) => (
@@ -221,7 +223,7 @@ export function AuditTrail() {
             disabled={loadingMore || !nextCursor}
             onClick={() => void loadEvents({ append: true, cursor: nextCursor })}
           >
-            {loadingMore ? 'Loading...' : 'Load More'}
+            {loadingMore ? <><Spinner size="sm" /> Loading...</> : 'Load More'}
           </button>
         </div>
       )}
