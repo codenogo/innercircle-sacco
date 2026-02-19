@@ -24,6 +24,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -146,7 +147,7 @@ class LedgerControllerTest {
                     PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "transactionDate")),
                     1
             );
-            when(journalEntryRepository.findByPostedTrue(any(Pageable.class))).thenReturn(page);
+            when(journalEntryRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
 
             mockMvc.perform(get("/api/v1/ledger/journal-entries"))
                     .andExpect(status().isOk())
@@ -173,7 +174,7 @@ class LedgerControllerTest {
                     PageRequest.of(1, 10, Sort.by(Sort.Direction.DESC, "transactionDate")),
                     11
             );
-            when(journalEntryRepository.findByPostedTrue(any(Pageable.class))).thenReturn(page);
+            when(journalEntryRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
 
             mockMvc.perform(get("/api/v1/ledger/journal-entries")
                             .param("page", "1")
@@ -197,7 +198,7 @@ class LedgerControllerTest {
                     PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "entryNumber")),
                     1
             );
-            when(journalEntryRepository.findByPostedTrue(any(Pageable.class))).thenReturn(page);
+            when(journalEntryRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
 
             mockMvc.perform(get("/api/v1/ledger/journal-entries")
                             .param("sort", "entryNumber,asc"))
@@ -209,7 +210,7 @@ class LedgerControllerTest {
         @DisplayName("should map journal lines correctly in response")
         void shouldMapJournalLinesCorrectly() throws Exception {
             Page<JournalEntry> page = new PageImpl<>(List.of(testJournalEntry));
-            when(journalEntryRepository.findByPostedTrue(any(Pageable.class))).thenReturn(page);
+            when(journalEntryRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
 
             mockMvc.perform(get("/api/v1/ledger/journal-entries"))
                     .andExpect(status().isOk())
@@ -226,7 +227,7 @@ class LedgerControllerTest {
         @DisplayName("should return empty page when no entries")
         void shouldReturnEmptyPage() throws Exception {
             Page<JournalEntry> emptyPage = new PageImpl<>(List.of());
-            when(journalEntryRepository.findByPostedTrue(any(Pageable.class))).thenReturn(emptyPage);
+            when(journalEntryRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(emptyPage);
 
             mockMvc.perform(get("/api/v1/ledger/journal-entries"))
                     .andExpect(status().isOk())

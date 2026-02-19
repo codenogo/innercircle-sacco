@@ -65,6 +65,8 @@ databaseChangeLog:
       file: db/changelog/ledger/006-add-account-member-fields.yaml
   - include:
       file: db/changelog/ledger/007-seed-petty-cash-float-account.yaml
+  - include:
+      file: db/changelog/ledger/008-add-search-indexes.yaml
 
   # Loan module
   - include:

@@ -9,15 +9,18 @@ import com.innercircle.sacco.ledger.dto.TrialBalanceResponse;
 import com.innercircle.sacco.ledger.entity.Account;
 import com.innercircle.sacco.ledger.entity.JournalEntry;
 import com.innercircle.sacco.ledger.entity.JournalLine;
+import com.innercircle.sacco.ledger.entity.TransactionType;
 import com.innercircle.sacco.ledger.repository.AccountRepository;
 import com.innercircle.sacco.ledger.repository.JournalEntryRepository;
 import com.innercircle.sacco.ledger.service.FinancialStatementService;
+import jakarta.persistence.criteria.Join;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -50,7 +54,13 @@ public class LedgerController {
     public ApiResponse<PageResponse<JournalEntryResponse>> getJournalEntries(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "transactionDate,desc") String sort) {
+            @RequestParam(defaultValue = "transactionDate,desc") String sort,
+            @RequestParam(required = false) UUID accountId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @RequestParam(required = false) String description,
+            @RequestParam(required = false) String entryNumber,
+            @RequestParam(required = false) TransactionType transactionType) {
 
         // Parse sort parameter
         String[] sortParts = sort.split(",");
@@ -60,7 +70,41 @@ public class LedgerController {
                 : Sort.Direction.DESC;
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortField));
-        Page<JournalEntry> entries = journalEntryRepository.findByPostedTrue(pageable);
+
+        // Build dynamic Specification — always filter to posted entries
+        Specification<JournalEntry> spec = (root, query, cb) -> cb.isTrue(root.get("posted"));
+
+        if (entryNumber != null && !entryNumber.isBlank()) {
+            String pattern = "%" + entryNumber.trim().toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("entryNumber")), pattern));
+        }
+
+        if (description != null && !description.isBlank()) {
+            String pattern = "%" + description.trim().toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("description")), pattern));
+        }
+
+        if (transactionType != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("transactionType"), transactionType));
+        }
+
+        if (dateFrom != null) {
+            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("transactionDate"), dateFrom));
+        }
+
+        if (dateTo != null) {
+            spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("transactionDate"), dateTo));
+        }
+
+        if (accountId != null) {
+            spec = spec.and((root, query, cb) -> {
+                Join<JournalEntry, JournalLine> lines = root.join("journalLines");
+                query.distinct(true);
+                return cb.equal(lines.get("account").get("id"), accountId);
+            });
+        }
+
+        Page<JournalEntry> entries = journalEntryRepository.findAll(spec, pageable);
 
         Page<JournalEntryResponse> responsePage = entries.map(this::mapToResponse);
         return ApiResponse.ok(PageResponse.from(responsePage));

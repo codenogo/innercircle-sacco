@@ -1,0 +1,37 @@
+databaseChangeLog:
+  - changeSet:
+      id: 008-add-journal-entry-search-indexes
+      author: claude
+      changes:
+        - createIndex:
+            tableName: journal_entries
+            indexName: idx_journal_entries_description
+            columns:
+              - column:
+                  name: description
+        - createIndex:
+            tableName: journal_entries
+            indexName: idx_journal_entries_posted_date_type
+            columns:
+              - column:
+                  name: posted
+              - column:
+                  name: transaction_date
+              - column:
+                  name: transaction_type
+        - createIndex:
+            tableName: journal_entries
+            indexName: idx_journal_entries_entry_number
+            columns:
+              - column:
+                  name: entry_number
+      rollback:
+        - dropIndex:
+            tableName: journal_entries
+            indexName: idx_journal_entries_description
+        - dropIndex:
+            tableName: journal_entries
+            indexName: idx_journal_entries_posted_date_type
+        - dropIndex:
+            tableName: journal_entries
+            indexName: idx_journal_entries_entry_number
