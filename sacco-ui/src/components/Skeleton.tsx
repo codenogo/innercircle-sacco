@@ -17,6 +17,22 @@ export function SkeletonRow({ cells = 4 }: { cells?: number }) {
   )
 }
 
+export function SkeletonTableRows({ rows = 3, cols }: { rows?: number; cols: number }) {
+  return (
+    <>
+      {Array.from({ length: rows }, (_, r) => (
+        <tr key={r} className="skeleton-table-row">
+          {Array.from({ length: cols }, (_, c) => (
+            <td key={c}>
+              <div className="skeleton skeleton-table-cell" />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  )
+}
+
 export function SkeletonStat() {
   return <div className="skeleton-stat" />
 }

@@ -62,6 +62,18 @@
 .skeleton-row-cell:nth-child(3) { flex: 1; }
 .skeleton-row-cell:nth-child(4) { flex: 0.5; }
 
+/* ─── Table skeleton (proper <tr>/<td> for use inside <tbody>) ─── */
+
+.skeleton-table-row {
+  border-bottom: 1px solid var(--rule-subtle);
+}
+
+.skeleton-table-cell {
+  height: 14px;
+  width: 75%;
+  margin: var(--space-2) 0;
+}
+
 /* ─── Stat card placeholder ─── */
 
 .skeleton-stat {

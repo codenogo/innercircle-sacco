@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Search, UserPlus } from 'lucide-react'
 import { Spinner } from '../components/Spinner'
-import { SkeletonRow } from '../components/Skeleton'
+import { SkeletonTableRows } from '../components/Skeleton'
 import { Modal } from '../components/Modal'
 import { ApiError } from '../services/apiClient'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
@@ -373,7 +373,7 @@ export function UsersAdmin() {
         </thead>
         <tbody>
           {loading ? (
-            <tr><td colSpan={5}><SkeletonRow cells={5} /><SkeletonRow cells={5} /><SkeletonRow cells={5} /></td></tr>
+            <SkeletonTableRows cols={5} />
           ) : filteredUsers.length === 0 ? (
             <tr><td colSpan={5} className="table-empty">No users found.</td></tr>
           ) : filteredUsers.map((user, i) => {

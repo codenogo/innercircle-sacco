@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Plus, Search } from 'lucide-react'
 import { Spinner } from '../components/Spinner'
-import { SkeletonRow } from '../components/Skeleton'
+import { SkeletonTableRows } from '../components/Skeleton'
 import { MonthPicker } from '../components/MonthPicker'
 import { DatePicker } from '../components/DatePicker'
 import { Modal } from '../components/Modal'
@@ -452,13 +452,7 @@ export function PettyCash() {
         </thead>
         <tbody>
           {loading ? (
-            <tr>
-              <td colSpan={7}>
-                <SkeletonRow cells={7} />
-                <SkeletonRow cells={7} />
-                <SkeletonRow cells={7} />
-              </td>
-            </tr>
+            <SkeletonTableRows cols={7} />
           ) : filtered.length === 0 ? (
             <tr>
               <td colSpan={7} className="table-empty">No petty cash vouchers found.</td>
