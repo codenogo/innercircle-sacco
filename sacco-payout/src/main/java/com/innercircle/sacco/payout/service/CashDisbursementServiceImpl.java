@@ -1,7 +1,9 @@
 package com.innercircle.sacco.payout.service;
 
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.guard.MakerCheckerGuard;
 import com.innercircle.sacco.payout.entity.CashDisbursement;
+import com.innercircle.sacco.payout.entity.CashDisbursementStatus;
 import com.innercircle.sacco.payout.event.CashDisbursementRecordedEvent;
 import com.innercircle.sacco.payout.repository.CashDisbursementRepository;
 import com.innercircle.sacco.common.outbox.EventOutboxWriter;
@@ -11,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -54,9 +57,49 @@ public class CashDisbursementServiceImpl implements CashDisbursementService {
 
     @Override
     @Transactional
+    public CashDisbursement approveDisbursement(UUID disbursementId, String actor,
+                                                String overrideReason, boolean isAdmin) {
+        CashDisbursement disbursement = disbursementRepository.findById(disbursementId)
+                .orElseThrow(() -> new IllegalArgumentException("Disbursement not found: " + disbursementId));
+
+        if (disbursement.getStatus() != CashDisbursementStatus.PENDING) {
+            throw new IllegalStateException("Disbursement must be in PENDING status to approve");
+        }
+
+        MakerCheckerGuard.assertOrOverride(
+                disbursement.getCreatedBy(), actor, overrideReason, isAdmin,
+                "CashDisbursement", disbursement.getId()
+        );
+
+        disbursement.setStatus(CashDisbursementStatus.APPROVED);
+        disbursement.setApprovedBy(actor);
+        disbursement.setApprovedAt(Instant.now());
+        return disbursementRepository.save(disbursement);
+    }
+
+    @Override
+    @Transactional
+    public CashDisbursement completeDisbursement(UUID disbursementId, String actor) {
+        CashDisbursement disbursement = disbursementRepository.findById(disbursementId)
+                .orElseThrow(() -> new IllegalArgumentException("Disbursement not found: " + disbursementId));
+
+        if (disbursement.getStatus() != CashDisbursementStatus.APPROVED) {
+            throw new IllegalStateException("Disbursement must be in APPROVED status to record");
+        }
+
+        disbursement.setStatus(CashDisbursementStatus.RECORDED);
+        return disbursementRepository.save(disbursement);
+    }
+
+    @Override
+    @Transactional
     public CashDisbursement signoff(UUID disbursementId, String signoffBy) {
         CashDisbursement disbursement = disbursementRepository.findById(disbursementId)
                 .orElseThrow(() -> new IllegalArgumentException("Disbursement not found: " + disbursementId));
+
+        if (disbursement.getStatus() != CashDisbursementStatus.RECORDED) {
+            throw new IllegalStateException("Disbursement must be in RECORDED status to sign off");
+        }
 
         if (disbursement.getSignoffBy() != null) {
             throw new IllegalStateException("Disbursement already signed off");

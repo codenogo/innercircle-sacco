@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowDownToLine, Search } from 'lucide-react'
+import { Spinner } from '../components/Spinner'
+import { SkeletonRow } from '../components/Skeleton'
 import { NewPayoutModal } from '../components/NewPayoutModal'
+import { MakerCheckerWarning } from '../components/MakerCheckerWarning'
 import { Select } from '../components/Select'
 import { ApiError } from '../services/apiClient'
 import { getAllMembers } from '../services/memberService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { useAuthorization } from '../hooks/useAuthorization'
 import { useCurrentUser } from '../hooks/useCurrentUser'
+import { isMakerCheckerViolation } from '../types/makerChecker'
 import type { CursorPage } from '../types/users'
 import type { PayoutResponse, PayoutRequest, PayoutStatus, PayoutType } from '../types/payouts'
 import './Payouts.css'
@@ -74,6 +78,8 @@ export function Payouts() {
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(false)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [overrideTarget, setOverrideTarget] = useState<{ id: string; action: 'approve' } | null>(null)
 
   const loadPayouts = useCallback(async (opts?: { append?: boolean; cursor?: string | null }) => {
     if (isMemberOnly) {
@@ -190,6 +196,45 @@ export function Payouts() {
     }
   }
 
+  async function handleApprovePayout(payoutId: string) {
+    setActionLoading(payoutId)
+    setFeedback(null)
+    try {
+      const updated = await request<PayoutResponse>(`/api/v1/payouts/${payoutId}/approve`, {
+        method: 'PUT',
+      })
+      setPayouts(prev => prev.map(p => p.id === payoutId ? updated : p))
+      setFeedback({ type: 'success', text: 'Payout approved successfully.' })
+    } catch (err) {
+      if (isMakerCheckerViolation(err)) {
+        setOverrideTarget({ id: payoutId, action: 'approve' })
+      } else {
+        setFeedback({ type: 'error', text: toErrorMessage(err, 'Unable to approve payout.') })
+      }
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  async function handlePayoutOverride(reason: string) {
+    if (!overrideTarget) return
+    const { id } = overrideTarget
+    setActionLoading(id)
+    try {
+      const updated = await request<PayoutResponse>(`/api/v1/payouts/${id}/approve`, {
+        method: 'PUT',
+        body: JSON.stringify({ overrideReason: reason }),
+      })
+      setPayouts(prev => prev.map(p => p.id === id ? updated : p))
+      setOverrideTarget(null)
+      setFeedback({ type: 'success', text: 'Payout approved with admin override.' })
+    } catch (err) {
+      setFeedback({ type: 'error', text: toErrorMessage(err, 'Unable to approve payout with override.') })
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
   const getMemberName = useCallback((memberId: string): string => {
     if (memberId === profile?.member?.id && profile.member) {
       return `${profile.member.firstName} ${profile.member.lastName}`.trim()
@@ -301,13 +346,14 @@ export function Payouts() {
               <th className="label">Status</th>
               <th className="label">Reference</th>
               <th className="label ledger-table-amount">Amount (KES)</th>
+              {canCreatePayout && <th className="label">Actions</th>}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="table-empty">Loading payouts...</td></tr>
+              <tr><td colSpan={canCreatePayout ? 6 : 5}><SkeletonRow cells={5} /><SkeletonRow cells={5} /><SkeletonRow cells={5} /></td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={5} className="table-empty">No payouts match your search.</td></tr>
+              <tr><td colSpan={canCreatePayout ? 6 : 5} className="table-empty">No payouts match your search.</td></tr>
             ) : filtered.map((p, i) => (
               <tr key={p.id} className={i % 2 === 1 ? 'ledger-row--alt' : ''}>
                 <td>
@@ -318,6 +364,20 @@ export function Payouts() {
                 <td><span className={`badge ${statusClass[p.status]}`}>{p.status}</span></td>
                 <td className="data payout-ref">{p.referenceNumber ?? '—'}</td>
                 <td className="amount ledger-table-amount">{fmtCurrency(p.amount)}</td>
+                {canCreatePayout && (
+                  <td>
+                    {p.status === 'PENDING' && (
+                      <button
+                        type="button"
+                        className="btn btn--ghost btn--small"
+                        disabled={actionLoading === p.id}
+                        onClick={() => void handleApprovePayout(p.id)}
+                      >
+                        Approve
+                      </button>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -331,7 +391,7 @@ export function Payouts() {
               disabled={loadingMore || !nextCursor}
               onClick={() => void loadPayouts({ append: true, cursor: nextCursor })}
             >
-              {loadingMore ? 'Loading...' : 'Load More'}
+              {loadingMore ? <><Spinner size="sm" /> Loading...</> : 'Load More'}
             </button>
           </div>
         )}
@@ -348,6 +408,15 @@ export function Payouts() {
           members={memberList}
         />
       )}
+
+      <MakerCheckerWarning
+        open={overrideTarget !== null}
+        onClose={() => setOverrideTarget(null)}
+        isAdmin={canAccess(['ADMIN'])}
+        onOverride={handlePayoutOverride}
+        submitting={actionLoading !== null}
+        action="approve"
+      />
     </div>
   )
 }

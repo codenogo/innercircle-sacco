@@ -125,7 +125,7 @@ class ShareWithdrawalControllerTest {
         void shouldApproveWithdrawalAndReturn200() throws Exception {
             testWithdrawal.setStatus(ShareWithdrawalStatus.APPROVED);
             testWithdrawal.setApprovedBy("admin");
-            when(shareWithdrawalService.approveWithdrawal(eq(withdrawalId), eq("admin")))
+            when(shareWithdrawalService.approveWithdrawal(eq(withdrawalId), eq("admin"), isNull(), eq(false)))
                     .thenReturn(testWithdrawal);
 
             mockMvc.perform(put("/api/v1/share-withdrawals/{withdrawalId}/approve", withdrawalId))

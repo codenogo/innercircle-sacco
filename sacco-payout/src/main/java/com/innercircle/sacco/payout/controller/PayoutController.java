@@ -3,6 +3,7 @@ package com.innercircle.sacco.payout.controller;
 import com.innercircle.sacco.common.dto.ApiResponse;
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.security.MemberAccessHelper;
+import com.innercircle.sacco.payout.dto.ApprovePayoutRequest;
 import com.innercircle.sacco.payout.dto.PayoutRequest;
 import com.innercircle.sacco.payout.dto.PayoutResponse;
 import com.innercircle.sacco.payout.entity.Payout;
@@ -55,10 +56,14 @@ public class PayoutController {
     @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<PayoutResponse> approvePayout(
             @PathVariable UUID payoutId,
+            @org.springframework.web.bind.annotation.RequestBody(required = false) @jakarta.validation.Valid ApprovePayoutRequest request,
             Authentication authentication
     ) {
         String actor = memberAccessHelper.currentActor(authentication);
-        Payout payout = payoutService.approvePayout(payoutId, actor);
+        boolean isAdmin = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        String overrideReason = request != null ? request.overrideReason() : null;
+        Payout payout = payoutService.approvePayout(payoutId, actor, overrideReason, isAdmin);
         return ApiResponse.ok(PayoutResponse.from(payout), "Payout approved successfully");
     }
 

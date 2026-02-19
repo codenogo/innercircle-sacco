@@ -145,7 +145,9 @@ public class AuditEventListener {
 
         String upperEventType = eventType.toUpperCase();
 
-        if (upperEventType.contains("CREATE")) {
+        if (upperEventType.contains("OVERRIDE_APPROV")) {
+            return AuditAction.OVERRIDE_APPROVE;
+        } else if (upperEventType.contains("CREATE")) {
             return AuditAction.CREATE;
         } else if (upperEventType.contains("UPDATE")) {
             return AuditAction.UPDATE;

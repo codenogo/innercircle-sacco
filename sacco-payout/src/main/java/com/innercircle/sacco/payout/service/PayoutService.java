@@ -12,7 +12,7 @@ public interface PayoutService {
 
     Payout createPayout(UUID memberId, BigDecimal amount, PayoutType type, String actor);
 
-    Payout approvePayout(UUID payoutId, String actor);
+    Payout approvePayout(UUID payoutId, String actor, String overrideReason, boolean isAdmin);
 
     Payout processPayout(UUID payoutId, String actor);
 

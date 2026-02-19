@@ -4,6 +4,7 @@ import com.innercircle.sacco.common.dto.ApiResponse;
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.security.MemberAccessHelper;
 import com.innercircle.sacco.config.entity.InterestMethod;
+import com.innercircle.sacco.loan.dto.ApproveLoanRequest;
 import com.innercircle.sacco.loan.dto.LoanApplicationRequest;
 import com.innercircle.sacco.loan.dto.LoanResponse;
 import com.innercircle.sacco.loan.dto.LoanSummaryResponse;
@@ -28,17 +29,23 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -74,6 +81,8 @@ class LoanControllerTest {
         loanId = UUID.randomUUID();
         loanProductId = UUID.randomUUID();
         lenient().when(memberAccessHelper.currentActor(authentication)).thenReturn("test-user");
+        // Default: non-admin user (no ROLE_ADMIN authority)
+        lenient().when(authentication.getAuthorities()).thenAnswer(inv -> Collections.emptyList());
     }
 
     // -------------------------------------------------------------------------
@@ -96,10 +105,10 @@ class LoanControllerTest {
 
             LoanApplication loan = createLoan(LoanStatus.PENDING);
             when(loanService.applyForLoan(memberId, loanProductId, new BigDecimal("100000"),
-                    12, "Business"))
+                    12, "Business", "test-user"))
                     .thenReturn(loan);
 
-            ApiResponse<LoanResponse> response = loanController.applyForLoan(request);
+            ApiResponse<LoanResponse> response = loanController.applyForLoan(request, authentication);
 
             assertThat(response.isSuccess()).isTrue();
             assertThat(response.getMessage()).isEqualTo("Loan application submitted successfully");
@@ -121,14 +130,14 @@ class LoanControllerTest {
                     .build();
 
             LoanApplication loan = createLoan(LoanStatus.PENDING);
-            when(loanService.applyForLoan(any(), any(), any(), any(), any()))
+            when(loanService.applyForLoan(any(), any(), any(), any(), any(), any()))
                     .thenReturn(loan);
 
-            loanController.applyForLoan(request);
+            loanController.applyForLoan(request, authentication);
 
             verify(loanService).applyForLoan(
                     memberId, otherProductId, new BigDecimal("50000"),
-                    6, "Education");
+                    6, "Education", "test-user");
         }
     }
 
@@ -145,14 +154,16 @@ class LoanControllerTest {
             UUID approvedBy = UUID.randomUUID();
             LoanApplication loan = createLoan(LoanStatus.APPROVED);
 
-            when(loanService.approveLoan(loanId, approvedBy)).thenReturn(loan);
             when(memberAccessHelper.resolveCurrentUserId(authentication)).thenReturn(approvedBy);
+            when(loanService.approveLoan(eq(loanId), eq(approvedBy), eq("test-user"),
+                    isNull(), eq(false))).thenReturn(loan);
 
-            ApiResponse<LoanResponse> response = loanController.approveLoan(loanId, authentication);
+            ApiResponse<LoanResponse> response = loanController.approveLoan(loanId, null, authentication);
 
             assertThat(response.isSuccess()).isTrue();
             assertThat(response.getMessage()).isEqualTo("Loan approved successfully");
-            verify(loanService).approveLoan(loanId, approvedBy);
+            verify(loanService).approveLoan(eq(loanId), eq(approvedBy), eq("test-user"),
+                    isNull(), eq(false));
         }
     }
 
@@ -169,14 +180,16 @@ class LoanControllerTest {
             UUID rejectedBy = UUID.randomUUID();
             LoanApplication loan = createLoan(LoanStatus.REJECTED);
 
-            when(loanService.rejectLoan(loanId, rejectedBy)).thenReturn(loan);
             when(memberAccessHelper.resolveCurrentUserId(authentication)).thenReturn(rejectedBy);
+            when(loanService.rejectLoan(eq(loanId), eq(rejectedBy), eq("test-user"),
+                    isNull(), eq(false))).thenReturn(loan);
 
-            ApiResponse<LoanResponse> response = loanController.rejectLoan(loanId, authentication);
+            ApiResponse<LoanResponse> response = loanController.rejectLoan(loanId, null, authentication);
 
             assertThat(response.isSuccess()).isTrue();
             assertThat(response.getMessage()).isEqualTo("Loan rejected");
-            verify(loanService).rejectLoan(loanId, rejectedBy);
+            verify(loanService).rejectLoan(eq(loanId), eq(rejectedBy), eq("test-user"),
+                    isNull(), eq(false));
         }
     }
 

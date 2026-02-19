@@ -3,6 +3,7 @@ package com.innercircle.sacco.payout.controller;
 import com.innercircle.sacco.common.dto.ApiResponse;
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.security.MemberAccessHelper;
+import com.innercircle.sacco.payout.dto.ApproveBankWithdrawalRequest;
 import com.innercircle.sacco.payout.dto.BankWithdrawalRequest;
 import com.innercircle.sacco.payout.dto.BankWithdrawalResponse;
 import com.innercircle.sacco.payout.entity.BankWithdrawal;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -50,6 +52,22 @@ public class BankWithdrawalController {
                 actor
         );
         return ApiResponse.ok(BankWithdrawalResponse.from(withdrawal), "Bank withdrawal initiated successfully");
+    }
+
+    @PutMapping("/{withdrawalId}/approve")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
+    public ApiResponse<BankWithdrawalResponse> approveWithdrawal(
+            @PathVariable UUID withdrawalId,
+            @Valid @RequestBody(required = false) ApproveBankWithdrawalRequest request,
+            Authentication authentication
+    ) {
+        String actor = memberAccessHelper.currentActor(authentication);
+        boolean isAdmin = authentication != null && authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch("ROLE_ADMIN"::equals);
+        String overrideReason = request != null ? request.overrideReason() : null;
+        BankWithdrawal withdrawal = bankWithdrawalService.approveWithdrawal(withdrawalId, actor, overrideReason, isAdmin);
+        return ApiResponse.ok(BankWithdrawalResponse.from(withdrawal), "Bank withdrawal approved successfully");
     }
 
     @PutMapping("/{withdrawalId}/confirm")

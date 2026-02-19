@@ -1,6 +1,7 @@
 package com.innercircle.sacco.payout.service;
 
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.guard.MakerCheckerGuard;
 import com.innercircle.sacco.payout.entity.ShareWithdrawal;
 import com.innercircle.sacco.payout.entity.ShareWithdrawal.ShareWithdrawalStatus;
 import com.innercircle.sacco.payout.entity.ShareWithdrawal.ShareWithdrawalType;
@@ -56,13 +57,17 @@ public class ShareWithdrawalServiceImpl implements ShareWithdrawalService {
 
     @Override
     @Transactional
-    public ShareWithdrawal approveWithdrawal(UUID withdrawalId, String actor) {
+    public ShareWithdrawal approveWithdrawal(UUID withdrawalId, String actor, String overrideReason, boolean isAdmin) {
         ShareWithdrawal withdrawal = withdrawalRepository.findById(withdrawalId)
                 .orElseThrow(() -> new IllegalArgumentException("Withdrawal not found: " + withdrawalId));
 
         if (withdrawal.getStatus() != ShareWithdrawalStatus.PENDING) {
             throw new IllegalStateException("Only pending withdrawals can be approved");
         }
+
+        MakerCheckerGuard.assertOrOverride(
+                withdrawal.getCreatedBy(), actor, overrideReason, isAdmin, "ShareWithdrawal", withdrawal.getId()
+        );
 
         withdrawal.setStatus(ShareWithdrawalStatus.APPROVED);
         withdrawal.setApprovedBy(actor);

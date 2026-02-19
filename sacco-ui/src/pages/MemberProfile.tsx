@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { SkeletonRow, SkeletonStat } from '../components/Skeleton'
 import { ApiError } from '../services/apiClient'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { useAuthorization } from '../hooks/useAuthorization'
@@ -138,7 +139,7 @@ export function MemberProfile() {
         </div>
         <hr className="rule rule--strong" />
         <div className="empty-state ops-empty">
-          <h2 className="empty-state-heading">Loading...</h2>
+          <SkeletonStat /><SkeletonRow cells={4} /><SkeletonRow cells={4} />
         </div>
       </div>
     )

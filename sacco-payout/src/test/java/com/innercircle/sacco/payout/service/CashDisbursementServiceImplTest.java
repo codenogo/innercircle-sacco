@@ -1,7 +1,9 @@
 package com.innercircle.sacco.payout.service;
 
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.exception.MakerCheckerViolationException;
 import com.innercircle.sacco.payout.entity.CashDisbursement;
+import com.innercircle.sacco.payout.entity.CashDisbursementStatus;
 import com.innercircle.sacco.common.event.AuditableEvent;
 import com.innercircle.sacco.payout.event.CashDisbursementRecordedEvent;
 import com.innercircle.sacco.payout.repository.CashDisbursementRepository;
@@ -78,6 +80,7 @@ class CashDisbursementServiceImplTest {
         disbursement.setId(disbursementId);
         disbursement.setCreatedAt(Instant.now());
         disbursement.setUpdatedAt(Instant.now());
+        disbursement.setCreatedBy("maker");
         return disbursement;
     }
 
@@ -109,6 +112,7 @@ class CashDisbursementServiceImplTest {
             assertThat(captured.getReceiptNumber()).isEqualTo(receiptNumber);
             assertThat(captured.getDisbursementDate()).isEqualTo(disbursementDate);
             assertThat(captured.getCreatedBy()).isEqualTo("admin");
+            assertThat(captured.getStatus()).isEqualTo(CashDisbursementStatus.PENDING);
             assertThat(result).isEqualTo(expected);
         }
 
@@ -162,13 +166,15 @@ class CashDisbursementServiceImplTest {
     class SignoffTests {
 
         @Test
-        @DisplayName("should sign off a disbursement")
+        @DisplayName("should sign off a disbursement in RECORDED status")
         void shouldSignOffDisbursement() {
             CashDisbursement disbursement = createTestDisbursement();
+            disbursement.setStatus(CashDisbursementStatus.RECORDED);
             disbursement.setSignoffBy(null);
             when(disbursementRepository.findById(disbursementId)).thenReturn(Optional.of(disbursement));
 
             CashDisbursement signedOff = createTestDisbursement();
+            signedOff.setStatus(CashDisbursementStatus.RECORDED);
             signedOff.setSignoffBy("supervisor");
             when(disbursementRepository.save(any(CashDisbursement.class))).thenReturn(signedOff);
 
@@ -177,6 +183,20 @@ class CashDisbursementServiceImplTest {
             verify(disbursementRepository).save(disbursementCaptor.capture());
             assertThat(disbursementCaptor.getValue().getSignoffBy()).isEqualTo("supervisor");
             assertThat(result.getSignoffBy()).isEqualTo("supervisor");
+        }
+
+        @Test
+        @DisplayName("should throw when disbursement is not in RECORDED status")
+        void shouldThrowWhenNotRecorded() {
+            CashDisbursement disbursement = createTestDisbursement();
+            disbursement.setStatus(CashDisbursementStatus.APPROVED);
+            when(disbursementRepository.findById(disbursementId)).thenReturn(Optional.of(disbursement));
+
+            assertThatThrownBy(() -> cashDisbursementService.signoff(disbursementId, "supervisor"))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("RECORDED");
+
+            verify(disbursementRepository, never()).save(any());
         }
 
         @Test
@@ -193,6 +213,7 @@ class CashDisbursementServiceImplTest {
         @DisplayName("should throw when disbursement already signed off")
         void shouldThrowWhenAlreadySignedOff() {
             CashDisbursement disbursement = createTestDisbursement();
+            disbursement.setStatus(CashDisbursementStatus.RECORDED);
             disbursement.setSignoffBy("another-supervisor");
             when(disbursementRepository.findById(disbursementId)).thenReturn(Optional.of(disbursement));
 
@@ -201,6 +222,153 @@ class CashDisbursementServiceImplTest {
                     .hasMessageContaining("Disbursement already signed off");
 
             verify(disbursementRepository, never()).save(any());
+        }
+    }
+
+    // ===================================================================
+    // approveDisbursement
+    // ===================================================================
+
+    @Nested
+    @DisplayName("approveDisbursement")
+    class ApproveDisbursementTests {
+
+        @Test
+        @DisplayName("should approve disbursement by a different user (PENDING -> APPROVED)")
+        void shouldApproveDisbursementByDifferentUser() {
+            CashDisbursement disbursement = createTestDisbursement();
+            disbursement.setCreatedBy("maker");
+            when(disbursementRepository.findById(disbursementId)).thenReturn(Optional.of(disbursement));
+
+            CashDisbursement approved = createTestDisbursement();
+            approved.setStatus(CashDisbursementStatus.APPROVED);
+            approved.setApprovedBy("checker");
+            approved.setApprovedAt(Instant.now());
+            when(disbursementRepository.save(any(CashDisbursement.class))).thenReturn(approved);
+
+            CashDisbursement result = cashDisbursementService.approveDisbursement(
+                    disbursementId, "checker", null, false
+            );
+
+            verify(disbursementRepository).save(disbursementCaptor.capture());
+            CashDisbursement captured = disbursementCaptor.getValue();
+            assertThat(captured.getStatus()).isEqualTo(CashDisbursementStatus.APPROVED);
+            assertThat(captured.getApprovedBy()).isEqualTo("checker");
+            assertThat(captured.getApprovedAt()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("should throw MakerCheckerViolationException when creator tries to approve")
+        void shouldThrowWhenCreatorTriesToApprove() {
+            CashDisbursement disbursement = createTestDisbursement();
+            disbursement.setCreatedBy("maker");
+            when(disbursementRepository.findById(disbursementId)).thenReturn(Optional.of(disbursement));
+
+            assertThatThrownBy(() -> cashDisbursementService.approveDisbursement(
+                    disbursementId, "maker", null, false
+            ))
+                    .isInstanceOf(MakerCheckerViolationException.class);
+
+            verify(disbursementRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should allow ADMIN override when creator and approver are the same")
+        void shouldAllowAdminOverride() {
+            CashDisbursement disbursement = createTestDisbursement();
+            disbursement.setCreatedBy("admin");
+            when(disbursementRepository.findById(disbursementId)).thenReturn(Optional.of(disbursement));
+
+            CashDisbursement approved = createTestDisbursement();
+            approved.setStatus(CashDisbursementStatus.APPROVED);
+            approved.setApprovedBy("admin");
+            approved.setApprovedAt(Instant.now());
+            when(disbursementRepository.save(any(CashDisbursement.class))).thenReturn(approved);
+
+            CashDisbursement result = cashDisbursementService.approveDisbursement(
+                    disbursementId, "admin", "Emergency override", true
+            );
+
+            verify(disbursementRepository).save(disbursementCaptor.capture());
+            assertThat(disbursementCaptor.getValue().getStatus()).isEqualTo(CashDisbursementStatus.APPROVED);
+        }
+
+        @Test
+        @DisplayName("should throw when disbursement is not in PENDING status")
+        void shouldThrowWhenNotPending() {
+            CashDisbursement disbursement = createTestDisbursement();
+            disbursement.setStatus(CashDisbursementStatus.APPROVED);
+            when(disbursementRepository.findById(disbursementId)).thenReturn(Optional.of(disbursement));
+
+            assertThatThrownBy(() -> cashDisbursementService.approveDisbursement(
+                    disbursementId, "checker", null, false
+            ))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("PENDING");
+
+            verify(disbursementRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should throw when disbursement not found")
+        void shouldThrowWhenDisbursementNotFound() {
+            when(disbursementRepository.findById(disbursementId)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> cashDisbursementService.approveDisbursement(
+                    disbursementId, "checker", null, false
+            ))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Disbursement not found");
+        }
+    }
+
+    // ===================================================================
+    // completeDisbursement
+    // ===================================================================
+
+    @Nested
+    @DisplayName("completeDisbursement")
+    class CompleteDisbursementTests {
+
+        @Test
+        @DisplayName("should complete disbursement when APPROVED (APPROVED -> RECORDED)")
+        void shouldCompleteDisbursementWhenApproved() {
+            CashDisbursement disbursement = createTestDisbursement();
+            disbursement.setStatus(CashDisbursementStatus.APPROVED);
+            when(disbursementRepository.findById(disbursementId)).thenReturn(Optional.of(disbursement));
+
+            CashDisbursement recorded = createTestDisbursement();
+            recorded.setStatus(CashDisbursementStatus.RECORDED);
+            when(disbursementRepository.save(any(CashDisbursement.class))).thenReturn(recorded);
+
+            CashDisbursement result = cashDisbursementService.completeDisbursement(disbursementId, "recorder");
+
+            verify(disbursementRepository).save(disbursementCaptor.capture());
+            assertThat(disbursementCaptor.getValue().getStatus()).isEqualTo(CashDisbursementStatus.RECORDED);
+        }
+
+        @Test
+        @DisplayName("should throw when disbursement is not in APPROVED status")
+        void shouldThrowWhenNotApproved() {
+            CashDisbursement disbursement = createTestDisbursement();
+            disbursement.setStatus(CashDisbursementStatus.PENDING);
+            when(disbursementRepository.findById(disbursementId)).thenReturn(Optional.of(disbursement));
+
+            assertThatThrownBy(() -> cashDisbursementService.completeDisbursement(disbursementId, "recorder"))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("APPROVED");
+
+            verify(disbursementRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should throw when disbursement not found")
+        void shouldThrowWhenDisbursementNotFound() {
+            when(disbursementRepository.findById(disbursementId)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> cashDisbursementService.completeDisbursement(disbursementId, "recorder"))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Disbursement not found");
         }
     }
 

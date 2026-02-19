@@ -77,29 +77,34 @@ public class MemberStatementServiceImpl implements MemberStatementService {
 
     private List<MemberStatementEntry> fetchContributions(UUID memberId, LocalDate from, LocalDate to) {
         return jdbc.query(
-                "SELECT id, amount, contribution_date, contribution_type FROM contributions " +
-                        "WHERE member_id = ? AND contribution_date BETWEEN ? AND ? AND status = 'CONFIRMED'",
-                (rs, rowNum) -> new MemberStatementEntry(
-                        rs.getTimestamp("contribution_date").toLocalDateTime(),
+                "SELECT c.id, c.amount, c.contribution_date, COALESCE(cc.name, 'Contribution') AS category_name " +
+                        "FROM contributions c " +
+                        "LEFT JOIN contribution_categories cc ON cc.id = c.category_id " +
+                        "WHERE c.member_id = ? AND c.contribution_date BETWEEN ? AND ? AND c.status = 'CONFIRMED'",
+                (rs, rowNum) -> {
+                    LocalDate contributionDate = rs.getObject("contribution_date", LocalDate.class);
+                    return new MemberStatementEntry(
+                        contributionDate.atStartOfDay(),
                         "CONTRIBUTION",
-                        rs.getString("contribution_type") + " contribution",
+                        rs.getString("category_name") + " contribution",
                         null,
                         rs.getBigDecimal("amount"),
                         null,
-                        rs.getObject("id", UUID.class)),
+                        rs.getObject("id", UUID.class));
+                },
                 memberId, from, to);
     }
 
     private List<MemberStatementEntry> fetchLoanDisbursements(UUID memberId, LocalDate from, LocalDate to) {
         return jdbc.query(
-                "SELECT id, amount, disbursed_at FROM loan_applications " +
-                        "WHERE member_id = ? AND disbursed_at BETWEEN ? AND ? AND status = 'DISBURSED'",
+                "SELECT id, principal_amount, disbursed_at FROM loan_applications " +
+                        "WHERE member_id = ? AND disbursed_at BETWEEN ? AND ? AND status IN ('DISBURSED', 'REPAYING', 'CLOSED')",
                 (rs, rowNum) -> new MemberStatementEntry(
                         rs.getTimestamp("disbursed_at").toLocalDateTime(),
                         "LOAN_DISBURSEMENT",
                         "Loan disbursement",
                         null,
-                        rs.getBigDecimal("amount"),
+                        rs.getBigDecimal("principal_amount"),
                         null,
                         rs.getObject("id", UUID.class)),
                 memberId, from.atStartOfDay(), to.plusDays(1).atStartOfDay());
@@ -107,17 +112,20 @@ public class MemberStatementServiceImpl implements MemberStatementService {
 
     private List<MemberStatementEntry> fetchLoanRepayments(UUID memberId, LocalDate from, LocalDate to) {
         return jdbc.query(
-                "SELECT lr.id, lr.amount, lr.payment_date FROM loan_repayments lr " +
+                "SELECT lr.id, lr.amount, lr.repayment_date FROM loan_repayments lr " +
                         "JOIN loan_applications la ON lr.loan_id = la.id " +
-                        "WHERE la.member_id = ? AND lr.payment_date BETWEEN ? AND ?",
-                (rs, rowNum) -> new MemberStatementEntry(
-                        rs.getTimestamp("payment_date").toLocalDateTime(),
+                        "WHERE la.member_id = ? AND lr.repayment_date BETWEEN ? AND ? AND lr.status = 'CONFIRMED'",
+                (rs, rowNum) -> {
+                    LocalDate repaymentDate = rs.getObject("repayment_date", LocalDate.class);
+                    return new MemberStatementEntry(
+                        repaymentDate.atStartOfDay(),
                         "LOAN_REPAYMENT",
                         "Loan repayment",
                         rs.getBigDecimal("amount"),
                         null,
                         null,
-                        rs.getObject("id", UUID.class)),
+                        rs.getObject("id", UUID.class));
+                },
                 memberId, from.atStartOfDay(), to.plusDays(1).atStartOfDay());
     }
 
@@ -140,14 +148,17 @@ public class MemberStatementServiceImpl implements MemberStatementService {
         return jdbc.query(
                 "SELECT id, amount, applied_date FROM contribution_penalties " +
                         "WHERE member_id = ? AND applied_date BETWEEN ? AND ?",
-                (rs, rowNum) -> new MemberStatementEntry(
-                        rs.getTimestamp("applied_date").toLocalDateTime(),
+                (rs, rowNum) -> {
+                    LocalDate appliedDate = rs.getObject("applied_date", LocalDate.class);
+                    return new MemberStatementEntry(
+                        appliedDate.atStartOfDay(),
                         "PENALTY",
                         "Late contribution penalty",
                         rs.getBigDecimal("amount"),
                         null,
                         null,
-                        rs.getObject("id", UUID.class)),
+                        rs.getObject("id", UUID.class));
+                },
                 memberId, from, to);
     }
 }

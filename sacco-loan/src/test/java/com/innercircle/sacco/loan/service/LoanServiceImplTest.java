@@ -3,6 +3,7 @@ package com.innercircle.sacco.loan.service;
 import com.innercircle.sacco.common.event.LoanDisbursedEvent;
 import com.innercircle.sacco.common.event.LoanRepaymentEvent;
 import com.innercircle.sacco.common.exception.InvalidStateTransitionException;
+import com.innercircle.sacco.common.exception.MakerCheckerViolationException;
 import com.innercircle.sacco.config.entity.InterestMethod;
 import com.innercircle.sacco.config.entity.LoanProductConfig;
 import com.innercircle.sacco.config.service.ConfigService;
@@ -124,7 +125,7 @@ class LoanServiceImplTest {
             when(loanRepository.save(any(LoanApplication.class))).thenAnswer(inv -> inv.getArgument(0));
 
             LoanApplication result = loanService.applyForLoan(
-                    memberId, loanProductId, new BigDecimal("100000"), 12, "Business");
+                    memberId, loanProductId, new BigDecimal("100000"), 12, "Business", "treasurer");
 
             verify(loanRepository).save(loanCaptor.capture());
             LoanApplication saved = loanCaptor.getValue();
@@ -142,6 +143,20 @@ class LoanServiceImplTest {
         }
 
         @Test
+        @DisplayName("should set createdBy to actor when applying for loan")
+        void shouldSetCreatedByToActor() {
+            LoanProductConfig product = createLoanProduct(InterestMethod.FLAT_RATE,
+                    new BigDecimal("12"), new BigDecimal("500000"), 24);
+            when(configService.getLoanProduct(loanProductId)).thenReturn(product);
+            when(loanRepository.save(any(LoanApplication.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            loanService.applyForLoan(memberId, loanProductId, new BigDecimal("100000"), 12, "Business", "maker@sacco");
+
+            verify(loanRepository).save(loanCaptor.capture());
+            assertThat(loanCaptor.getValue().getCreatedBy()).isEqualTo("maker@sacco");
+        }
+
+        @Test
         @DisplayName("should accept REDUCING_BALANCE interest method from product config")
         void shouldAcceptReducingBalance() {
             LoanProductConfig product = createLoanProduct(InterestMethod.REDUCING_BALANCE,
@@ -150,7 +165,7 @@ class LoanServiceImplTest {
             when(loanRepository.save(any(LoanApplication.class))).thenAnswer(inv -> inv.getArgument(0));
 
             LoanApplication result = loanService.applyForLoan(
-                    memberId, loanProductId, new BigDecimal("100000"), 12, null);
+                    memberId, loanProductId, new BigDecimal("100000"), 12, null, "treasurer");
 
             verify(loanRepository).save(loanCaptor.capture());
             assertThat(loanCaptor.getValue().getInterestMethod()).isEqualTo(InterestMethod.REDUCING_BALANCE);
@@ -160,7 +175,7 @@ class LoanServiceImplTest {
         @DisplayName("should throw for zero principal amount")
         void shouldThrowForZeroPrincipal() {
             assertThatThrownBy(() ->
-                    loanService.applyForLoan(memberId, loanProductId, BigDecimal.ZERO, 12, null))
+                    loanService.applyForLoan(memberId, loanProductId, BigDecimal.ZERO, 12, null, "treasurer"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Principal amount must be greater than zero");
         }
@@ -169,7 +184,7 @@ class LoanServiceImplTest {
         @DisplayName("should throw for negative principal amount")
         void shouldThrowForNegativePrincipal() {
             assertThatThrownBy(() ->
-                    loanService.applyForLoan(memberId, loanProductId, new BigDecimal("-1000"), 12, null))
+                    loanService.applyForLoan(memberId, loanProductId, new BigDecimal("-1000"), 12, null, "treasurer"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Principal amount must be greater than zero");
         }
@@ -178,7 +193,7 @@ class LoanServiceImplTest {
         @DisplayName("should throw for zero term months")
         void shouldThrowForZeroTermMonths() {
             assertThatThrownBy(() ->
-                    loanService.applyForLoan(memberId, loanProductId, new BigDecimal("100000"), 0, null))
+                    loanService.applyForLoan(memberId, loanProductId, new BigDecimal("100000"), 0, null, "treasurer"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Term months must be greater than zero");
         }
@@ -187,7 +202,7 @@ class LoanServiceImplTest {
         @DisplayName("should throw for negative term months")
         void shouldThrowForNegativeTermMonths() {
             assertThatThrownBy(() ->
-                    loanService.applyForLoan(memberId, loanProductId, new BigDecimal("100000"), -5, null))
+                    loanService.applyForLoan(memberId, loanProductId, new BigDecimal("100000"), -5, null, "treasurer"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Term months must be greater than zero");
         }
@@ -201,7 +216,7 @@ class LoanServiceImplTest {
             when(configService.getLoanProduct(loanProductId)).thenReturn(product);
 
             assertThatThrownBy(() ->
-                    loanService.applyForLoan(memberId, loanProductId, new BigDecimal("100000"), 12, null))
+                    loanService.applyForLoan(memberId, loanProductId, new BigDecimal("100000"), 12, null, "treasurer"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Loan product is not active");
         }
@@ -214,7 +229,7 @@ class LoanServiceImplTest {
             when(configService.getLoanProduct(loanProductId)).thenReturn(product);
 
             assertThatThrownBy(() ->
-                    loanService.applyForLoan(memberId, loanProductId, new BigDecimal("100000"), 12, null))
+                    loanService.applyForLoan(memberId, loanProductId, new BigDecimal("100000"), 12, null, "treasurer"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Principal amount exceeds maximum allowed");
         }
@@ -227,7 +242,7 @@ class LoanServiceImplTest {
             when(configService.getLoanProduct(loanProductId)).thenReturn(product);
 
             assertThatThrownBy(() ->
-                    loanService.applyForLoan(memberId, loanProductId, new BigDecimal("100000"), 24, null))
+                    loanService.applyForLoan(memberId, loanProductId, new BigDecimal("100000"), 24, null, "treasurer"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Term exceeds maximum allowed");
         }
@@ -241,13 +256,14 @@ class LoanServiceImplTest {
     class ApproveLoan {
 
         @Test
-        @DisplayName("should approve a pending loan")
+        @DisplayName("should approve a pending loan by a different user")
         void shouldApprovePendingLoan() {
             LoanApplication loan = createLoan(LoanStatus.PENDING);
+            loan.setCreatedBy("maker");
             when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
             when(loanRepository.save(any(LoanApplication.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            LoanApplication result = loanService.approveLoan(loanId, approverId);
+            LoanApplication result = loanService.approveLoan(loanId, approverId, "checker", null, false);
 
             assertThat(result.getStatus()).isEqualTo(LoanStatus.APPROVED);
             assertThat(result.getApprovedBy()).isEqualTo(approverId);
@@ -255,12 +271,49 @@ class LoanServiceImplTest {
         }
 
         @Test
+        @DisplayName("should throw MakerCheckerViolationException when creator tries to approve own loan")
+        void shouldThrowWhenCreatorApprovesOwnLoan() {
+            LoanApplication loan = createLoan(LoanStatus.PENDING);
+            loan.setCreatedBy("maker");
+            when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
+
+            assertThatThrownBy(() -> loanService.approveLoan(loanId, approverId, "maker", null, false))
+                    .isInstanceOf(MakerCheckerViolationException.class);
+        }
+
+        @Test
+        @DisplayName("should allow ADMIN override when creator approves own loan with reason")
+        void shouldAllowAdminOverrideWithReason() {
+            LoanApplication loan = createLoan(LoanStatus.PENDING);
+            loan.setCreatedBy("admin");
+            when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
+            when(loanRepository.save(any(LoanApplication.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            LoanApplication result = loanService.approveLoan(loanId, approverId, "admin",
+                    "Emergency approval - sole officer on duty", true);
+
+            assertThat(result.getStatus()).isEqualTo(LoanStatus.APPROVED);
+        }
+
+        @Test
+        @DisplayName("should throw when ADMIN creator tries to approve own loan without reason")
+        void shouldThrowWhenAdminApprovesSelfWithNoReason() {
+            LoanApplication loan = createLoan(LoanStatus.PENDING);
+            loan.setCreatedBy("admin");
+            when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
+
+            assertThatThrownBy(() -> loanService.approveLoan(loanId, approverId, "admin", null, true))
+                    .isInstanceOf(MakerCheckerViolationException.class);
+        }
+
+        @Test
         @DisplayName("should throw for non-pending loan")
         void shouldThrowForNonPendingLoan() {
             LoanApplication loan = createLoan(LoanStatus.APPROVED);
+            loan.setCreatedBy("maker");
             when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
 
-            assertThatThrownBy(() -> loanService.approveLoan(loanId, approverId))
+            assertThatThrownBy(() -> loanService.approveLoan(loanId, approverId, "checker", null, false))
                     .isInstanceOf(InvalidStateTransitionException.class);
         }
 
@@ -269,7 +322,7 @@ class LoanServiceImplTest {
         void shouldThrowForNonExistentLoan() {
             when(loanRepository.findById(loanId)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> loanService.approveLoan(loanId, approverId))
+            assertThatThrownBy(() -> loanService.approveLoan(loanId, approverId, "checker", null, false))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Loan not found");
         }
@@ -278,9 +331,10 @@ class LoanServiceImplTest {
         @DisplayName("should throw when trying to approve a rejected loan")
         void shouldThrowForRejectedLoan() {
             LoanApplication loan = createLoan(LoanStatus.REJECTED);
+            loan.setCreatedBy("maker");
             when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
 
-            assertThatThrownBy(() -> loanService.approveLoan(loanId, approverId))
+            assertThatThrownBy(() -> loanService.approveLoan(loanId, approverId, "checker", null, false))
                     .isInstanceOf(InvalidStateTransitionException.class);
         }
 
@@ -288,9 +342,10 @@ class LoanServiceImplTest {
         @DisplayName("should throw when trying to approve a repaying loan")
         void shouldThrowForRepayingLoan() {
             LoanApplication loan = createLoan(LoanStatus.REPAYING);
+            loan.setCreatedBy("maker");
             when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
 
-            assertThatThrownBy(() -> loanService.approveLoan(loanId, approverId))
+            assertThatThrownBy(() -> loanService.approveLoan(loanId, approverId, "checker", null, false))
                     .isInstanceOf(InvalidStateTransitionException.class);
         }
     }
@@ -303,13 +358,14 @@ class LoanServiceImplTest {
     class RejectLoan {
 
         @Test
-        @DisplayName("should reject a pending loan")
+        @DisplayName("should reject a pending loan by a different user")
         void shouldRejectPendingLoan() {
             LoanApplication loan = createLoan(LoanStatus.PENDING);
+            loan.setCreatedBy("maker");
             when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
             when(loanRepository.save(any(LoanApplication.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            LoanApplication result = loanService.rejectLoan(loanId, approverId);
+            LoanApplication result = loanService.rejectLoan(loanId, approverId, "checker", null, false);
 
             assertThat(result.getStatus()).isEqualTo(LoanStatus.REJECTED);
             assertThat(result.getApprovedBy()).isEqualTo(approverId);
@@ -317,12 +373,24 @@ class LoanServiceImplTest {
         }
 
         @Test
+        @DisplayName("should throw MakerCheckerViolationException when creator tries to reject own loan")
+        void shouldThrowWhenCreatorRejectsOwnLoan() {
+            LoanApplication loan = createLoan(LoanStatus.PENDING);
+            loan.setCreatedBy("maker");
+            when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
+
+            assertThatThrownBy(() -> loanService.rejectLoan(loanId, approverId, "maker", null, false))
+                    .isInstanceOf(MakerCheckerViolationException.class);
+        }
+
+        @Test
         @DisplayName("should throw for non-pending loan")
         void shouldThrowForNonPendingLoan() {
             LoanApplication loan = createLoan(LoanStatus.APPROVED);
+            loan.setCreatedBy("maker");
             when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
 
-            assertThatThrownBy(() -> loanService.rejectLoan(loanId, approverId))
+            assertThatThrownBy(() -> loanService.rejectLoan(loanId, approverId, "checker", null, false))
                     .isInstanceOf(InvalidStateTransitionException.class);
         }
 
@@ -331,7 +399,7 @@ class LoanServiceImplTest {
         void shouldThrowForNonExistentLoan() {
             when(loanRepository.findById(loanId)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> loanService.rejectLoan(loanId, approverId))
+            assertThatThrownBy(() -> loanService.rejectLoan(loanId, approverId, "checker", null, false))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Loan not found");
         }

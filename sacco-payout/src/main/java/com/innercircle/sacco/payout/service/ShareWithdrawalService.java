@@ -13,7 +13,7 @@ public interface ShareWithdrawalService {
     ShareWithdrawal requestWithdrawal(UUID memberId, BigDecimal amount, ShareWithdrawalType withdrawalType,
                                      BigDecimal currentShareBalance, String actor);
 
-    ShareWithdrawal approveWithdrawal(UUID withdrawalId, String actor);
+    ShareWithdrawal approveWithdrawal(UUID withdrawalId, String actor, String overrideReason, boolean isAdmin);
 
     ShareWithdrawal processWithdrawal(UUID withdrawalId, String actor);
 

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { FileText, Download, BarChart3, TrendingUp, Users, Wallet, Loader2, Search } from 'lucide-react'
+import { FileText, Download, BarChart3, TrendingUp, Users, Wallet, Search } from 'lucide-react'
+import { Spinner } from '../components/Spinner'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { ApiError } from '../services/apiClient'
 import { getAllMembers } from '../services/memberService'
@@ -229,7 +230,7 @@ export function Reports() {
         <hr className="rule" />
         {statsLoading ? (
           <div className="reports-stats-loading">
-            <Loader2 size={16} className="spinner" />
+            <Spinner size="sm" />
             <span>Loading stats...</span>
           </div>
         ) : statsError ? (
@@ -266,7 +267,7 @@ export function Reports() {
             <div className="reports-member-list">
               {membersLoading ? (
                 <div className="reports-member-list-empty">
-                  <Loader2 size={14} className="spinner" />
+                  <Spinner size="sm" />
                   Loading members...
                 </div>
               ) : filteredMembers.length === 0 ? (
@@ -335,7 +336,7 @@ export function Reports() {
                         title={isAvailable ? undefined : `${f} export is coming soon`}
                       >
                         {isDownloading ? (
-                          <Loader2 size={11} className="spinner" />
+                          <Spinner size="sm" />
                         ) : (
                           <Download size={11} strokeWidth={2} />
                         )}

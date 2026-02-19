@@ -18,6 +18,8 @@ public record BankWithdrawalResponse(
         WithdrawalStatus status,
         LocalDate transactionDate,
         boolean reconciled,
+        String approvedBy,
+        Instant approvedAt,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -32,6 +34,8 @@ public record BankWithdrawalResponse(
                 withdrawal.getStatus(),
                 withdrawal.getTransactionDate(),
                 withdrawal.isReconciled(),
+                withdrawal.getApprovedBy(),
+                withdrawal.getApprovedAt(),
                 withdrawal.getCreatedAt(),
                 withdrawal.getUpdatedAt()
         );

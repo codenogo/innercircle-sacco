@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { MonthPicker } from '../components/MonthPicker'
+import { Spinner } from '../components/Spinner'
 import { Select } from '../components/Select'
 import { DatePicker } from '../components/DatePicker'
 import { ApiError } from '../services/apiClient'
@@ -354,7 +355,7 @@ export function ContributionOperations() {
             disabled={loadingMore}
             onClick={() => { if (nextCursor) void fetchContributions(nextCursor) }}
           >
-            {loadingMore ? 'Loading...' : 'Load More'}
+            {loadingMore ? <><Spinner size="sm" /> Loading...</> : 'Load More'}
           </button>
         </div>
       )}

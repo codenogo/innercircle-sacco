@@ -1,0 +1,157 @@
+/* ─── Toast — notification system ─── */
+
+.toast-container {
+  position: fixed;
+  bottom: var(--space-5);
+  right: var(--space-5);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--space-2);
+  pointer-events: none;
+  max-width: 380px;
+}
+
+/* ─── Individual toast ─── */
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+  animation: toast-slide-in var(--ease-slow) forwards;
+}
+
+.toast--exiting {
+  animation: toast-slide-out var(--ease-medium) forwards;
+}
+
+/* ─── Left accent border ─── */
+
+.toast::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+}
+
+/* ─── Variants ─── */
+
+.toast--success::before { background: var(--mpesa); }
+.toast--error::before   { background: var(--deficit); }
+.toast--warning::before { background: var(--caution); }
+.toast--info::before    { background: var(--info); }
+
+.toast--success .toast-icon { color: var(--mpesa); }
+.toast--error .toast-icon   { color: var(--deficit); }
+.toast--warning .toast-icon { color: var(--caution); }
+.toast--info .toast-icon    { color: var(--info); }
+
+/* ─── Content ─── */
+
+.toast-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.toast-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.toast-title {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--ink);
+  line-height: var(--leading-tight);
+}
+
+.toast-message {
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+  margin-top: 2px;
+  line-height: var(--leading-normal);
+}
+
+.toast-dismiss {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition: color var(--ease-fast), background var(--ease-fast);
+}
+
+.toast-dismiss:hover {
+  color: var(--ink-muted);
+  background: var(--rule-subtle);
+}
+
+/* ─── Auto-dismiss countdown bar ─── */
+
+.toast-countdown {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--rule-subtle);
+}
+
+.toast-countdown-fill {
+  height: 100%;
+  background: var(--ink-faint);
+  transition: width linear;
+  opacity: 0.4;
+}
+
+/* ─── Animations ─── */
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes toast-slide-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+/* ─── Responsive — full-width on mobile ─── */
+
+@media (max-width: 480px) {
+  .toast-container {
+    left: var(--space-3);
+    right: var(--space-3);
+    bottom: var(--space-3);
+    max-width: none;
+  }
+}

@@ -77,7 +77,8 @@
   font-size: var(--text-sm);
   font-weight: 500;
   border-radius: var(--radius-sm);
-  transition: background var(--ease), color var(--ease), border-color var(--ease);
+  transition: background var(--ease-fast), color var(--ease-fast), border-color var(--ease-fast),
+              box-shadow var(--ease-medium), transform var(--ease-medium);
   white-space: nowrap;
   cursor: pointer;
 }
@@ -90,6 +91,8 @@
 
 .btn--primary:hover {
   background: var(--mpesa-hover);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-0.5px);
 }
 
 .btn--secondary {
@@ -112,7 +115,7 @@
 
 .btn--ghost:hover {
   color: var(--ink);
-  background: var(--rule-subtle);
+  background: rgba(90, 80, 60, 0.05);
 }
 
 .btn--small {
@@ -121,7 +124,8 @@
 }
 
 .btn:active:not(:disabled) {
-  transform: scale(0.98);
+  transform: scale(0.98) translateY(0);
+  box-shadow: none;
 }
 
 .btn:focus-visible {
@@ -155,6 +159,7 @@
 .badge--approved {
   color: var(--mpesa-text);
   background: var(--mpesa-soft);
+  border: 1px solid rgba(58, 125, 68, 0.15);
 }
 
 .badge--pending,
@@ -162,6 +167,7 @@
 .badge--processing {
   color: var(--caution);
   background: var(--caution-soft);
+  border: 1px solid rgba(192, 138, 21, 0.15);
 }
 
 .badge--overdue,
@@ -170,11 +176,13 @@
 .badge--defaulted {
   color: var(--deficit);
   background: var(--deficit-soft);
+  border: 1px solid rgba(185, 74, 61, 0.15);
 }
 
 .badge--inactive {
   color: var(--ink-muted);
   background: var(--paper-inset);
+  border: 1px solid var(--rule);
 }
 
 /* ─── Filter Bar — row of controls above a table ─── */
@@ -184,6 +192,8 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--rule-subtle);
+  margin-bottom: var(--space-3);
 }
 
 .filter-select {
@@ -295,6 +305,30 @@
   color: var(--ink-muted);
 }
 
+/* ─── Illustrated empty state — CSS-only ruled paper lines ─── */
+
+.empty-state--illustrated {
+  position: relative;
+}
+
+.empty-state--illustrated::before {
+  content: '';
+  display: block;
+  width: 120px;
+  height: 60px;
+  margin: 0 auto var(--space-4);
+  background:
+    linear-gradient(to right, var(--ink-faint) 0%, var(--ink-faint) 100%) no-repeat 10% 20% / 80% 2px,
+    linear-gradient(to right, var(--ink-faint) 0%, var(--ink-faint) 100%) no-repeat 15% 40% / 65% 2px,
+    linear-gradient(to right, var(--ink-faint) 0%, var(--ink-faint) 100%) no-repeat 10% 60% / 75% 2px,
+    linear-gradient(to right, var(--ink-faint) 0%, var(--ink-faint) 100%) no-repeat 20% 80% / 50% 2px;
+  opacity: 0.3;
+}
+
+.empty-state-action {
+  margin-top: var(--space-4);
+}
+
 /* ─── Table Empty State — when filters return no results ─── */
 
 .table-empty {
@@ -382,13 +416,16 @@
   padding: var(--space-4);
   border: 1px solid var(--rule);
   border-radius: var(--radius-sm);
-  transition: border-color var(--ease), background var(--ease);
+  transition: border-color var(--ease-fast), background var(--ease-fast),
+              box-shadow var(--ease-medium), transform var(--ease-medium);
   cursor: pointer;
 }
 
 .report-card:hover {
   border-color: var(--rule-strong);
   background: var(--rule-subtle);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
 }
 
 .report-card-info {

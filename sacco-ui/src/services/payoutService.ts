@@ -33,9 +33,10 @@ export async function createPayout(payload: PayoutRequest): Promise<PayoutRespon
   })
 }
 
-export async function approvePayout(id: string): Promise<PayoutResponse> {
+export async function approvePayout(id: string, overrideReason?: string): Promise<PayoutResponse> {
   return apiRequest<PayoutResponse>(`/api/v1/payouts/${id}/approve`, {
     method: 'PUT',
+    ...(overrideReason ? { body: JSON.stringify({ overrideReason }) } : {}),
   })
 }
 

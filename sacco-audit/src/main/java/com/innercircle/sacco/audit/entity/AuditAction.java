@@ -18,5 +18,6 @@ public enum AuditAction {
     CONFIG_CHANGE,
     REPAID,
     REJECTED,
-    APPROVED
+    APPROVED,
+    OVERRIDE_APPROVE
 }

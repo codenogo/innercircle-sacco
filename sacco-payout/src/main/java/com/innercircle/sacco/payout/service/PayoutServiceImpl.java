@@ -3,6 +3,7 @@ package com.innercircle.sacco.payout.service;
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.event.PayoutProcessedEvent;
 import com.innercircle.sacco.common.event.PayoutStatusChangeEvent;
+import com.innercircle.sacco.common.guard.MakerCheckerGuard;
 import com.innercircle.sacco.payout.entity.Payout;
 import com.innercircle.sacco.payout.entity.PayoutStatus;
 import com.innercircle.sacco.payout.entity.PayoutType;
@@ -48,21 +49,26 @@ public class PayoutServiceImpl implements PayoutService {
 
     @Override
     @Transactional
-    public Payout approvePayout(UUID payoutId, String actor) {
+    public Payout approvePayout(UUID payoutId, String actor, String overrideReason, boolean isAdmin) {
         Payout payout = payoutRepository.findById(payoutId)
                 .orElseThrow(() -> new IllegalArgumentException("Payout not found: " + payoutId));
 
         PayoutTransitionGuards.PAYOUT.validate(payout.getStatus(), PayoutStatus.APPROVED);
+
+        boolean overrideUsed = MakerCheckerGuard.assertOrOverride(
+                payout.getCreatedBy(), actor, overrideReason, isAdmin, "Payout", payout.getId()
+        );
 
         payout.setStatus(PayoutStatus.APPROVED);
         payout.setApprovedBy(actor);
 
         Payout approved = payoutRepository.save(payout);
 
+        String action = overrideUsed ? "OVERRIDE_APPROVED" : "APPROVED";
         outboxWriter.write(new PayoutStatusChangeEvent(
                 approved.getId(),
                 approved.getMemberId(),
-                "APPROVED",
+                action,
                 UUID.randomUUID(),
                 actor
         ), "Payout", approved.getId());

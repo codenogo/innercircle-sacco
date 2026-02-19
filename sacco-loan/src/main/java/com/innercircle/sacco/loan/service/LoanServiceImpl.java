@@ -4,6 +4,7 @@ import com.innercircle.sacco.common.event.LoanApplicationEvent;
 import com.innercircle.sacco.common.event.LoanDisbursedEvent;
 import com.innercircle.sacco.common.event.LoanRepaymentEvent;
 import com.innercircle.sacco.common.event.LoanStatusChangeEvent;
+import com.innercircle.sacco.common.guard.MakerCheckerGuard;
 import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import com.innercircle.sacco.config.entity.InterestMethod;
 import com.innercircle.sacco.config.entity.LoanProductConfig;
@@ -49,7 +50,7 @@ public class LoanServiceImpl implements LoanService {
     @Override
     @Transactional
     public LoanApplication applyForLoan(UUID memberId, UUID loanProductId, BigDecimal principalAmount,
-                                         Integer termMonths, String purpose) {
+                                         Integer termMonths, String purpose, String actor) {
         if (principalAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Principal amount must be greater than zero");
         }
@@ -89,6 +90,7 @@ public class LoanServiceImpl implements LoanService {
         loan.setOutstandingBalance(BigDecimal.ZERO);
         loan.setTotalInterestAccrued(BigDecimal.ZERO);
         loan.setTotalInterestPaid(BigDecimal.ZERO);
+        loan.setCreatedBy(actor);
 
         LoanApplication savedLoan = loanRepository.save(loan);
 
@@ -97,7 +99,7 @@ public class LoanServiceImpl implements LoanService {
                 savedLoan.getMemberId(),
                 "APPLIED",
                 UUID.randomUUID(),
-                memberId.toString()
+                actor
         ), "LoanApplication", savedLoan.getId());
 
         return savedLoan;
@@ -105,8 +107,13 @@ public class LoanServiceImpl implements LoanService {
 
     @Override
     @Transactional
-    public LoanApplication approveLoan(UUID loanId, UUID approvedBy) {
+    public LoanApplication approveLoan(UUID loanId, UUID approvedBy, String actor,
+                                        String overrideReason, boolean isAdmin) {
         LoanApplication loan = getLoanById(loanId);
+
+        boolean overrideUsed = MakerCheckerGuard.assertOrOverride(
+                loan.getCreatedBy(), actor, overrideReason, isAdmin,
+                "LoanApplication", loan.getId());
 
         LoanTransitionGuards.LOAN.validate(loan.getStatus(), LoanStatus.APPROVED);
 
@@ -116,12 +123,13 @@ public class LoanServiceImpl implements LoanService {
 
         LoanApplication approved = loanRepository.save(loan);
 
+        String action = overrideUsed ? "OVERRIDE_APPROVED" : "APPROVED";
         outboxWriter.write(new LoanApplicationEvent(
                 approved.getId(),
                 approved.getMemberId(),
-                "APPROVED",
+                action,
                 UUID.randomUUID(),
-                approvedBy.toString()
+                actor
         ), "LoanApplication", approved.getId());
 
         return approved;
@@ -129,8 +137,13 @@ public class LoanServiceImpl implements LoanService {
 
     @Override
     @Transactional
-    public LoanApplication rejectLoan(UUID loanId, UUID rejectedBy) {
+    public LoanApplication rejectLoan(UUID loanId, UUID rejectedBy, String actor,
+                                       String overrideReason, boolean isAdmin) {
         LoanApplication loan = getLoanById(loanId);
+
+        boolean overrideUsed = MakerCheckerGuard.assertOrOverride(
+                loan.getCreatedBy(), actor, overrideReason, isAdmin,
+                "LoanApplication", loan.getId());
 
         LoanTransitionGuards.LOAN.validate(loan.getStatus(), LoanStatus.REJECTED);
 
@@ -140,12 +153,13 @@ public class LoanServiceImpl implements LoanService {
 
         LoanApplication rejected = loanRepository.save(loan);
 
+        String action = overrideUsed ? "OVERRIDE_REJECTED" : "REJECTED";
         outboxWriter.write(new LoanApplicationEvent(
                 rejected.getId(),
                 rejected.getMemberId(),
-                "REJECTED",
+                action,
                 UUID.randomUUID(),
-                rejectedBy.toString()
+                actor
         ), "LoanApplication", rejected.getId());
 
         return rejected;

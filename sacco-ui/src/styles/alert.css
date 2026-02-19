@@ -1,0 +1,84 @@
+/* ─── Alert — inline feedback banners ─── */
+
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--rule);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+/* ─── Variants ─── */
+
+.alert--success {
+  color: var(--mpesa-text);
+  background: var(--mpesa-soft);
+  border-color: rgba(58, 125, 68, 0.15);
+}
+
+.alert--error {
+  color: var(--deficit);
+  background: var(--deficit-soft);
+  border-color: rgba(185, 74, 61, 0.15);
+}
+
+.alert--warning {
+  color: var(--caution);
+  background: var(--caution-soft);
+  border-color: rgba(192, 138, 21, 0.15);
+}
+
+.alert--info {
+  color: var(--info);
+  background: var(--info-soft);
+  border-color: rgba(74, 111, 165, 0.15);
+}
+
+/* ─── Icon ─── */
+
+.alert-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ─── Content ─── */
+
+.alert-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.alert-title {
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.alert-message {
+  opacity: 0.85;
+}
+
+/* ─── Dismiss button ─── */
+
+.alert-dismiss {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: currentColor;
+  opacity: 0.5;
+  cursor: pointer;
+  transition: opacity var(--ease-fast);
+}
+
+.alert-dismiss:hover {
+  opacity: 0.8;
+}

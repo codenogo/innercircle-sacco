@@ -30,6 +30,20 @@
   font-weight: 500;
 }
 
+.table-actions {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.btn--danger-text {
+  color: var(--error, #b91c1c);
+}
+
+.btn--danger-text:hover {
+  color: #991b1b;
+  background: rgba(185, 28, 28, 0.06);
+}
+
 .loan-date {
   display: block;
   font-size: var(--text-xs);

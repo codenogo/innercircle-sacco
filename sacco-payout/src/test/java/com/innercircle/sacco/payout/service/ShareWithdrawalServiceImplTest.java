@@ -1,10 +1,11 @@
 package com.innercircle.sacco.payout.service;
 
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.event.AuditableEvent;
+import com.innercircle.sacco.common.exception.MakerCheckerViolationException;
 import com.innercircle.sacco.payout.entity.ShareWithdrawal;
 import com.innercircle.sacco.payout.entity.ShareWithdrawal.ShareWithdrawalStatus;
 import com.innercircle.sacco.payout.entity.ShareWithdrawal.ShareWithdrawalType;
-import com.innercircle.sacco.common.event.AuditableEvent;
 import com.innercircle.sacco.payout.event.ShareWithdrawalProcessedEvent;
 import com.innercircle.sacco.payout.event.ShareWithdrawalRequestedEvent;
 import com.innercircle.sacco.payout.repository.ShareWithdrawalRepository;
@@ -197,16 +198,17 @@ class ShareWithdrawalServiceImplTest {
     class ApproveWithdrawalTests {
 
         @Test
-        @DisplayName("should approve a PENDING withdrawal")
+        @DisplayName("should approve a PENDING withdrawal by a different user")
         void shouldApprovePendingWithdrawal() {
             ShareWithdrawal pendingWithdrawal = createTestWithdrawal(ShareWithdrawalStatus.PENDING, ShareWithdrawalType.PARTIAL);
+            pendingWithdrawal.setCreatedBy("treasurer");
             when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.of(pendingWithdrawal));
 
             ShareWithdrawal approvedWithdrawal = createTestWithdrawal(ShareWithdrawalStatus.APPROVED, ShareWithdrawalType.PARTIAL);
             approvedWithdrawal.setApprovedBy("admin");
             when(withdrawalRepository.save(any(ShareWithdrawal.class))).thenReturn(approvedWithdrawal);
 
-            ShareWithdrawal result = shareWithdrawalService.approveWithdrawal(withdrawalId, "admin");
+            ShareWithdrawal result = shareWithdrawalService.approveWithdrawal(withdrawalId, "admin", null, false);
 
             verify(withdrawalRepository).save(withdrawalCaptor.capture());
             ShareWithdrawal captured = withdrawalCaptor.getValue();
@@ -216,11 +218,53 @@ class ShareWithdrawalServiceImplTest {
         }
 
         @Test
+        @DisplayName("should throw MakerCheckerViolationException when creator tries to approve")
+        void shouldThrowWhenCreatorApprovesOwnWithdrawal() {
+            ShareWithdrawal pendingWithdrawal = createTestWithdrawal(ShareWithdrawalStatus.PENDING, ShareWithdrawalType.PARTIAL);
+            pendingWithdrawal.setCreatedBy("treasurer");
+            when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.of(pendingWithdrawal));
+
+            assertThatThrownBy(() -> shareWithdrawalService.approveWithdrawal(withdrawalId, "treasurer", null, false))
+                    .isInstanceOf(MakerCheckerViolationException.class);
+
+            verify(withdrawalRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should allow ADMIN to override and approve their own withdrawal with reason")
+        void shouldAllowAdminOverrideWithReason() {
+            ShareWithdrawal pendingWithdrawal = createTestWithdrawal(ShareWithdrawalStatus.PENDING, ShareWithdrawalType.PARTIAL);
+            pendingWithdrawal.setCreatedBy("admin");
+            when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.of(pendingWithdrawal));
+
+            ShareWithdrawal approvedWithdrawal = createTestWithdrawal(ShareWithdrawalStatus.APPROVED, ShareWithdrawalType.PARTIAL);
+            approvedWithdrawal.setApprovedBy("admin");
+            when(withdrawalRepository.save(any(ShareWithdrawal.class))).thenReturn(approvedWithdrawal);
+
+            ShareWithdrawal result = shareWithdrawalService.approveWithdrawal(withdrawalId, "admin", "Emergency approval", true);
+
+            assertThat(result.getStatus()).isEqualTo(ShareWithdrawalStatus.APPROVED);
+        }
+
+        @Test
+        @DisplayName("should throw when ADMIN override attempted without reason")
+        void shouldThrowWhenAdminOverrideWithoutReason() {
+            ShareWithdrawal pendingWithdrawal = createTestWithdrawal(ShareWithdrawalStatus.PENDING, ShareWithdrawalType.PARTIAL);
+            pendingWithdrawal.setCreatedBy("admin");
+            when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.of(pendingWithdrawal));
+
+            assertThatThrownBy(() -> shareWithdrawalService.approveWithdrawal(withdrawalId, "admin", null, true))
+                    .isInstanceOf(MakerCheckerViolationException.class);
+
+            verify(withdrawalRepository, never()).save(any());
+        }
+
+        @Test
         @DisplayName("should throw when withdrawal not found")
         void shouldThrowWhenWithdrawalNotFound() {
             when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> shareWithdrawalService.approveWithdrawal(withdrawalId, "admin"))
+            assertThatThrownBy(() -> shareWithdrawalService.approveWithdrawal(withdrawalId, "admin", null, false))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Withdrawal not found");
         }
@@ -231,7 +275,7 @@ class ShareWithdrawalServiceImplTest {
             ShareWithdrawal approvedWithdrawal = createTestWithdrawal(ShareWithdrawalStatus.APPROVED, ShareWithdrawalType.PARTIAL);
             when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.of(approvedWithdrawal));
 
-            assertThatThrownBy(() -> shareWithdrawalService.approveWithdrawal(withdrawalId, "admin"))
+            assertThatThrownBy(() -> shareWithdrawalService.approveWithdrawal(withdrawalId, "admin", null, false))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("Only pending withdrawals can be approved");
 
@@ -244,7 +288,7 @@ class ShareWithdrawalServiceImplTest {
             ShareWithdrawal processedWithdrawal = createTestWithdrawal(ShareWithdrawalStatus.PROCESSED, ShareWithdrawalType.PARTIAL);
             when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.of(processedWithdrawal));
 
-            assertThatThrownBy(() -> shareWithdrawalService.approveWithdrawal(withdrawalId, "admin"))
+            assertThatThrownBy(() -> shareWithdrawalService.approveWithdrawal(withdrawalId, "admin", null, false))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("Only pending withdrawals can be approved");
         }

@@ -3,6 +3,7 @@ package com.innercircle.sacco.payout.controller;
 import com.innercircle.sacco.common.dto.ApiResponse;
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.security.MemberAccessHelper;
+import com.innercircle.sacco.payout.dto.ApproveShareWithdrawalRequest;
 import com.innercircle.sacco.payout.dto.ShareWithdrawalRequest;
 import com.innercircle.sacco.payout.dto.ShareWithdrawalResponse;
 import com.innercircle.sacco.payout.entity.ShareWithdrawal;
@@ -56,10 +57,14 @@ public class ShareWithdrawalController {
     @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
     public ApiResponse<ShareWithdrawalResponse> approveWithdrawal(
             @PathVariable UUID withdrawalId,
+            @org.springframework.web.bind.annotation.RequestBody(required = false) @jakarta.validation.Valid ApproveShareWithdrawalRequest request,
             Authentication authentication
     ) {
         String actor = memberAccessHelper.currentActor(authentication);
-        ShareWithdrawal withdrawal = shareWithdrawalService.approveWithdrawal(withdrawalId, actor);
+        boolean isAdmin = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        String overrideReason = request != null ? request.overrideReason() : null;
+        ShareWithdrawal withdrawal = shareWithdrawalService.approveWithdrawal(withdrawalId, actor, overrideReason, isAdmin);
         return ApiResponse.ok(ShareWithdrawalResponse.from(withdrawal), "Share withdrawal approved successfully");
     }
 

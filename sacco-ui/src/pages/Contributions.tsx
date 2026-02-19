@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
+import { Spinner } from '../components/Spinner'
+import { SkeletonRow } from '../components/Skeleton'
 import { RecordContributionModal } from '../components/RecordContributionModal'
 import { MonthPicker } from '../components/MonthPicker'
 import { ApiError } from '../services/apiClient'
@@ -282,7 +284,7 @@ export function Contributions() {
         </thead>
         <tbody>
           {loading ? (
-            <tr><td colSpan={5} className="table-empty">Loading contributions...</td></tr>
+            <tr><td colSpan={5}><SkeletonRow cells={5} /><SkeletonRow cells={5} /><SkeletonRow cells={5} /></td></tr>
           ) : monthContributions.length === 0 ? (
             <tr><td colSpan={5} className="table-empty">No contributions for the selected month.</td></tr>
           ) : monthContributions.map((c, i) => (
@@ -307,7 +309,7 @@ export function Contributions() {
             disabled={loadingMore || !nextCursor}
             onClick={() => void loadContributions({ append: true, cursor: nextCursor })}
           >
-            {loadingMore ? 'Loading...' : 'Load More'}
+            {loadingMore ? <><Spinner size="sm" /> Loading...</> : 'Load More'}
           </button>
         </div>
       )}

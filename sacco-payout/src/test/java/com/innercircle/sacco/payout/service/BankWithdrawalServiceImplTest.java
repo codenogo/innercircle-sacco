@@ -1,9 +1,11 @@
 package com.innercircle.sacco.payout.service;
 
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.exception.MakerCheckerViolationException;
 import com.innercircle.sacco.payout.entity.BankWithdrawal;
 import com.innercircle.sacco.payout.entity.WithdrawalStatus;
 import com.innercircle.sacco.common.event.AuditableEvent;
+import com.innercircle.sacco.payout.event.BankWithdrawalApprovedEvent;
 import com.innercircle.sacco.payout.event.BankWithdrawalConfirmedEvent;
 import com.innercircle.sacco.payout.event.BankWithdrawalInitiatedEvent;
 import com.innercircle.sacco.payout.repository.BankWithdrawalRepository;
@@ -129,6 +131,126 @@ class BankWithdrawalServiceImplTest {
     }
 
     // ===================================================================
+    // approveWithdrawal
+    // ===================================================================
+
+    @Nested
+    @DisplayName("approveWithdrawal")
+    class ApproveWithdrawalTests {
+
+        private BankWithdrawal createTestWithdrawalWithCreator(WithdrawalStatus status, String creator) {
+            BankWithdrawal withdrawal = createTestWithdrawal(status);
+            withdrawal.setCreatedBy(creator);
+            return withdrawal;
+        }
+
+        @Test
+        @DisplayName("should approve a PENDING withdrawal when different actors")
+        void shouldApprovePendingWithdrawalWithDifferentActors() {
+            BankWithdrawal pendingWithdrawal = createTestWithdrawalWithCreator(WithdrawalStatus.PENDING, "maker");
+            when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.of(pendingWithdrawal));
+
+            BankWithdrawal approvedWithdrawal = createTestWithdrawal(WithdrawalStatus.APPROVED);
+            approvedWithdrawal.setApprovedBy("checker");
+            when(withdrawalRepository.save(any(BankWithdrawal.class))).thenReturn(approvedWithdrawal);
+
+            BankWithdrawal result = bankWithdrawalService.approveWithdrawal(withdrawalId, "checker", null, false);
+
+            verify(withdrawalRepository).save(withdrawalCaptor.capture());
+            BankWithdrawal captured = withdrawalCaptor.getValue();
+            assertThat(captured.getStatus()).isEqualTo(WithdrawalStatus.APPROVED);
+            assertThat(captured.getApprovedBy()).isEqualTo("checker");
+            assertThat(captured.getApprovedAt()).isNotNull();
+            assertThat(result.getStatus()).isEqualTo(WithdrawalStatus.APPROVED);
+        }
+
+        @Test
+        @DisplayName("should publish BankWithdrawalApprovedEvent")
+        void shouldPublishBankWithdrawalApprovedEvent() {
+            BankWithdrawal pendingWithdrawal = createTestWithdrawalWithCreator(WithdrawalStatus.PENDING, "maker");
+            when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.of(pendingWithdrawal));
+
+            BankWithdrawal approvedWithdrawal = createTestWithdrawal(WithdrawalStatus.APPROVED);
+            approvedWithdrawal.setApprovedBy("checker");
+            when(withdrawalRepository.save(any(BankWithdrawal.class))).thenReturn(approvedWithdrawal);
+
+            bankWithdrawalService.approveWithdrawal(withdrawalId, "checker", null, false);
+
+            verify(outboxWriter).write(eventCaptor.capture(), eq("BankWithdrawal"), any(UUID.class));
+            AuditableEvent event = eventCaptor.getValue();
+            assertThat(event).isInstanceOf(BankWithdrawalApprovedEvent.class);
+            BankWithdrawalApprovedEvent approvedEvent = (BankWithdrawalApprovedEvent) event;
+            assertThat(approvedEvent.withdrawalId()).isEqualTo(approvedWithdrawal.getId());
+            assertThat(approvedEvent.memberId()).isEqualTo(approvedWithdrawal.getMemberId());
+            assertThat(approvedEvent.actor()).isEqualTo("checker");
+        }
+
+        @Test
+        @DisplayName("should throw MakerCheckerViolationException when same user approves")
+        void shouldThrowWhenSameUserApproves() {
+            BankWithdrawal pendingWithdrawal = createTestWithdrawalWithCreator(WithdrawalStatus.PENDING, "admin");
+            when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.of(pendingWithdrawal));
+
+            assertThatThrownBy(() -> bankWithdrawalService.approveWithdrawal(withdrawalId, "admin", null, false))
+                    .isInstanceOf(MakerCheckerViolationException.class);
+
+            verify(withdrawalRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should allow ADMIN override when same user with reason")
+        void shouldAllowAdminOverrideWithReason() {
+            BankWithdrawal pendingWithdrawal = createTestWithdrawalWithCreator(WithdrawalStatus.PENDING, "admin");
+            when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.of(pendingWithdrawal));
+
+            BankWithdrawal approvedWithdrawal = createTestWithdrawal(WithdrawalStatus.APPROVED);
+            approvedWithdrawal.setApprovedBy("admin");
+            when(withdrawalRepository.save(any(BankWithdrawal.class))).thenReturn(approvedWithdrawal);
+
+            BankWithdrawal result = bankWithdrawalService.approveWithdrawal(
+                    withdrawalId, "admin", "Emergency override - sole admin available", true
+            );
+
+            assertThat(result.getStatus()).isEqualTo(WithdrawalStatus.APPROVED);
+        }
+
+        @Test
+        @DisplayName("should throw when ADMIN override has no reason")
+        void shouldThrowWhenAdminOverrideHasNoReason() {
+            BankWithdrawal pendingWithdrawal = createTestWithdrawalWithCreator(WithdrawalStatus.PENDING, "admin");
+            when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.of(pendingWithdrawal));
+
+            assertThatThrownBy(() -> bankWithdrawalService.approveWithdrawal(withdrawalId, "admin", null, true))
+                    .isInstanceOf(MakerCheckerViolationException.class);
+
+            verify(withdrawalRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should throw when withdrawal is not PENDING")
+        void shouldThrowWhenWithdrawalNotPending() {
+            BankWithdrawal approvedWithdrawal = createTestWithdrawalWithCreator(WithdrawalStatus.APPROVED, "maker");
+            when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.of(approvedWithdrawal));
+
+            assertThatThrownBy(() -> bankWithdrawalService.approveWithdrawal(withdrawalId, "checker", null, false))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("Only pending withdrawals can be approved");
+
+            verify(withdrawalRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("should throw when withdrawal not found")
+        void shouldThrowWhenWithdrawalNotFound() {
+            when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> bankWithdrawalService.approveWithdrawal(withdrawalId, "checker", null, false))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Withdrawal not found");
+        }
+    }
+
+    // ===================================================================
     // confirmWithdrawal
     // ===================================================================
 
@@ -137,10 +259,10 @@ class BankWithdrawalServiceImplTest {
     class ConfirmWithdrawalTests {
 
         @Test
-        @DisplayName("should confirm a PENDING withdrawal")
-        void shouldConfirmPendingWithdrawal() {
-            BankWithdrawal pendingWithdrawal = createTestWithdrawal(WithdrawalStatus.PENDING);
-            when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.of(pendingWithdrawal));
+        @DisplayName("should confirm an APPROVED withdrawal")
+        void shouldConfirmApprovedWithdrawal() {
+            BankWithdrawal approvedWithdrawal = createTestWithdrawal(WithdrawalStatus.APPROVED);
+            when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.of(approvedWithdrawal));
 
             BankWithdrawal confirmedWithdrawal = createTestWithdrawal(WithdrawalStatus.COMPLETED);
             confirmedWithdrawal.setReferenceNumber("REF-001");
@@ -160,8 +282,8 @@ class BankWithdrawalServiceImplTest {
         @Test
         @DisplayName("should publish BankWithdrawalConfirmedEvent")
         void shouldPublishBankWithdrawalConfirmedEvent() {
-            BankWithdrawal pendingWithdrawal = createTestWithdrawal(WithdrawalStatus.PENDING);
-            when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.of(pendingWithdrawal));
+            BankWithdrawal approvedWithdrawal = createTestWithdrawal(WithdrawalStatus.APPROVED);
+            when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.of(approvedWithdrawal));
 
             BankWithdrawal confirmedWithdrawal = createTestWithdrawal(WithdrawalStatus.COMPLETED);
             confirmedWithdrawal.setReferenceNumber("REF-001");
@@ -190,27 +312,27 @@ class BankWithdrawalServiceImplTest {
         }
 
         @Test
-        @DisplayName("should throw when withdrawal is not PENDING")
-        void shouldThrowWhenWithdrawalNotPending() {
-            BankWithdrawal completedWithdrawal = createTestWithdrawal(WithdrawalStatus.COMPLETED);
-            when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.of(completedWithdrawal));
+        @DisplayName("should throw when withdrawal is PENDING (not yet approved)")
+        void shouldThrowWhenWithdrawalIsPending() {
+            BankWithdrawal pendingWithdrawal = createTestWithdrawal(WithdrawalStatus.PENDING);
+            when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.of(pendingWithdrawal));
 
             assertThatThrownBy(() -> bankWithdrawalService.confirmWithdrawal(withdrawalId, "REF-001", "admin"))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Only pending withdrawals can be confirmed");
+                    .hasMessageContaining("Only approved withdrawals can be confirmed");
 
             verify(withdrawalRepository, never()).save(any());
         }
 
         @Test
-        @DisplayName("should throw when withdrawal has PROCESSING status")
-        void shouldThrowWhenWithdrawalIsProcessing() {
-            BankWithdrawal processingWithdrawal = createTestWithdrawal(WithdrawalStatus.PROCESSING);
-            when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.of(processingWithdrawal));
+        @DisplayName("should throw when withdrawal has COMPLETED status")
+        void shouldThrowWhenWithdrawalIsCompleted() {
+            BankWithdrawal completedWithdrawal = createTestWithdrawal(WithdrawalStatus.COMPLETED);
+            when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.of(completedWithdrawal));
 
             assertThatThrownBy(() -> bankWithdrawalService.confirmWithdrawal(withdrawalId, "REF-001", "admin"))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Only pending withdrawals can be confirmed");
+                    .hasMessageContaining("Only approved withdrawals can be confirmed");
         }
 
         @Test
@@ -221,7 +343,36 @@ class BankWithdrawalServiceImplTest {
 
             assertThatThrownBy(() -> bankWithdrawalService.confirmWithdrawal(withdrawalId, "REF-001", "admin"))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Only pending withdrawals can be confirmed");
+                    .hasMessageContaining("Only approved withdrawals can be confirmed");
+        }
+
+        @Test
+        @DisplayName("full flow: initiate -> approve -> confirm")
+        void shouldSupportFullFlow() {
+            // initiate
+            BankWithdrawal pendingWithdrawal = createTestWithdrawal(WithdrawalStatus.PENDING);
+            pendingWithdrawal.setCreatedBy("maker");
+            when(withdrawalRepository.save(any(BankWithdrawal.class))).thenReturn(pendingWithdrawal);
+
+            bankWithdrawalService.initiateWithdrawal(memberId, amount, bankName, accountNumber, "maker");
+
+            // approve
+            when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.of(pendingWithdrawal));
+            BankWithdrawal approvedWithdrawal = createTestWithdrawal(WithdrawalStatus.APPROVED);
+            approvedWithdrawal.setApprovedBy("checker");
+            when(withdrawalRepository.save(any(BankWithdrawal.class))).thenReturn(approvedWithdrawal);
+
+            BankWithdrawal approveResult = bankWithdrawalService.approveWithdrawal(withdrawalId, "checker", null, false);
+            assertThat(approveResult.getStatus()).isEqualTo(WithdrawalStatus.APPROVED);
+
+            // confirm
+            when(withdrawalRepository.findById(withdrawalId)).thenReturn(Optional.of(approvedWithdrawal));
+            BankWithdrawal confirmedWithdrawal = createTestWithdrawal(WithdrawalStatus.COMPLETED);
+            confirmedWithdrawal.setReferenceNumber("REF-001");
+            when(withdrawalRepository.save(any(BankWithdrawal.class))).thenReturn(confirmedWithdrawal);
+
+            BankWithdrawal confirmResult = bankWithdrawalService.confirmWithdrawal(withdrawalId, "REF-001", "admin");
+            assertThat(confirmResult.getStatus()).isEqualTo(WithdrawalStatus.COMPLETED);
         }
     }
 

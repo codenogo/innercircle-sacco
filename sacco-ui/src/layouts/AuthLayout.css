@@ -15,6 +15,7 @@
   background: var(--paper);
   border: 1px solid var(--rule);
   border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
   padding: var(--space-6);
 }
 

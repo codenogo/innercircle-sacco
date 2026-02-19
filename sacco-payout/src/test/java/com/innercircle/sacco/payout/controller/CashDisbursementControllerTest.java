@@ -1,11 +1,12 @@
 package com.innercircle.sacco.payout.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.security.MemberAccessHelper;
+import com.innercircle.sacco.payout.dto.ApproveCashDisbursementRequest;
 import com.innercircle.sacco.payout.dto.CashDisbursementRequest;
 import com.innercircle.sacco.payout.entity.CashDisbursement;
+import com.innercircle.sacco.payout.entity.CashDisbursementStatus;
 import com.innercircle.sacco.payout.service.CashDisbursementService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -116,6 +118,48 @@ class CashDisbursementControllerTest {
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.signoffBy").value("admin"))
                     .andExpect(jsonPath("$.message").value("Cash disbursement signed off successfully"));
+        }
+    }
+
+    @Nested
+    @DisplayName("PUT /api/v1/cash-disbursements/{disbursementId}/approve")
+    class ApproveDisbursementTests {
+
+        @Test
+        @DisplayName("should approve disbursement and return 200")
+        void shouldApproveDisbursement() throws Exception {
+            testDisbursement.setStatus(CashDisbursementStatus.APPROVED);
+            testDisbursement.setApprovedBy("admin");
+            when(cashDisbursementService.approveDisbursement(
+                    eq(disbursementId), anyString(), any(), anyBoolean()
+            )).thenReturn(testDisbursement);
+
+            ApproveCashDisbursementRequest request = new ApproveCashDisbursementRequest(null);
+
+            mockMvc.perform(put("/api/v1/cash-disbursements/{disbursementId}/approve", disbursementId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.message").value("Cash disbursement approved successfully"));
+        }
+    }
+
+    @Nested
+    @DisplayName("PUT /api/v1/cash-disbursements/{disbursementId}/record")
+    class RecordDisbursementCompleteTests {
+
+        @Test
+        @DisplayName("should mark disbursement as RECORDED and return 200")
+        void shouldRecordDisbursement() throws Exception {
+            testDisbursement.setStatus(CashDisbursementStatus.RECORDED);
+            when(cashDisbursementService.completeDisbursement(eq(disbursementId), anyString()))
+                    .thenReturn(testDisbursement);
+
+            mockMvc.perform(put("/api/v1/cash-disbursements/{disbursementId}/record", disbursementId))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.message").value("Cash disbursement recorded successfully"));
         }
     }
 
