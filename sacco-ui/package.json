@@ -12,6 +12,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.13.18",
     "google-libphonenumber": "^3.2.44",
     "lucide-react": "^0.474.0",
     "react": "^19.0.0",

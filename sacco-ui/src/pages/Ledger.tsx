@@ -1,13 +1,22 @@
-import { useCallback, useEffect, useState } from 'react'
-import { PenLine } from 'lucide-react'
-import { SkeletonRow } from '../components/Skeleton'
-import { NewJournalEntryModal } from '../components/NewJournalEntryModal'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+} from '@tanstack/react-table'
+import { useVirtualizer } from '@tanstack/react-virtual'
+import { ChevronRight, ChevronDown } from 'lucide-react'
+import { Spinner } from '../components/Spinner'
+import { SkeletonTableRows } from '../components/Skeleton'
 import { ApiError } from '../services/apiClient'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
-import type { AccountResponse, JournalEntryResponse, Page } from '../types/ledger'
+import type { JournalEntryResponse, JournalLineDto, Page } from '../types/ledger'
 import './Ledger.css'
 
-const PAGE_SIZE = 20
+const PAGE_SIZE = 50
+const ROW_HEIGHT = 40
+const SUB_ROW_HEIGHT = 36
 
 function toErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiError) return error.message
@@ -29,95 +38,168 @@ function fmtDate(value: string): string {
   })
 }
 
-interface FlatLine {
-  key: string
-  entryNumber: string
-  transactionDate: string
-  description: string
-  accountName: string
-  debit: number
-  credit: number
-}
+type DisplayRow =
+  | { type: 'entry'; entry: JournalEntryResponse }
+  | { type: 'line'; line: JournalLineDto; entryNumber: string }
 
-function flattenEntries(entries: JournalEntryResponse[]): FlatLine[] {
-  const lines: FlatLine[] = []
-  for (const entry of entries) {
-    for (let i = 0; i < entry.journalLines.length; i++) {
-      const line = entry.journalLines[i]
-      lines.push({
-        key: `${entry.id}-${i}`,
-        entryNumber: entry.entryNumber,
-        transactionDate: entry.transactionDate,
-        description: entry.description,
-        accountName: line.accountName,
-        debit: Number(line.debitAmount) || 0,
-        credit: Number(line.creditAmount) || 0,
-      })
-    }
-  }
-  return lines
-}
+const columnHelper = createColumnHelper<JournalEntryResponse>()
+
+const columns = [
+  columnHelper.display({
+    id: 'expand',
+    header: '',
+    cell: () => null, // rendered manually
+    size: 32,
+  }),
+  columnHelper.accessor('entryNumber', {
+    header: 'Ref',
+    size: 100,
+  }),
+  columnHelper.accessor('transactionDate', {
+    header: 'Date',
+    size: 110,
+  }),
+  columnHelper.accessor('transactionType', {
+    header: 'Type',
+    size: 140,
+  }),
+  columnHelper.accessor('description', {
+    header: 'Description',
+    size: 240,
+  }),
+  columnHelper.display({
+    id: 'totalDebit',
+    header: 'Debit (KES)',
+    size: 120,
+  }),
+  columnHelper.display({
+    id: 'totalCredit',
+    header: 'Credit (KES)',
+    size: 120,
+  }),
+]
 
 export function Ledger() {
   const { request } = useAuthenticatedApi()
 
   const [entries, setEntries] = useState<JournalEntryResponse[]>([])
-  const [accounts, setAccounts] = useState<AccountResponse[]>([])
-  const [accountFilter, setAccountFilter] = useState('All Accounts')
-  const [showModal, setShowModal] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [currentPage, setCurrentPage] = useState(0)
-  const [totalPages, setTotalPages] = useState(0)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
   const [totalElements, setTotalElements] = useState(0)
+  const [error, setError] = useState<string | null>(null)
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
-  const loadAccounts = useCallback(async () => {
-    try {
-      const data = await request<AccountResponse[]>('/api/v1/ledger/accounts')
-      setAccounts(data)
-    } catch {
-      // non-critical — filter dropdown will be empty
+  const pageRef = useRef(0)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  const loadEntries = useCallback(async (opts?: { append?: boolean }) => {
+    const append = Boolean(opts?.append)
+
+    if (append) {
+      pageRef.current += 1
+      setLoadingMore(true)
+    } else {
+      pageRef.current = 0
+      setLoading(true)
     }
-  }, [request])
-
-  const loadEntries = useCallback(async (page: number) => {
-    setLoading(true)
     setError(null)
+
     try {
       const params = new URLSearchParams({
-        page: String(page),
+        page: String(pageRef.current),
         size: String(PAGE_SIZE),
         sort: 'transactionDate,desc',
       })
       const data = await request<Page<JournalEntryResponse>>(
         `/api/v1/ledger/journal-entries?${params}`,
       )
-      setEntries(data.content)
-      setTotalPages(data.totalPages)
-      setTotalElements(data.totalElements)
-      setCurrentPage(data.number)
+
+      if (append) {
+        setEntries(prev => [...prev, ...data.content])
+      } else {
+        setEntries(data.content)
+        setTotalElements(data.totalElements)
+      }
+      setHasMore(!data.last)
     } catch (err) {
       setError(toErrorMessage(err, 'Unable to load journal entries.'))
     } finally {
       setLoading(false)
+      setLoadingMore(false)
     }
   }, [request])
 
   useEffect(() => {
-    void loadAccounts()
-    void loadEntries(0)
-  }, [loadAccounts, loadEntries])
+    void loadEntries()
+  }, [loadEntries])
 
-  const flatLines = flattenEntries(entries)
+  const table = useReactTable({
+    data: entries,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    manualPagination: true,
+    manualFiltering: true,
+  })
 
-  const filtered = accountFilter === 'All Accounts'
-    ? flatLines
-    : flatLines.filter(line => line.accountName === accountFilter)
+  const toggleExpanded = useCallback((entryId: string) => {
+    setExpanded(prev => ({ ...prev, [entryId]: !prev[entryId] }))
+  }, [])
 
-  const totalDebit = filtered.reduce((sum, line) => sum + line.debit, 0)
-  const totalCredit = filtered.reduce((sum, line) => sum + line.credit, 0)
+  // Build flat display rows for virtualization
+  const displayRows = useMemo((): DisplayRow[] => {
+    const rows: DisplayRow[] = []
+    for (const entry of entries) {
+      rows.push({ type: 'entry', entry })
+      if (expanded[entry.id]) {
+        for (const line of entry.journalLines) {
+          rows.push({ type: 'line', line, entryNumber: entry.entryNumber })
+        }
+      }
+    }
+    return rows
+  }, [entries, expanded])
 
-  const accountOptions = ['All Accounts', ...accounts.map(a => a.accountName)]
+  const virtualizer = useVirtualizer({
+    count: displayRows.length,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: (index) =>
+      displayRows[index]?.type === 'line' ? SUB_ROW_HEIGHT : ROW_HEIGHT,
+    overscan: 10,
+  })
+
+  // Infinite scroll: load more when near bottom
+  const loadingMoreRef = useRef(false)
+  loadingMoreRef.current = loadingMore
+
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    const handleScroll = () => {
+      if (loadingMoreRef.current || !hasMore) return
+      const { scrollTop, scrollHeight, clientHeight } = container
+      if (scrollHeight - scrollTop - clientHeight < 200) {
+        void loadEntries({ append: true })
+      }
+    }
+
+    container.addEventListener('scroll', handleScroll, { passive: true })
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [hasMore, loadEntries])
+
+  // Entry-boundary alternation
+  const entryAltMap = useMemo(() => {
+    const map = new Map<string, boolean>()
+    let alt = false
+    for (const entry of entries) {
+      alt = !alt
+      map.set(entry.id, alt)
+    }
+    return map
+  }, [entries])
+
+  const headerGroups = table.getHeaderGroups()
 
   return (
     <div className="ledger-page">
@@ -126,28 +208,13 @@ export function Ledger() {
           <h1 className="page-title">General Ledger</h1>
           <p className="page-subtitle">
             {totalElements > 0
-              ? `${totalElements} journal entries`
+              ? `${totalElements.toLocaleString()} journal entries`
               : 'Double-entry journal'}
           </p>
         </div>
-        <button className="btn btn--primary" onClick={() => setShowModal(true)}>
-          <PenLine size={14} strokeWidth={2} />
-          New Entry
-        </button>
       </div>
 
       <hr className="rule rule--strong" />
-
-      <div className="filter-bar">
-        <span className="page-section-title page-section-title--inline">Account</span>
-        <select
-          className="filter-select"
-          value={accountFilter}
-          onChange={e => setAccountFilter(e.target.value)}
-        >
-          {accountOptions.map(a => <option key={a} value={a}>{a}</option>)}
-        </select>
-      </div>
 
       {error && (
         <div className="ops-feedback ops-feedback--error" role="status">
@@ -155,73 +222,138 @@ export function Ledger() {
         </div>
       )}
 
-      <table className="ledger-table ledger-journal">
-        <thead>
-          <tr>
-            <th className="label">Ref</th>
-            <th className="label">Date</th>
-            <th className="label">Description</th>
-            <th className="label">Account</th>
-            <th className="label ledger-table-amount">Debit (KES)</th>
-            <th className="label ledger-table-amount">Credit (KES)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading ? (
-            <tr><td colSpan={6}><SkeletonRow cells={4} /><SkeletonRow cells={4} /><SkeletonRow cells={4} /></td></tr>
-          ) : filtered.length === 0 ? (
-            <tr><td colSpan={6} className="table-empty">No entries for this account.</td></tr>
-          ) : filtered.map((line, i) => (
-            <tr key={line.key} className={i % 2 === 1 ? 'ledger-row--alt' : ''}>
-              <td className="data journal-ref">{line.entryNumber}</td>
-              <td className="data ledger-date">{fmtDate(line.transactionDate)}</td>
-              <td className="journal-desc">{line.description}</td>
-              <td className="journal-account">{line.accountName}</td>
-              <td className="amount ledger-table-amount">{fmtCurrency(line.debit)}</td>
-              <td className="amount ledger-table-amount">{fmtCurrency(line.credit)}</td>
+      {loading ? (
+        <table className="ledger-table ledger-journal">
+          <thead>
+            <tr>
+              {headerGroups[0]?.headers.map(header => (
+                <th key={header.id} className="label">
+                  {flexRender(header.column.columnDef.header, header.getContext())}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr className="journal-totals">
-            <td colSpan={4} className="label ledger-table-amount">Totals</td>
-            <td className="amount ledger-table-amount">{totalDebit.toLocaleString('en-KE')}</td>
-            <td className="amount ledger-table-amount">{totalCredit.toLocaleString('en-KE')}</td>
-          </tr>
-        </tfoot>
-      </table>
+          </thead>
+          <tbody>
+            <SkeletonTableRows cols={7} />
+          </tbody>
+        </table>
+      ) : (
+        <div className="ledger-scroll-container" ref={scrollContainerRef}>
+          <table className="ledger-table ledger-journal">
+            <thead>
+              <tr>
+                {headerGroups[0]?.headers.map(header => (
+                  <th
+                    key={header.id}
+                    className="label"
+                    style={{ width: header.getSize() }}
+                  >
+                    {flexRender(header.column.columnDef.header, header.getContext())}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody
+              style={{
+                height: `${virtualizer.getTotalSize()}px`,
+                position: 'relative',
+              }}
+            >
+              {displayRows.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="table-empty">
+                    No journal entries found.
+                  </td>
+                </tr>
+              ) : (
+                virtualizer.getVirtualItems().map(virtualRow => {
+                  const displayRow = displayRows[virtualRow.index]
+                  if (!displayRow) return null
 
-      {totalPages > 1 && (
-        <div className="ops-pager">
-          <button
-            type="button"
-            className="btn btn--secondary"
-            disabled={loading || currentPage === 0}
-            onClick={() => void loadEntries(currentPage - 1)}
-          >
-            Previous
-          </button>
-          <span className="ops-pager-info">
-            Page {currentPage + 1} of {totalPages}
-          </span>
-          <button
-            type="button"
-            className="btn btn--secondary"
-            disabled={loading || currentPage >= totalPages - 1}
-            onClick={() => void loadEntries(currentPage + 1)}
-          >
-            Next
-          </button>
+                  if (displayRow.type === 'entry') {
+                    const entry = displayRow.entry
+                    const isExpanded = expanded[entry.id]
+                    const isAlt = entryAltMap.get(entry.id)
+                    const totalDebit = entry.journalLines.reduce(
+                      (sum, l) => sum + (Number(l.debitAmount) || 0), 0,
+                    )
+                    const totalCredit = entry.journalLines.reduce(
+                      (sum, l) => sum + (Number(l.creditAmount) || 0), 0,
+                    )
+
+                    return (
+                      <tr
+                        key={`entry-${entry.id}`}
+                        className={`ledger-row--expandable${isAlt ? '' : ' ledger-row--alt'}`}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: `${virtualRow.size}px`,
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                        onClick={() => toggleExpanded(entry.id)}
+                      >
+                        <td className="data ledger-expand-cell">
+                          {isExpanded
+                            ? <ChevronDown size={14} />
+                            : <ChevronRight size={14} />}
+                        </td>
+                        <td className="data journal-ref">{entry.entryNumber}</td>
+                        <td className="data ledger-date">{fmtDate(entry.transactionDate)}</td>
+                        <td className="data ledger-type">
+                          {entry.transactionType.replace(/_/g, ' ')}
+                        </td>
+                        <td className="journal-desc" title={entry.description}>
+                          {entry.description}
+                        </td>
+                        <td className="amount ledger-table-amount">{fmtCurrency(totalDebit)}</td>
+                        <td className="amount ledger-table-amount">{fmtCurrency(totalCredit)}</td>
+                      </tr>
+                    )
+                  }
+
+                  // Sub-row (journal line)
+                  const line = displayRow.line
+                  return (
+                    <tr
+                      key={`line-${displayRow.entryNumber}-${line.id}`}
+                      className="ledger-subrow"
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: `${virtualRow.size}px`,
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                    >
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td className="journal-account">{line.accountName}</td>
+                      <td className="amount ledger-table-amount">
+                        {fmtCurrency(Number(line.debitAmount) || 0)}
+                      </td>
+                      <td className="amount ledger-table-amount">
+                        {fmtCurrency(Number(line.creditAmount) || 0)}
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+
+          {loadingMore && (
+            <div className="ledger-loading-more">
+              <Spinner size="sm" /> Loading more entries…
+            </div>
+          )}
         </div>
       )}
-
-      <hr className="rule rule--strong" />
-
-      <NewJournalEntryModal
-        open={showModal}
-        onClose={() => setShowModal(false)}
-        accounts={accounts.map(a => a.accountName)}
-      />
     </div>
   )
 }
