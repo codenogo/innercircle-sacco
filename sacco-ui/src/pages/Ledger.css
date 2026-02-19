@@ -31,6 +31,65 @@
   border-bottom: 1px solid var(--rule-strong);
 }
 
+/* ─── Column header filter row ─── */
+
+.ledger-th-filter th {
+  padding: var(--space-1) var(--space-1);
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper);
+  vertical-align: middle;
+}
+
+.ledger-filter-input {
+  font-size: var(--text-xs);
+  padding: var(--space-1);
+  width: 100%;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  box-sizing: border-box;
+}
+
+.ledger-filter-input:focus {
+  outline: none;
+  border-color: var(--accent, #2563eb);
+}
+
+.ledger-filter-select {
+  font-size: var(--text-xs);
+  padding: var(--space-1);
+  width: 100%;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.ledger-filter-select:focus {
+  outline: none;
+  border-color: var(--accent, #2563eb);
+}
+
+.ledger-filter-date {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ledger-filter-date .ledger-filter-input {
+  min-width: 0;
+  flex: 1;
+}
+
+.ledger-filter-date-sep {
+  color: var(--ink-muted);
+  font-size: var(--text-xs);
+  flex-shrink: 0;
+}
+
 /* ─── Cell styles ─── */
 
 .journal-ref {

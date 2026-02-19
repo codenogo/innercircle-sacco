@@ -40,6 +40,30 @@ export interface Page<T> {
   last: boolean
 }
 
+export type TransactionType =
+  | 'CONTRIBUTION'
+  | 'LOAN_DISBURSEMENT'
+  | 'LOAN_REPAYMENT'
+  | 'PAYOUT'
+  | 'PETTY_CASH_DISBURSEMENT'
+  | 'PETTY_CASH_SETTLEMENT'
+  | 'PENALTY'
+  | 'INTEREST_ACCRUAL'
+  | 'MANUAL_ADJUSTMENT'
+  | 'LOAN_REVERSAL'
+  | 'CONTRIBUTION_REVERSAL'
+  | 'PENALTY_WAIVER'
+  | 'BENEFIT_DISTRIBUTION'
+
+export interface JournalEntryFilters {
+  entryNumber?: string
+  description?: string
+  dateFrom?: string
+  dateTo?: string
+  transactionType?: TransactionType
+  accountId?: string
+}
+
 export interface TrialBalanceEntry {
   accountCode: string
   accountName: string

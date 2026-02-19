@@ -11,12 +11,37 @@ import { Spinner } from '../components/Spinner'
 import { SkeletonTableRows } from '../components/Skeleton'
 import { ApiError } from '../services/apiClient'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
-import type { JournalEntryResponse, JournalLineDto, Page } from '../types/ledger'
+import { useDebounce } from '../hooks/useDebounce'
+import type {
+  AccountResponse,
+  JournalEntryFilters,
+  JournalEntryResponse,
+  JournalLineDto,
+  Page,
+  TransactionType,
+} from '../types/ledger'
 import './Ledger.css'
 
 const PAGE_SIZE = 50
 const ROW_HEIGHT = 40
 const SUB_ROW_HEIGHT = 36
+const DEBOUNCE_MS = 400
+
+const TRANSACTION_TYPES: TransactionType[] = [
+  'CONTRIBUTION',
+  'LOAN_DISBURSEMENT',
+  'LOAN_REPAYMENT',
+  'PAYOUT',
+  'PETTY_CASH_DISBURSEMENT',
+  'PETTY_CASH_SETTLEMENT',
+  'PENALTY',
+  'INTEREST_ACCRUAL',
+  'MANUAL_ADJUSTMENT',
+  'LOAN_REVERSAL',
+  'CONTRIBUTION_REVERSAL',
+  'PENALTY_WAIVER',
+  'BENEFIT_DISTRIBUTION',
+]
 
 function toErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiError) return error.message
@@ -38,6 +63,10 @@ function fmtDate(value: string): string {
   })
 }
 
+function fmtType(value: string): string {
+  return value.replace(/_/g, ' ')
+}
+
 type DisplayRow =
   | { type: 'entry'; entry: JournalEntryResponse }
   | { type: 'line'; line: JournalLineDto; entryNumber: string }
@@ -48,7 +77,7 @@ const columns = [
   columnHelper.display({
     id: 'expand',
     header: '',
-    cell: () => null, // rendered manually
+    cell: () => null,
     size: 32,
   }),
   columnHelper.accessor('entryNumber', {
@@ -57,7 +86,7 @@ const columns = [
   }),
   columnHelper.accessor('transactionDate', {
     header: 'Date',
-    size: 110,
+    size: 180,
   }),
   columnHelper.accessor('transactionType', {
     header: 'Type',
@@ -65,17 +94,17 @@ const columns = [
   }),
   columnHelper.accessor('description', {
     header: 'Description',
-    size: 240,
+    size: 220,
   }),
   columnHelper.display({
     id: 'totalDebit',
     header: 'Debit (KES)',
-    size: 120,
+    size: 110,
   }),
   columnHelper.display({
     id: 'totalCredit',
     header: 'Credit (KES)',
-    size: 120,
+    size: 110,
   }),
 ]
 
@@ -83,6 +112,7 @@ export function Ledger() {
   const { request } = useAuthenticatedApi()
 
   const [entries, setEntries] = useState<JournalEntryResponse[]>([])
+  const [accounts, setAccounts] = useState<AccountResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(false)
@@ -90,11 +120,44 @@ export function Ledger() {
   const [error, setError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
+  // Column filter state
+  const [filterRef, setFilterRef] = useState('')
+  const [filterDateFrom, setFilterDateFrom] = useState('')
+  const [filterDateTo, setFilterDateTo] = useState('')
+  const [filterType, setFilterType] = useState('')
+  const [filterDesc, setFilterDesc] = useState('')
+  const [filterAccountId, setFilterAccountId] = useState('')
+
+  // Debounce text inputs
+  const debouncedRef = useDebounce(filterRef, DEBOUNCE_MS)
+  const debouncedDesc = useDebounce(filterDesc, DEBOUNCE_MS)
+  const debouncedDateFrom = useDebounce(filterDateFrom, DEBOUNCE_MS)
+  const debouncedDateTo = useDebounce(filterDateTo, DEBOUNCE_MS)
+
   const pageRef = useRef(0)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
-  const loadEntries = useCallback(async (opts?: { append?: boolean }) => {
+  const loadAccounts = useCallback(async () => {
+    try {
+      const data = await request<AccountResponse[]>('/api/v1/ledger/accounts')
+      setAccounts(data)
+    } catch {
+      // non-critical — filter dropdown will be empty
+    }
+  }, [request])
+
+  const filters: JournalEntryFilters = useMemo(() => ({
+    entryNumber: debouncedRef || undefined,
+    description: debouncedDesc || undefined,
+    dateFrom: debouncedDateFrom || undefined,
+    dateTo: debouncedDateTo || undefined,
+    transactionType: (filterType as TransactionType) || undefined,
+    accountId: filterAccountId || undefined,
+  }), [debouncedRef, debouncedDesc, debouncedDateFrom, debouncedDateTo, filterType, filterAccountId])
+
+  const loadEntries = useCallback(async (opts?: { append?: boolean; currentFilters?: JournalEntryFilters }) => {
     const append = Boolean(opts?.append)
+    const f = opts?.currentFilters ?? filters
 
     if (append) {
       pageRef.current += 1
@@ -111,6 +174,14 @@ export function Ledger() {
         size: String(PAGE_SIZE),
         sort: 'transactionDate,desc',
       })
+
+      if (f.entryNumber) params.set('entryNumber', f.entryNumber)
+      if (f.description) params.set('description', f.description)
+      if (f.dateFrom) params.set('dateFrom', f.dateFrom)
+      if (f.dateTo) params.set('dateTo', f.dateTo)
+      if (f.transactionType) params.set('transactionType', f.transactionType)
+      if (f.accountId) params.set('accountId', f.accountId)
+
       const data = await request<Page<JournalEntryResponse>>(
         `/api/v1/ledger/journal-entries?${params}`,
       )
@@ -120,6 +191,7 @@ export function Ledger() {
       } else {
         setEntries(data.content)
         setTotalElements(data.totalElements)
+        setExpanded({})
       }
       setHasMore(!data.last)
     } catch (err) {
@@ -128,11 +200,17 @@ export function Ledger() {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [request])
+  }, [request, filters])
 
+  // Initial load + load accounts
   useEffect(() => {
-    void loadEntries()
-  }, [loadEntries])
+    void loadAccounts()
+  }, [loadAccounts])
+
+  // Re-fetch when debounced filters change
+  useEffect(() => {
+    void loadEntries({ currentFilters: filters })
+  }, [filters]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const table = useReactTable({
     data: entries,
@@ -222,7 +300,7 @@ export function Ledger() {
         </div>
       )}
 
-      {loading ? (
+      {loading && entries.length === 0 ? (
         <table className="ledger-table ledger-journal">
           <thead>
             <tr>
@@ -251,6 +329,80 @@ export function Ledger() {
                     {flexRender(header.column.columnDef.header, header.getContext())}
                   </th>
                 ))}
+              </tr>
+              {/* Filter row */}
+              <tr className="ledger-th-filter">
+                {/* Expand column — account filter */}
+                <th>
+                  <select
+                    className="ledger-filter-select"
+                    value={filterAccountId}
+                    onChange={e => setFilterAccountId(e.target.value)}
+                    title="Filter by account"
+                  >
+                    <option value="">Acct</option>
+                    {accounts.map(a => (
+                      <option key={a.id} value={a.id}>{a.accountCode}</option>
+                    ))}
+                  </select>
+                </th>
+                {/* Ref */}
+                <th>
+                  <input
+                    className="ledger-filter-input"
+                    type="text"
+                    placeholder="Ref…"
+                    value={filterRef}
+                    onChange={e => setFilterRef(e.target.value)}
+                  />
+                </th>
+                {/* Date (from – to) */}
+                <th>
+                  <div className="ledger-filter-date">
+                    <input
+                      type="date"
+                      className="ledger-filter-input"
+                      value={filterDateFrom}
+                      onChange={e => setFilterDateFrom(e.target.value)}
+                      title="From date"
+                    />
+                    <span className="ledger-filter-date-sep">–</span>
+                    <input
+                      type="date"
+                      className="ledger-filter-input"
+                      value={filterDateTo}
+                      onChange={e => setFilterDateTo(e.target.value)}
+                      title="To date"
+                    />
+                  </div>
+                </th>
+                {/* Type */}
+                <th>
+                  <select
+                    className="ledger-filter-select"
+                    value={filterType}
+                    onChange={e => setFilterType(e.target.value)}
+                  >
+                    <option value="">All types</option>
+                    {TRANSACTION_TYPES.map(t => (
+                      <option key={t} value={t}>{fmtType(t)}</option>
+                    ))}
+                  </select>
+                </th>
+                {/* Description */}
+                <th>
+                  <input
+                    className="ledger-filter-input"
+                    type="text"
+                    placeholder="Search…"
+                    value={filterDesc}
+                    onChange={e => setFilterDesc(e.target.value)}
+                  />
+                </th>
+                {/* Debit — no filter */}
+                <th></th>
+                {/* Credit — no filter */}
+                <th></th>
               </tr>
             </thead>
             <tbody
@@ -303,7 +455,7 @@ export function Ledger() {
                         <td className="data journal-ref">{entry.entryNumber}</td>
                         <td className="data ledger-date">{fmtDate(entry.transactionDate)}</td>
                         <td className="data ledger-type">
-                          {entry.transactionType.replace(/_/g, ' ')}
+                          {fmtType(entry.transactionType)}
                         </td>
                         <td className="journal-desc" title={entry.description}>
                           {entry.description}
