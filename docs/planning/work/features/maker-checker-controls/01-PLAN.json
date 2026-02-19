@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "feature": "maker-checker-controls",
+  "planNumber": "01",
+  "goal": "Create the shared MakerCheckerGuard, exception, and OVERRIDE_APPROVE audit action as foundation for all maker-checker enforcement",
+  "tasks": [
+    {
+      "name": "Create MakerCheckerGuard and MakerCheckerViolationException",
+      "cwd": "sacco-common",
+      "files": [
+        "sacco-common/src/main/java/com/innercircle/sacco/common/guard/MakerCheckerGuard.java",
+        "sacco-common/src/main/java/com/innercircle/sacco/common/exception/MakerCheckerViolationException.java"
+      ],
+      "action": "Create MakerCheckerGuard with two static methods: (1) assertDifferentActor(String maker, String checker, String entityType, UUID entityId) throws MakerCheckerViolationException if maker.equals(checker). (2) assertOrOverride(String maker, String checker, String overrideReason, boolean isAdmin) which allows same-actor only if isAdmin=true and overrideReason is non-blank, otherwise throws. Create MakerCheckerViolationException extending RuntimeException with entityType and entityId fields. Ensure the exception is mapped to HTTP 403 in the global exception handler (check existing GlobalExceptionHandler or equivalent).",
+      "verify": ["mvn -pl sacco-common compile -q"]
+    },
+    {
+      "name": "Add OVERRIDE_APPROVE audit action and update audit listener mapping",
+      "cwd": "sacco-audit",
+      "files": [
+        "sacco-audit/src/main/java/com/innercircle/sacco/audit/entity/AuditAction.java",
+        "sacco-audit/src/main/java/com/innercircle/sacco/audit/listener/AuditEventListener.java"
+      ],
+      "action": "Add OVERRIDE_APPROVE to AuditAction enum. Update the event-type-to-AuditAction mapping in AuditEventListener to map 'OVERRIDE_APPROVED' string to OVERRIDE_APPROVE action. This ensures override approvals get their own distinct audit trail entry.",
+      "verify": ["mvn -pl sacco-audit compile -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Unit tests for MakerCheckerGuard",
+      "cwd": "sacco-common",
+      "files": [
+        "sacco-common/src/test/java/com/innercircle/sacco/common/guard/MakerCheckerGuardTest.java"
+      ],
+      "action": "Write tests covering: (1) different actors passes silently, (2) same actor without override throws MakerCheckerViolationException, (3) same actor with ADMIN role and valid reason passes, (4) same actor with ADMIN role but blank reason throws, (5) same actor with non-ADMIN role and reason still throws, (6) null/empty maker or checker edge cases.",
+      "verify": ["mvn -pl sacco-common test -q"],
+      "blockedBy": [0]
+    }
+  ],
+  "planVerify": ["mvn -pl sacco-common,sacco-audit test -q"],
+  "commitMessage": "feat(maker-checker-controls): add MakerCheckerGuard, exception, and OVERRIDE_APPROVE audit action",
+  "timestamp": "2026-02-18T00:00:00Z"
+}

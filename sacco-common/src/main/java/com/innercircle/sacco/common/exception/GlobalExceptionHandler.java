@@ -53,6 +53,14 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(message, request.getRequestURI()));
     }
 
+    @ExceptionHandler(MakerCheckerViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMakerCheckerViolation(MakerCheckerViolationException ex,
+                                                                         HttpServletRequest request) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(ex.getMessage(), request.getRequestURI()));
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException ex,
                                                                 HttpServletRequest request) {

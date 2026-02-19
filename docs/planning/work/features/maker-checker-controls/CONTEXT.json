@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "feature": "maker-checker-controls",
+  "displayName": "Maker-Checker Controls",
+  "decisions": [
+    {
+      "area": "scope",
+      "decision": "All financial flows require maker-checker",
+      "rationale": "Loans, Payouts, Share Withdrawals, Petty Cash, Bank Withdrawals, and Cash Disbursements all need the control for comprehensive fraud prevention."
+    },
+    {
+      "area": "depth",
+      "decision": "Approval-only separation (not disbursement)",
+      "rationale": "Creator cannot approve, but the approver CAN disburse. Simpler, sufficient for most SACCOs. Avoids requiring 3+ privileged users for every transaction."
+    },
+    {
+      "area": "override",
+      "decision": "ADMIN can self-approve with mandatory reason",
+      "rationale": "Small SACCOs may only have one admin available. Override requires ADMIN role + documented reason, logged in audit trail for accountability."
+    },
+    {
+      "area": "missing-flows",
+      "decision": "Add approval step to Bank Withdrawals and Cash Disbursements",
+      "rationale": "Both currently lack formal approval workflows. Bank Withdrawals need PENDING->APPROVED->COMPLETED. Cash Disbursements need a new status workflow with approval before recording."
+    },
+    {
+      "area": "architecture",
+      "decision": "Shared MakerCheckerGuard in sacco-common",
+      "rationale": "Centralized, DRY utility that all services call. Easy to test, single place to maintain the logic. Located at sacco-common/.../guard/MakerCheckerGuard.java."
+    },
+    {
+      "area": "api",
+      "decision": "Optional overrideReason field on approve request DTOs",
+      "rationale": "Clean API design — field is optional normally, required only when self-approving. No extra endpoints needed. Validated server-side by MakerCheckerGuard."
+    }
+  ],
+  "constraints": [
+    "Must not break existing approval workflows — additive changes only",
+    "createdBy field must be reliably set on all entities (fix LoanApplication bug where it's not set)",
+    "ADMIN override must always produce an audit event with the override reason",
+    "Bank Withdrawal and Cash Disbursement need new Liquibase migrations for status columns",
+    "All maker-checker violations return HTTP 403 with clear error message",
+    "Frontend must show override reason input when self-approving (ADMIN only)",
+    "Existing transition guards (LoanTransitionGuards, PayoutTransitionGuards) must be updated for new status flows"
+  ],
+  "openQuestions": [
+    "Should the override audit event be a new AuditAction (e.g., OVERRIDE_APPROVE) or reuse APPROVE with metadata?",
+    "Should the frontend proactively warn ADMINs when they're about to self-approve, or only show the reason field after submission fails?",
+    "For Cash Disbursements: should the new workflow be PENDING->APPROVED->RECORDED, or add status to the existing single-step creation?"
+  ],
+  "relatedCode": [
+    "sacco-common/src/main/java/com/innercircle/sacco/common/model/BaseEntity.java",
+    "sacco-common/src/main/java/com/innercircle/sacco/common/security/MemberAccessHelper.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/guard/LoanTransitionGuards.java",
+    "sacco-loan/src/main/java/com/innercircle/sacco/loan/controller/LoanController.java",
+    "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/PayoutServiceImpl.java",
+    "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/BankWithdrawalServiceImpl.java",
+    "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/CashDisbursementServiceImpl.java",
+    "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/ShareWithdrawalServiceImpl.java",
+    "sacco-payout/src/main/java/com/innercircle/sacco/payout/service/PettyCashServiceImpl.java",
+    "sacco-payout/src/main/java/com/innercircle/sacco/payout/guard/PayoutTransitionGuards.java",
+    "sacco-audit/src/main/java/com/innercircle/sacco/audit/entity/AuditAction.java",
+    "sacco-audit/src/main/java/com/innercircle/sacco/audit/listener/AuditEventListener.java"
+  ],
+  "timestamp": "2026-02-18T00:00:00Z"
+}

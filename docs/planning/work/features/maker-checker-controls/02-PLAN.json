@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "feature": "maker-checker-controls",
+  "planNumber": "02",
+  "goal": "Enforce maker-checker on loan approval: fix createdBy bug, add overrideReason to approve flow, wire MakerCheckerGuard",
+  "tasks": [
+    {
+      "name": "Fix LoanApplication createdBy and create ApproveLoanRequest DTO",
+      "cwd": "sacco-loan",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/dto/ApproveLoanRequest.java"
+      ],
+      "action": "In LoanServiceImpl.applyForLoan(), add loan.setCreatedBy(actor) using the actor parameter (derive from MemberAccessHelper pattern used by the controller — may need to add actor param if not present). Create ApproveLoanRequest DTO with optional overrideReason field (@Size(max=500)).",
+      "verify": ["mvn -pl sacco-loan compile -q"]
+    },
+    {
+      "name": "Wire MakerCheckerGuard into approveLoan and update controller",
+      "cwd": "sacco-loan",
+      "files": [
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanServiceImpl.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/service/LoanService.java",
+        "sacco-loan/src/main/java/com/innercircle/sacco/loan/controller/LoanController.java"
+      ],
+      "action": "Update LoanService.approveLoan() signature to accept overrideReason and isAdmin flag (or Authentication). In LoanServiceImpl.approveLoan(), call MakerCheckerGuard.assertOrOverride(loan.getCreatedBy(), actor, overrideReason, isAdmin) before the status transition. If override is used, publish event with type 'OVERRIDE_APPROVED' instead of 'APPROVED'. Update LoanController to accept @RequestBody ApproveLoanRequest, extract isAdmin from Authentication, and pass to service. Apply same pattern to rejectLoan (reject should also be maker-checker protected).",
+      "verify": ["mvn -pl sacco-loan compile -q"],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Unit tests for loan maker-checker enforcement",
+      "cwd": "sacco-loan",
+      "files": [
+        "sacco-loan/src/test/java/com/innercircle/sacco/loan/service/LoanServiceImplTest.java"
+      ],
+      "action": "Add tests: (1) approveLoan by different user succeeds, (2) approveLoan by same user (creator) throws MakerCheckerViolationException, (3) approveLoan by same user with ADMIN override + reason succeeds, (4) approveLoan by same user with ADMIN override but no reason throws, (5) verify createdBy is now set in applyForLoan, (6) rejectLoan by same user throws.",
+      "verify": ["mvn -pl sacco-loan test -q"],
+      "blockedBy": [1]
+    }
+  ],
+  "planVerify": ["mvn -pl sacco-loan test -q"],
+  "commitMessage": "feat(maker-checker-controls): enforce maker-checker on loan approval with ADMIN override",
+  "timestamp": "2026-02-18T00:00:00Z"
+}
