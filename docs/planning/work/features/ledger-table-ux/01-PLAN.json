@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "feature": "ledger-table-ux",
+  "planNumber": "01",
+  "goal": "Add server-side filtering to the journal entries API endpoint using JPA Specifications",
+  "tasks": [
+    {
+      "name": "Add JpaSpecificationExecutor and filtered query to JournalEntryRepository",
+      "cwd": "sacco-ledger",
+      "files": [
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/repository/JournalEntryRepository.java"
+      ],
+      "action": "Extend JournalEntryRepository with JpaSpecificationExecutor<JournalEntry>. This follows the pattern already used by ContributionRepository. No new query methods needed — Specification will handle dynamic filtering.",
+      "verify": [
+        "cd sacco-ledger && mvn -q compile"
+      ]
+    },
+    {
+      "name": "Add filter parameters to LedgerController.getJournalEntries",
+      "cwd": "sacco-ledger",
+      "files": [
+        "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/controller/LedgerController.java"
+      ],
+      "action": "Add optional @RequestParam filters to getJournalEntries: accountId (UUID), dateFrom (LocalDate), dateTo (LocalDate), description (String — ILIKE search), entryNumber (String — ILIKE search), transactionType (TransactionType). Build a Specification<JournalEntry> chain (same pattern as ContributionServiceImpl): start with posted=true, then conditionally .and() each filter. For description/entryNumber use cb.like(cb.lower(...), '%' + value.toLowerCase() + '%'). For account filtering, join through journalLines to account. Use repository.findAll(spec, pageable) and wrap with PageResponse.from().",
+      "verify": [
+        "cd sacco-ledger && mvn -q compile"
+      ],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Add database indexes for text search performance",
+      "cwd": "sacco-ledger",
+      "files": [
+        "sacco-ledger/src/main/resources/db/changelog/ledger/004-add-search-indexes.yaml"
+      ],
+      "action": "Create Liquibase changeset 004-add-search-indexes.yaml: add btree index on journal_entries.description (for LIKE prefix queries) and a composite index on (posted, transaction_date, transaction_type) for the filtered query. Register in sacco-app db.changelog-master.yaml.",
+      "verify": [
+        "cd sacco-app && mvn -q compile"
+      ],
+      "blockedBy": [1]
+    }
+  ],
+  "planVerify": [
+    "mvn -pl sacco-ledger -q compile",
+    "mvn -pl sacco-ledger test -q"
+  ],
+  "commitMessage": "feat(ledger): add server-side filtering to journal entries API",
+  "timestamp": "2026-02-19T00:00:00Z"
+}

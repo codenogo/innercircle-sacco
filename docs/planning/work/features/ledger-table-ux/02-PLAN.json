@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "feature": "ledger-table-ux",
+  "planNumber": "02",
+  "goal": "Install TanStack Table + Virtual and rebuild the Ledger page with virtual scrolling and expandable rows",
+  "tasks": [
+    {
+      "name": "Install @tanstack/react-table and @tanstack/react-virtual",
+      "cwd": "sacco-ui",
+      "files": [
+        "sacco-ui/package.json"
+      ],
+      "action": "npm install @tanstack/react-table @tanstack/react-virtual. Verify versions land in package.json and lock file updates.",
+      "verify": [
+        "cd sacco-ui && npm ls @tanstack/react-table @tanstack/react-virtual"
+      ]
+    },
+    {
+      "name": "Rewrite Ledger.tsx with TanStack Table, virtual scrolling, and expandable rows",
+      "cwd": "sacco-ui",
+      "files": [
+        "sacco-ui/src/pages/Ledger.tsx",
+        "sacco-ui/src/types/ledger.ts"
+      ],
+      "action": "Rewrite Ledger.tsx: (1) Define TanStack column defs for: Ref, Date, Type, Description, Total Debit, Total Credit. (2) Use useReactTable with manualPagination, manualFiltering, getCoreRowModel, getExpandedRowModel. (3) Each row represents a JournalEntryResponse. Expanding a row reveals its journalLines as sub-rows (account, debit, credit). (4) Use useVirtualizer from @tanstack/react-virtual on the tbody container with a fixed row height estimate (~40px). (5) Table container: fixed height calc(100vh - 220px), overflow-y: auto. (6) Sticky thead via position: sticky, top: 0. (7) Infinite scroll: when virtualizer scrolls near bottom, trigger loadEntries({ append: true }) to fetch next page. (8) Update types/ledger.ts if needed for any new response fields. (9) Keep the page header, error feedback, and basic structure. Remove the old filter-bar, flat-line logic, and manual Load More button.",
+      "verify": [
+        "cd sacco-ui && npm run build"
+      ],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Update Ledger.css for virtual scroll container, sticky header, expandable rows",
+      "cwd": "sacco-ui",
+      "files": [
+        "sacco-ui/src/pages/Ledger.css"
+      ],
+      "action": "Add CSS: (1) .ledger-scroll-container with fixed height, overflow-y auto, border. (2) .ledger-table thead with position sticky, top 0, z-index 10, background paper. (3) .ledger-row--expandable cursor pointer, hover highlight. (4) .ledger-subrow with indented left padding, lighter background for journal line detail rows. (5) Remove old filter-bar-related selectors that are no longer used. Keep .journal-totals, .journal-ref, .journal-desc styles.",
+      "verify": [
+        "cd sacco-ui && npm run build"
+      ],
+      "blockedBy": [1]
+    }
+  ],
+  "planVerify": [
+    "cd sacco-ui && npm run build",
+    "cd sacco-ui && npm run lint"
+  ],
+  "commitMessage": "feat(ledger-ui): rebuild ledger with TanStack Table, virtual scroll, expandable rows",
+  "timestamp": "2026-02-19T00:00:00Z"
+}

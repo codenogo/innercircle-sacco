@@ -245,8 +245,21 @@
   min-width: 200px;
 }
 
+.filter-search-wrap {
+  position: relative;
+}
+
+.filter-search-icon {
+  position: absolute;
+  left: var(--space-2);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-faint);
+  pointer-events: none;
+}
+
 .filter-search-wrap .filter-search {
-  padding-left: 30px;
+  padding-left: var(--space-6);
 }
 
 .filter-search::placeholder {
@@ -340,6 +353,11 @@
 }
 
 /* ─── Ledger Table — extended for all pages ─── */
+
+.ledger-table {
+  width: 100%;
+  table-layout: fixed;
+}
 
 .ledger-table th {
   font-family: var(--font-body);
@@ -495,6 +513,7 @@
     display: table;
     width: 100%;
     min-width: 560px;
+    table-layout: fixed;
   }
 
   .ledger-table thead {
@@ -534,4 +553,34 @@
     background: linear-gradient(to right, transparent, rgba(229, 223, 211, 0.8));
     pointer-events: none;
   }
+}
+
+/* ─── Inline feedback ─── */
+
+.ops-feedback {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--rule);
+  font-size: var(--text-sm);
+}
+
+.ops-feedback--success {
+  color: var(--mpesa-text);
+  background: var(--mpesa-soft);
+  border-color: rgba(26, 127, 56, 0.2);
+}
+
+.ops-feedback--error {
+  color: var(--deficit);
+  background: var(--deficit-soft);
+  border-color: rgba(183, 66, 55, 0.2);
+}
+
+/* ─── Pagination ─── */
+
+.ops-pager {
+  margin-top: var(--space-4);
+  display: flex;
+  justify-content: center;
 }

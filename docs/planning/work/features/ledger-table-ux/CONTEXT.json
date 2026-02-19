@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "feature": "ledger-table-ux",
+  "displayName": "General Ledger — Scrollable Table with Column Filtering",
+  "decisions": [
+    {
+      "area": "frontend-library",
+      "decision": "TanStack Table (@tanstack/react-table) + TanStack Virtual (@tanstack/react-virtual)",
+      "rationale": "Purpose-built for virtual scrolling, column filtering, sorting, and server-side pagination. Battle-tested at 100k+ rows. Required for millions of journal entries."
+    },
+    {
+      "area": "backend-api",
+      "decision": "Add full server-side filtering to GET /api/v1/ledger/journal-entries",
+      "rationale": "Current endpoint only supports page/size/sort. Client-side filtering cannot handle millions of rows. Need account, date range, description LIKE, entryNumber, transactionType filters."
+    },
+    {
+      "area": "row-display",
+      "decision": "Expandable rows — one summary row per journal entry, click to expand debit/credit lines",
+      "rationale": "Matches Xero/QuickBooks UX pattern. Cleaner at scale — reduces visual noise. A 4-line journal entry shows as 1 row until expanded."
+    },
+    {
+      "area": "filter-ux",
+      "decision": "Column header row inputs — small text inputs / dropdowns embedded directly in each column header cell",
+      "rationale": "Compact, Excel-like pattern. Standard for accounting/ledger tables. Allows column-specific search without a separate filter bar."
+    },
+    {
+      "area": "scrolling",
+      "decision": "Virtual scrolling with sticky header",
+      "rationale": "Render only visible rows for performance. Sticky header keeps column labels and filter inputs visible while scrolling."
+    },
+    {
+      "area": "pagination-strategy",
+      "decision": "Server-side pagination with infinite scroll (Load More / auto-fetch on scroll)",
+      "rationale": "Cannot load millions of rows at once. TanStack Virtual + server-side pagination fetches pages as user scrolls."
+    }
+  ],
+  "constraints": [
+    "No new Java modules — backend changes go in sacco-ledger",
+    "TanStack Table dependency scoped to Ledger page initially; other pages keep plain HTML tables",
+    "All monetary columns use BigDecimal on backend, formatted client-side",
+    "Backend filtering must use indexed columns for query performance",
+    "Journal entries with journalLines are fetched as nested objects (existing shape), expanded client-side",
+    "Must preserve existing API response shape (PageResponse wrapper)",
+    "Column filter inputs must debounce server requests (300-500ms)",
+    "Sticky header must work within the app shell layout (sidebar + main content scroll area)"
+  ],
+  "openQuestions": [
+    "Should we add database indexes on journal_entry.description (for LIKE search) or rely on ILIKE with existing indexes?",
+    "Should expanded row detail show the line-level description field or just account/debit/credit?",
+    "Should date range filter use the existing MonthPicker or a from/to date pair?",
+    "Should we add CSV/PDF export to the ledger page (like Audit has)?",
+    "Virtual scroll container height — fixed pixel height or calc(100vh - header) fluid?"
+  ],
+  "relatedCode": [
+    "sacco-ui/src/pages/Ledger.tsx",
+    "sacco-ui/src/pages/Ledger.css",
+    "sacco-ui/src/types/ledger.ts",
+    "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/controller/LedgerController.java",
+    "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/repository/JournalEntryRepository.java",
+    "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/dto/JournalEntryResponse.java",
+    "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/entity/JournalEntry.java",
+    "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/entity/JournalLine.java",
+    "sacco-ui/src/styles/components.css"
+  ],
+  "research": [
+    {
+      "topic": "Enterprise data table UX patterns",
+      "sources": [
+        "https://www.pencilandpaper.io/articles/ux-pattern-analysis-enterprise-data-tables",
+        "https://coyleandrew.medium.com/design-better-data-tables-4ecc99d23356",
+        "https://wpdatatables.com/table-ui-design/"
+      ],
+      "findings": "Sticky headers, column-level filters, virtual scrolling, zebra striping, and customizable columns are standard for enterprise data tables. Server-side filtering required for datasets over 1,000 rows."
+    },
+    {
+      "topic": "TanStack Table + Virtual for React",
+      "sources": [
+        "https://tanstack.com/table/latest/docs/framework/react/examples/virtualized-infinite-scrolling",
+        "https://tanstack.com/table/latest/docs/guide/column-filtering",
+        "https://tanstack.com/table/latest/docs/framework/react/examples/virtualized-rows"
+      ],
+      "findings": "TanStack Table provides headless UI for column filtering, sorting, pagination. TanStack Virtual handles row virtualization. Supports server-side filtering with manual pagination control. Tested to 100k+ rows."
+    },
+    {
+      "topic": "Accounting software UX (Xero, QuickBooks)",
+      "sources": [
+        "https://central.xero.com/s/article/General-Ledger-report",
+        "https://www.dualentry.com/blog/best-general-ledger-software"
+      ],
+      "findings": "Accounting software uses expandable journal entries, date range filters, account dropdowns, and search-by-description. Xero emphasizes clean interfaces with searchable menus. QuickBooks uses more granular control but with cluttered UI."
+    }
+  ],
+  "timestamp": "2026-02-19T00:00:00Z"
+}

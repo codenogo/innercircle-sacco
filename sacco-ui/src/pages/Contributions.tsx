@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CircleDollarSign, HandCoins, Plus } from 'lucide-react'
 import { Spinner } from '../components/Spinner'
-import { SkeletonRow } from '../components/Skeleton'
+import { SkeletonTableRows } from '../components/Skeleton'
 import { RecordContributionModal } from '../components/RecordContributionModal'
 import { MonthPicker } from '../components/MonthPicker'
 import { ApiError } from '../services/apiClient'
@@ -301,7 +301,7 @@ export function Contributions() {
         </thead>
         <tbody>
           {loading ? (
-            <tr><td colSpan={5}><SkeletonRow cells={5} /><SkeletonRow cells={5} /><SkeletonRow cells={5} /></td></tr>
+            <SkeletonTableRows cols={5} />
           ) : monthContributions.length === 0 ? (
             <tr><td colSpan={5} className="table-empty">No contributions for the selected month.</td></tr>
           ) : monthContributions.map((c, i) => (

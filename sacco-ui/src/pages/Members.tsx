@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Search, UserPlus } from 'lucide-react'
 import { Spinner } from '../components/Spinner'
-import { SkeletonRow } from '../components/Skeleton'
+import { SkeletonTableRows } from '../components/Skeleton'
 import { Link } from 'react-router-dom'
 import { AddMemberModal } from '../components/AddMemberModal'
 import { Select } from '../components/Select'
@@ -228,7 +228,7 @@ export function Members() {
         </thead>
         <tbody>
           {loading ? (
-            <tr><td colSpan={5}><SkeletonRow cells={5} /><SkeletonRow cells={5} /><SkeletonRow cells={5} /></td></tr>
+            <SkeletonTableRows cols={5} />
           ) : filtered.length === 0 ? (
             <tr><td colSpan={5} className="table-empty">No members match your search.</td></tr>
           ) : filtered.map((member, i) => (

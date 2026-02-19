@@ -1,5 +1,5 @@
 .loans-page {
-  max-width: 800px;
+  max-width: 900px;
 }
 
 .loan-summary {
@@ -36,12 +36,12 @@
 }
 
 .btn--danger-text {
-  color: var(--error, #b91c1c);
+  color: var(--deficit);
 }
 
 .btn--danger-text:hover {
-  color: #991b1b;
-  background: rgba(185, 28, 28, 0.06);
+  color: var(--deficit);
+  background: var(--deficit-soft);
 }
 
 .loan-date {

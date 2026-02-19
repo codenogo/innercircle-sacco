@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Landmark, Search } from 'lucide-react'
 import { Spinner } from '../components/Spinner'
-import { SkeletonRow } from '../components/Skeleton'
+import { SkeletonTableRows } from '../components/Skeleton'
 import { NewLoanModal } from '../components/NewLoanModal'
 import { MakerCheckerWarning } from '../components/MakerCheckerWarning'
 import { ApiError } from '../services/apiClient'
@@ -329,7 +329,7 @@ export function Loans() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={canManageLoans ? 8 : 7}><SkeletonRow cells={4} /><SkeletonRow cells={4} /><SkeletonRow cells={4} /></td></tr>
+              <SkeletonTableRows cols={canManageLoans ? 8 : 7} />
             ) : filtered.length === 0 ? (
               <tr><td colSpan={canManageLoans ? 8 : 7} className="table-empty">No loans match your search.</td></tr>
             ) : filtered.map((loan, i) => (

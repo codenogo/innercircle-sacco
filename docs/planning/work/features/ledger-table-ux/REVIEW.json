@@ -1,0 +1,417 @@
+{
+  "automated": [
+    {
+      "name": "lint",
+      "result": "skipped"
+    },
+    {
+      "name": "types",
+      "result": "skipped"
+    },
+    {
+      "name": "tests",
+      "result": "pass"
+    }
+  ],
+  "blockers": [],
+  "branch": "feature/ledger-table-ux",
+  "feature": "ledger-table-ux",
+  "invariants": {
+    "findings": [],
+    "summary": {
+      "fail": 0,
+      "total": 0,
+      "warn": 0
+    }
+  },
+  "packages": [
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "cwd": ".",
+          "exitCode": 1,
+          "fullOutputPath": ".cnogo/tee/20260219T214813.427473Z_8521_innercircle-sacco_lint.log",
+          "name": "lint",
+          "output": "FINDINGS:\n[ERROR] No plugin found for prefix 'spotless' in the current project and in the plugin groups [org.apache.maven.plugins, org.codehaus.mojo] available from the repositories [local (/Users/arnoldkizzitoh/.m2/repository), central (https://repo.maven.apache.org/maven2)] -> [Help 1] (x2)\n[ERROR] (x4)\n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch. (x2)\n[ERROR] Re-run Maven using the -X switch to enable full debug logging. (x2)\n[ERROR] For more information about the errors and possible solutions, please read the following articles: (x2)\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/NoPluginFoundForPrefixException (x2)\nSUMMARY:",
+          "outputReducer": "grouped-errors",
+          "reason": "spotless plugin not configured",
+          "result": "skipped",
+          "tokenTelemetry": {
+            "inputTokens": 164,
+            "outputTokens": 173,
+            "savedTokens": 0,
+            "savingsPct": 0.0
+          }
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "cwd": ".",
+          "exitCode": 0,
+          "fullOutputPath": null,
+          "name": "test",
+          "output": "SUMMARY:\n21:48:16.483 [main] ERROR com.innercircle.sacco.common.service.EmailServiceImpl -- Failed to send email to: user@test.com\norg.springframework.mail.MailSendException: Authentication failed\n21:48:16.488 [main] ERROR com.innercircle.sacco.common.service.EmailServiceImpl -- Failed to send email to: user@test.com\n21:48:16.505 [main] ERROR com.innercircle.sacco.common.service.EmailServiceImpl -- Failed to send email to: user@test.com\n21:48:16.674 [main] ERROR com.innercircle.sacco.common.exception.GlobalExceptionHandler -- Unhandled exception\nat com.innercircle.sacco.common.exception.GlobalExceptionHandlerTest.handleGeneral_shouldReturnGenericErrorMessage(GlobalExceptionHandlerTest.java:197)\n21:48:16.678 [main] ERROR com.innercircle.sacco.common.exception.GlobalExceptionHandler -- Unhandled exception\njava.lang.RuntimeException: Sensitive SQL error: SELECT * FROM users WHERE password='admin'\n21:48:16.685 [main] ERROR com.innercircle.sacco.common.exception.GlobalExceptionHandler -- Unhandled exception\nat com.innercircle.sacco.common.exception.GlobalExceptionHandlerTest.handleGeneral_withNullPointerException_shouldReturnInternalServerError(GlobalExceptionHandlerTest.java:221)\n21:48:16.689 [main] ERROR com.innercircle.sacco.common.exception.GlobalExceptionHandler -- Unhandled exception\njava.lang.RuntimeException: Unexpected error\nat com.innercircle.sacco.common.exception.GlobalExceptionHandlerTest.handleGeneral_shouldReturnInternalServerErrorStatus(GlobalExceptionHandlerTest.java:188)\n21:48:19.567 [main] WARN com.innercircle.sacco.security.controller.AuthController -- Password reset failed: Invalid or expired token\n21:48:19.569 [main] WARN com.innercircle.sacco.security.controller.AuthController -- Password reset failed: Token has already been used\n21:48:19.570 [main] WARN com.innercircle.sacco.security.controller.AuthController -- Password reset failed: Password must be at least 8 characters long\n21:48:19.571 [main] WARN com.innercircle.sacco.security.controller.AuthController -- Password reset failed: Token has expired\n21:48:19.574 [main] ERROR com.innercircle.sacco.security.controller.AuthController -- Error processing password reset\njava.lang.RuntimeException: Database connection failed\nat com.innercircle.sacco.security.controller.AuthControllerTest$ResetPassword.shouldReturnInternalServerErrorOnUnexpectedException(AuthControllerTest.java:207)\n21:48:19.576 [main] ERROR com.innercircle.sacco.security.controller.AuthController -- Error processing password reset\nat com.innercircle.sacco.security.controller.AuthControllerTest$ResetPassword.shouldNotExposeInternalErrorDetails(AuthControllerTest.java:226)\n21:48:19.586 [main] ERROR com.innercircle.sacco.security.controller.AuthController -- Error processing forgot password request\njava.lang.RuntimeException: Internal error\n21:48:19.842 [main] WARN com.innercircle.sacco.security.service.AuthService -- Authentication failed: Invalid password for user 'testuser'\n21:48:19.843 [main] WARN com.innercircle.sacco.security.service.AuthService -- Authentication failed: Account locked for user 'lockeduser'\n21:48:19.845 [main] WARN com.innercircle.sacco.security.service.AuthService -- Authentication failed: Account disabled for user 'disableduser'\n21:48:25.800 [main] ERROR com.innercircle.sacco.loan.service.LoanBatchServiceImpl -- Batch processing failed for 2026-02: Database error\njava.lang.RuntimeException: Database error\nat com.innercircle.sacco.loan.service.LoanBatchServiceImplTest$ProcessMonthlyLoans.lambda$shouldUpdateBatchLogToFailedOnException$9(LoanBatchServiceImplTest.java:689)",
+          "outputReducer": "failure-focus",
+          "reason": null,
+          "result": "pass",
+          "tokenTelemetry": {
+            "inputTokens": 60358,
+            "outputTokens": 896,
+            "savedTokens": 59462,
+            "savingsPct": 98.5
+          }
+        }
+      ],
+      "kind": "java",
+      "name": "innercircle-sacco",
+      "path": "."
+    },
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "name": "lint",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "name": "test",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        }
+      ],
+      "kind": "java",
+      "name": "sacco-app",
+      "path": "sacco-app"
+    },
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "name": "lint",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "name": "test",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        }
+      ],
+      "kind": "java",
+      "name": "sacco-audit",
+      "path": "sacco-audit"
+    },
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "name": "lint",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "name": "test",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        }
+      ],
+      "kind": "java",
+      "name": "sacco-common",
+      "path": "sacco-common"
+    },
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "name": "lint",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "name": "test",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        }
+      ],
+      "kind": "java",
+      "name": "sacco-config",
+      "path": "sacco-config"
+    },
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "name": "lint",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "name": "test",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        }
+      ],
+      "kind": "java",
+      "name": "sacco-contribution",
+      "path": "sacco-contribution"
+    },
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "name": "lint",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "name": "test",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        }
+      ],
+      "kind": "java",
+      "name": "sacco-ledger",
+      "path": "sacco-ledger"
+    },
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "name": "lint",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "name": "test",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        }
+      ],
+      "kind": "java",
+      "name": "sacco-loan",
+      "path": "sacco-loan"
+    },
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "name": "lint",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "name": "test",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        }
+      ],
+      "kind": "java",
+      "name": "sacco-member",
+      "path": "sacco-member"
+    },
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "name": "lint",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "name": "test",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        }
+      ],
+      "kind": "java",
+      "name": "sacco-payout",
+      "path": "sacco-payout"
+    },
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "name": "lint",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "name": "test",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        }
+      ],
+      "kind": "java",
+      "name": "sacco-reporting",
+      "path": "sacco-reporting"
+    },
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "name": "lint",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "name": "test",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        }
+      ],
+      "kind": "java",
+      "name": "sacco-security",
+      "path": "sacco-security"
+    },
+    {
+      "checks": [
+        {
+          "cmd": "npm run lint",
+          "name": "lint",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "npm run test",
+          "name": "test",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        }
+      ],
+      "kind": "typescript",
+      "name": "sacco-ui",
+      "path": "sacco-ui"
+    }
+  ],
+  "principles": [
+    {
+      "name": "Think Before Coding",
+      "notes": "",
+      "status": "todo"
+    },
+    {
+      "name": "Simplicity First",
+      "notes": "",
+      "status": "todo"
+    },
+    {
+      "name": "Surgical Changes",
+      "notes": "",
+      "status": "todo"
+    },
+    {
+      "name": "Goal-Driven Execution",
+      "notes": "",
+      "status": "todo"
+    },
+    {
+      "name": "Prefer shared utility packages over hand-rolled helpers",
+      "notes": "",
+      "status": "todo"
+    },
+    {
+      "name": "Don't probe data YOLO-style",
+      "notes": "",
+      "status": "todo"
+    },
+    {
+      "name": "Validate boundaries",
+      "notes": "",
+      "status": "todo"
+    },
+    {
+      "name": "Typed SDKs",
+      "notes": "",
+      "status": "todo"
+    }
+  ],
+  "schemaVersion": 2,
+  "timestamp": "2026-02-19T21:48:37Z",
+  "tokenTelemetry": {
+    "checksRun": 1,
+    "checksSkipped": 38,
+    "inputTokens": 60358,
+    "outputTokens": 896,
+    "savedTokens": 59462,
+    "savingsPct": 98.5
+  },
+  "verdict": "warn",
+  "warnings": []
+}

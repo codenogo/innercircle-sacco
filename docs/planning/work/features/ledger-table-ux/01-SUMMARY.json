@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "feature": "ledger-table-ux",
+  "planNumber": "01",
+  "outcome": "success",
+  "changes": [
+    {
+      "file": "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/repository/JournalEntryRepository.java",
+      "description": "Extended with JpaSpecificationExecutor<JournalEntry> for dynamic filtering"
+    },
+    {
+      "file": "sacco-ledger/src/main/java/com/innercircle/sacco/ledger/controller/LedgerController.java",
+      "description": "Added 6 optional filter params (accountId, dateFrom, dateTo, description, entryNumber, transactionType) with Specification chain"
+    },
+    {
+      "file": "sacco-ledger/src/main/resources/db/changelog/ledger/008-add-search-indexes.yaml",
+      "description": "New Liquibase changeset adding btree indexes for description, entry_number, and composite (posted, transaction_date, transaction_type)"
+    },
+    {
+      "file": "sacco-app/src/main/resources/db/changelog/db.changelog-master.yaml",
+      "description": "Registered new changeset 008-add-search-indexes.yaml"
+    },
+    {
+      "file": "sacco-ledger/src/test/java/com/innercircle/sacco/ledger/controller/LedgerControllerTest.java",
+      "description": "Updated mocks from findByPostedTrue to findAll(Specification, Pageable)"
+    }
+  ],
+  "verification": [
+    { "command": "mvn -pl sacco-ledger -q compile", "result": "pass" },
+    { "command": "mvn -pl sacco-app -q compile", "result": "pass" },
+    { "command": "mvn -pl sacco-ledger test", "result": "pass", "details": "112 tests, 0 failures" }
+  ],
+  "commit": "3d87fbe",
+  "timestamp": "2026-02-19T21:37:00Z"
+}

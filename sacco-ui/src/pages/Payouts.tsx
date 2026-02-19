@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowDownToLine, Search } from 'lucide-react'
 import { Spinner } from '../components/Spinner'
-import { SkeletonRow } from '../components/Skeleton'
+import { SkeletonTableRows } from '../components/Skeleton'
 import { NewPayoutModal } from '../components/NewPayoutModal'
 import { MakerCheckerWarning } from '../components/MakerCheckerWarning'
 import { Select } from '../components/Select'
@@ -351,7 +351,7 @@ export function Payouts() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={canCreatePayout ? 6 : 5}><SkeletonRow cells={5} /><SkeletonRow cells={5} /><SkeletonRow cells={5} /></td></tr>
+              <SkeletonTableRows cols={canCreatePayout ? 6 : 5} />
             ) : filtered.length === 0 ? (
               <tr><td colSpan={canCreatePayout ? 6 : 5} className="table-empty">No payouts match your search.</td></tr>
             ) : filtered.map((p, i) => (

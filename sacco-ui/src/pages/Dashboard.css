@@ -1,7 +1,7 @@
 /* ─── Dashboard — the opening page of the ledger ─── */
 
 .dashboard {
-  max-width: 720px;
+  max-width: 800px;
 }
 
 /* ─── Header — like the top of a ledger page ─── */
@@ -134,7 +134,7 @@
 }
 
 .ledger-table thead th {
-  padding: var(--space-2) 0;
+  padding: var(--space-2) var(--space-4) var(--space-2) 0;
   text-align: left;
   font-size: var(--text-xs);
   border-bottom: 1px solid var(--rule-strong);
@@ -142,28 +142,12 @@
 
 .ledger-table tbody tr {
   border-bottom: 1px solid var(--rule-subtle);
-  transition: background var(--ease);
-  position: relative;
+  transition: background var(--ease), box-shadow var(--ease-fast);
 }
 
 .ledger-table tbody tr:hover {
   background: rgba(90, 110, 150, 0.08);
-}
-
-.ledger-table tbody tr::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--mpesa);
-  opacity: 0;
-  transition: opacity var(--ease-fast);
-}
-
-.ledger-table tbody tr:hover::before {
-  opacity: 1;
+  box-shadow: inset 2px 0 0 var(--mpesa);
 }
 
 /* Alternating row — like ruled ledger paper */
@@ -177,7 +161,8 @@
   vertical-align: baseline;
 }
 
-.ledger-table-amount {
+.ledger-table th.ledger-table-amount,
+.ledger-table td.ledger-table-amount {
   text-align: right;
   padding-right: 0 !important;
 }
