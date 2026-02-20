@@ -26,4 +26,9 @@ public record LoanBatchProcessedEvent(
     public UUID getCorrelationId() {
         return correlationId;
     }
+
+    @Override
+    public UUID getEntityId() {
+        return correlationId;
+    }
 }

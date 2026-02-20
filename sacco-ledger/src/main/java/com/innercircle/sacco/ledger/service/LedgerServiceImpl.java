@@ -9,6 +9,7 @@ import com.innercircle.sacco.ledger.repository.AccountRepository;
 import com.innercircle.sacco.ledger.repository.JournalEntryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +23,8 @@ import java.util.UUID;
 @Slf4j
 public class LedgerServiceImpl implements LedgerService {
 
+    private static final int ENTRY_NUMBER_COLLISION_RETRIES = 3;
+
     private final JournalEntryRepository journalEntryRepository;
     private final AccountRepository accountRepository;
 
@@ -31,17 +34,21 @@ public class LedgerServiceImpl implements LedgerService {
         // Validate that debits equal credits
         validateBalancedEntry(journalEntry);
 
-        // Generate entry number if not provided
-        if (journalEntry.getEntryNumber() == null || journalEntry.getEntryNumber().isEmpty()) {
-            journalEntry.setEntryNumber(generateEntryNumber());
+        if (journalEntry.getReferenceId() != null && journalEntry.getTransactionType() != null) {
+            JournalEntry existing = journalEntryRepository
+                    .findByReferenceIdAndTransactionType(journalEntry.getReferenceId(), journalEntry.getTransactionType())
+                    .orElse(null);
+            if (existing != null) {
+                log.info("Journal entry already exists for reference {} and type {}: {}",
+                        journalEntry.getReferenceId(), journalEntry.getTransactionType(), existing.getEntryNumber());
+                return existing;
+            }
         }
 
         // Ensure all journal lines are linked to this entry
         journalEntry.getJournalLines().forEach(line -> line.setJournalEntry(journalEntry));
 
-        JournalEntry saved = journalEntryRepository.save(journalEntry);
-        log.info("Created journal entry: {}", saved.getEntryNumber());
-        return saved;
+        return saveWithEntryNumberRecovery(journalEntry);
     }
 
     @Override
@@ -51,7 +58,8 @@ public class LedgerServiceImpl implements LedgerService {
                 .orElseThrow(() -> new ResourceNotFoundException("Journal entry", journalEntryId));
 
         if (entry.isPosted()) {
-            throw new BusinessException("Journal entry already posted: " + entry.getEntryNumber());
+            log.info("Journal entry already posted, skipping repost: {}", entry.getEntryNumber());
+            return entry;
         }
 
         // Validate balance again before posting
@@ -104,6 +112,46 @@ public class LedgerServiceImpl implements LedgerService {
     public String generateEntryNumber() {
         Long nextVal = journalEntryRepository.getNextEntryNumber();
         return String.format("JE%06d", nextVal);
+    }
+
+    private JournalEntry saveWithEntryNumberRecovery(JournalEntry entry) {
+        for (int attempt = 0; attempt < ENTRY_NUMBER_COLLISION_RETRIES; attempt++) {
+            if (entry.getEntryNumber() == null || entry.getEntryNumber().isBlank()) {
+                entry.setEntryNumber(generateEntryNumber());
+            }
+
+            try {
+                JournalEntry saved = journalEntryRepository.saveAndFlush(entry);
+                log.info("Created journal entry: {}", saved.getEntryNumber());
+                return saved;
+            } catch (DataIntegrityViolationException e) {
+                if (!isEntryNumberCollision(e)) {
+                    throw e;
+                }
+
+                log.warn("Entry number collision for {} on attempt {}/{}. Resyncing sequence.",
+                        entry.getEntryNumber(), attempt + 1, ENTRY_NUMBER_COLLISION_RETRIES);
+                journalEntryRepository.syncEntryNumberSequenceToMax();
+                entry.setEntryNumber(null);
+            }
+        }
+
+        throw new IllegalStateException("Unable to generate unique journal entry number after retries");
+    }
+
+    private boolean isEntryNumberCollision(DataIntegrityViolationException exception) {
+        Throwable cause = exception;
+        while (cause != null) {
+            String message = cause.getMessage();
+            if (message != null) {
+                String lower = message.toLowerCase();
+                if (lower.contains("entry_number") && lower.contains("unique")) {
+                    return true;
+                }
+            }
+            cause = cause.getCause();
+        }
+        return false;
     }
 
     private void validateBalancedEntry(JournalEntry entry) {

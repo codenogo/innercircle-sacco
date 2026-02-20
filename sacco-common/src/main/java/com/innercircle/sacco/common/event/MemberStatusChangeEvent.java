@@ -25,4 +25,9 @@ public record MemberStatusChangeEvent(
     public UUID getCorrelationId() {
         return correlationId;
     }
+
+    @Override
+    public UUID getEntityId() {
+        return memberId;
+    }
 }

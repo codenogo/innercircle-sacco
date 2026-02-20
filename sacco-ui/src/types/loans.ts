@@ -3,6 +3,7 @@ export type InterestMethod = 'FLAT' | 'REDUCING_BALANCE'
 
 export interface LoanResponse {
   id: string
+  loanNumber: string | null
   memberId: string
   loanProductId: string
   principalAmount: number

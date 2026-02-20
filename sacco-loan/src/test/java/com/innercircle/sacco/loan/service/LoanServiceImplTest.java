@@ -38,6 +38,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -122,6 +123,7 @@ class LoanServiceImplTest {
             LoanProductConfig product = createLoanProduct(InterestMethod.FLAT_RATE,
                     new BigDecimal("12"), new BigDecimal("500000"), 24);
             when(configService.getLoanProduct(loanProductId)).thenReturn(product);
+            when(loanRepository.existsByLoanNumber(anyString())).thenReturn(false);
             when(loanRepository.save(any(LoanApplication.class))).thenAnswer(inv -> inv.getArgument(0));
 
             LoanApplication result = loanService.applyForLoan(
@@ -140,6 +142,8 @@ class LoanServiceImplTest {
             assertThat(saved.getStatus()).isEqualTo(LoanStatus.PENDING);
             assertThat(saved.getTotalRepaid()).isEqualByComparingTo(BigDecimal.ZERO);
             assertThat(saved.getOutstandingBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+            assertThat(saved.getLoanNumber()).startsWith("LN-");
+            assertThat(saved.getLoanNumber()).hasSize(11);
         }
 
         @Test
@@ -148,6 +152,7 @@ class LoanServiceImplTest {
             LoanProductConfig product = createLoanProduct(InterestMethod.FLAT_RATE,
                     new BigDecimal("12"), new BigDecimal("500000"), 24);
             when(configService.getLoanProduct(loanProductId)).thenReturn(product);
+            when(loanRepository.existsByLoanNumber(anyString())).thenReturn(false);
             when(loanRepository.save(any(LoanApplication.class))).thenAnswer(inv -> inv.getArgument(0));
 
             loanService.applyForLoan(memberId, loanProductId, new BigDecimal("100000"), 12, "Business", "maker@sacco");
@@ -162,6 +167,7 @@ class LoanServiceImplTest {
             LoanProductConfig product = createLoanProduct(InterestMethod.REDUCING_BALANCE,
                     new BigDecimal("12"), new BigDecimal("500000"), 24);
             when(configService.getLoanProduct(loanProductId)).thenReturn(product);
+            when(loanRepository.existsByLoanNumber(anyString())).thenReturn(false);
             when(loanRepository.save(any(LoanApplication.class))).thenAnswer(inv -> inv.getArgument(0));
 
             LoanApplication result = loanService.applyForLoan(
@@ -169,6 +175,23 @@ class LoanServiceImplTest {
 
             verify(loanRepository).save(loanCaptor.capture());
             assertThat(loanCaptor.getValue().getInterestMethod()).isEqualTo(InterestMethod.REDUCING_BALANCE);
+        }
+
+        @Test
+        @DisplayName("should retry loan number generation after collision")
+        void shouldRetryLoanNumberGenerationAfterCollision() {
+            LoanProductConfig product = createLoanProduct(InterestMethod.FLAT_RATE,
+                    new BigDecimal("12"), new BigDecimal("500000"), 24);
+            when(configService.getLoanProduct(loanProductId)).thenReturn(product);
+            when(loanRepository.existsByLoanNumber(anyString()))
+                    .thenReturn(true, false);
+            when(loanRepository.save(any(LoanApplication.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            LoanApplication result = loanService.applyForLoan(
+                    memberId, loanProductId, new BigDecimal("100000"), 12, "Business", "treasurer");
+
+            assertThat(result.getLoanNumber()).startsWith("LN-");
+            verify(loanRepository).save(any(LoanApplication.class));
         }
 
         @Test
@@ -245,6 +268,20 @@ class LoanServiceImplTest {
                     loanService.applyForLoan(memberId, loanProductId, new BigDecimal("100000"), 24, null, "treasurer"))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Term exceeds maximum allowed");
+        }
+
+        @Test
+        @DisplayName("should throw when loan number generation is exhausted")
+        void shouldThrowWhenLoanNumberGenerationExhausted() {
+            LoanProductConfig product = createLoanProduct(InterestMethod.FLAT_RATE,
+                    new BigDecimal("12"), new BigDecimal("500000"), 24);
+            when(configService.getLoanProduct(loanProductId)).thenReturn(product);
+            when(loanRepository.existsByLoanNumber(anyString())).thenReturn(true);
+
+            assertThatThrownBy(() ->
+                    loanService.applyForLoan(memberId, loanProductId, new BigDecimal("100000"), 12, "Business", "treasurer"))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("Unable to generate unique loan number");
         }
     }
 
@@ -1014,6 +1051,7 @@ class LoanServiceImplTest {
         LoanApplication loan = new LoanApplication();
         loan.setId(loanId);
         loan.setMemberId(memberId);
+        loan.setLoanNumber("LN-ABCDEF12");
         loan.setLoanProductId(loanProductId);
         loan.setPrincipalAmount(new BigDecimal("100000"));
         loan.setInterestRate(new BigDecimal("12"));

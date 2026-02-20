@@ -27,6 +27,9 @@ public class LoanApplication extends BaseEntity {
     @Column(nullable = false)
     private UUID memberId;
 
+    @Column(name = "loan_number", nullable = false, unique = true, length = 50)
+    private String loanNumber;
+
     private UUID loanProductId;
 
     @Column(nullable = false, precision = 19, scale = 2)

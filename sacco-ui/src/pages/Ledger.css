@@ -1,12 +1,5 @@
 /* ─── Ledger Page — the core accounts book ─── */
 
-/* Override parent .app-main constraint — progressive enhancement */
-@supports selector(:has(*)) {
-  .app-main:has(.ledger-page) {
-    max-width: 1200px;
-  }
-}
-
 /* Column width variables — shared by table columns and sticky totals grid */
 .ledger-page {
   --col-ref:    10%;
@@ -16,7 +9,7 @@
   --col-credit: 12%;
 }
 
-.ledger-th-amount {
+.datatable .ledger-th-amount {
   text-align: right;
 }
 

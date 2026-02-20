@@ -13,4 +13,20 @@ public interface AuditableEvent {
     String getActor();
 
     UUID getCorrelationId();
+
+    default UUID getEntityId() {
+        return null;
+    }
+
+    default String getEntityType() {
+        return getClass().getSimpleName();
+    }
+
+    default Object getBeforeState() {
+        return null;
+    }
+
+    default Object getAfterState() {
+        return null;
+    }
 }

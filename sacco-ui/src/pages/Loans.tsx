@@ -51,10 +51,6 @@ function toErrorMessage(error: unknown, fallback: string): string {
   return fallback
 }
 
-function shortId(id: string): string {
-  return id.length > 8 ? id.slice(0, 8) : id
-}
-
 export function Loans() {
   const { request } = useAuthenticatedApi()
   const { canAccess, isMemberOnly } = useAuthorization()
@@ -224,13 +220,24 @@ export function Loans() {
 
   const memberList = members.map(m => ({ id: m.id, name: `${m.firstName} ${m.lastName}`.trim() }))
 
+  const memberNumberById = useMemo(() => {
+    const map = new Map<string, string>()
+    members.forEach(member => map.set(member.id, member.memberNumber))
+    if (profile?.member) {
+      map.set(profile.member.id, profile.member.memberNumber)
+    }
+    return map
+  }, [members, profile?.member])
+
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
     if (!query) return loans
 
     return loans.filter(loan => {
       const text = [
+        loan.loanNumber ?? '',
         loan.id,
+        memberNumberById.get(loan.memberId) ?? '',
         loan.memberId,
         loan.status,
         loan.purpose,
@@ -239,21 +246,21 @@ export function Loans() {
 
       return text.includes(query)
     })
-  }, [loans, search])
+  }, [loans, search, memberNumberById])
 
   const loanColumns: ColumnDef<LoanResponse>[] = useMemo(() => {
     const cols: ColumnDef<LoanResponse>[] = [
       {
         key: 'loanId',
-        header: 'Loan ID',
+        header: 'Loan Number',
         className: 'data loan-id',
-        render: (loan) => shortId(loan.id),
+        render: (loan) => loan.loanNumber ?? loan.id,
       },
       {
         key: 'memberId',
-        header: 'Member ID',
+        header: 'Member Number',
         render: (loan) => (
-          <span className="loan-member">{shortId(loan.memberId)}</span>
+          <span className="loan-member">{memberNumberById.get(loan.memberId) ?? loan.memberId}</span>
         ),
       },
       {
@@ -285,9 +292,10 @@ export function Loans() {
       {
         key: 'balance',
         header: 'Balance',
+        className: 'amount ledger-table-amount',
         headerClassName: 'ledger-table-amount',
         render: (loan) => (
-          <span className={`amount ledger-table-amount${loan.status === 'DEFAULTED' ? ' amount--negative' : ''}`}>
+          <span className={loan.status === 'DEFAULTED' ? 'amount--negative' : ''}>
             {Number(loan.outstandingBalance) > 0 ? fmt(loan.outstandingBalance) : '\u2014'}
           </span>
         ),
@@ -322,7 +330,7 @@ export function Loans() {
     }
 
     return cols
-  }, [canManageLoans, actionLoading])
+  }, [canManageLoans, actionLoading, memberNumberById])
 
   const activeLoans = loans.filter(l => l.status === 'DISBURSED' || l.status === 'REPAYING')
   const totalDisbursed = activeLoans.reduce((s, l) => s + Number(l.principalAmount), 0)

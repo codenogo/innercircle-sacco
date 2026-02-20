@@ -1,5 +1,20 @@
 /* ─── Shared component patterns across all pages ─── */
 
+.dashboard,
+.members-page,
+.contributions-page,
+.loans-page,
+.payouts-page,
+.petty-cash-page,
+.ops-page,
+.reports-page,
+.settings-page,
+.loan-workflow-page,
+.ledger-page {
+  width: 100%;
+  max-width: var(--app-content-max-width);
+}
+
 /* ─── Page Header — title + optional actions ─── */
 
 .page-header {

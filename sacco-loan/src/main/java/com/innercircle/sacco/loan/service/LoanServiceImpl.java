@@ -6,6 +6,7 @@ import com.innercircle.sacco.common.event.LoanRepaymentEvent;
 import com.innercircle.sacco.common.event.LoanStatusChangeEvent;
 import com.innercircle.sacco.common.guard.MakerCheckerGuard;
 import com.innercircle.sacco.common.outbox.EventOutboxWriter;
+import com.innercircle.sacco.common.util.SecureIdGenerator;
 import com.innercircle.sacco.config.entity.InterestMethod;
 import com.innercircle.sacco.config.entity.LoanProductConfig;
 import com.innercircle.sacco.config.service.ConfigService;
@@ -36,6 +37,8 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class LoanServiceImpl implements LoanService {
+
+    private static final int MAX_GENERATION_ATTEMPTS = 5;
 
     private final LoanApplicationRepository loanRepository;
     private final RepaymentScheduleRepository scheduleRepository;
@@ -91,6 +94,7 @@ public class LoanServiceImpl implements LoanService {
         loan.setTotalInterestAccrued(BigDecimal.ZERO);
         loan.setTotalInterestPaid(BigDecimal.ZERO);
         loan.setCreatedBy(actor);
+        loan.setLoanNumber(generateUniqueLoanNumber());
 
         LoanApplication savedLoan = loanRepository.save(loan);
 
@@ -383,5 +387,16 @@ public class LoanServiceImpl implements LoanService {
     @Transactional(readOnly = true)
     public List<LoanApplication> getMemberLoans(UUID memberId) {
         return loanRepository.findByMemberId(memberId);
+    }
+
+    private String generateUniqueLoanNumber() {
+        for (int attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt++) {
+            String candidate = SecureIdGenerator.generate("LN");
+            if (!loanRepository.existsByLoanNumber(candidate)) {
+                return candidate;
+            }
+        }
+        throw new IllegalStateException(
+                "Unable to generate unique loan number after " + MAX_GENERATION_ATTEMPTS + " attempts");
     }
 }

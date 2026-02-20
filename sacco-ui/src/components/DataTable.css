@@ -31,6 +31,9 @@
 }
 
 .datatable thead th {
+  padding: var(--space-1) var(--space-1);
+  vertical-align: middle;
+  text-align: left;
   border-bottom: 1px solid var(--rule-strong);
   font-family: var(--font-body);
 }
@@ -83,7 +86,7 @@
 
 /* ─── Amount column alignment — shared utility for right-aligned numeric cols ─── */
 
-.ledger-table-amount {
+.datatable .ledger-table-amount {
   text-align: right;
 }
 

@@ -22,6 +22,10 @@ public interface JournalEntryRepository extends JpaRepository<JournalEntry, UUID
 
     List<JournalEntry> findByReferenceId(UUID referenceId);
 
+    boolean existsByReferenceIdAndTransactionType(UUID referenceId, TransactionType transactionType);
+
+    Optional<JournalEntry> findByReferenceIdAndTransactionType(UUID referenceId, TransactionType transactionType);
+
     Page<JournalEntry> findByPostedTrue(Pageable pageable);
 
     Page<JournalEntry> findByTransactionType(TransactionType transactionType, Pageable pageable);
@@ -34,4 +38,20 @@ public interface JournalEntryRepository extends JpaRepository<JournalEntry, UUID
 
     @Query(value = "SELECT nextval('journal_entry_number_seq')", nativeQuery = true)
     Long getNextEntryNumber();
+
+    @Query(value = """
+            SELECT setval(
+                'journal_entry_number_seq',
+                GREATEST(
+                    (
+                        SELECT COALESCE(MAX(CAST(SUBSTRING(entry_number, 3) AS bigint)), 0)
+                        FROM journal_entries
+                        WHERE entry_number LIKE 'JE%%'
+                    ),
+                    1
+                ),
+                true
+            )
+            """, nativeQuery = true)
+    Long syncEntryNumberSequenceToMax();
 }

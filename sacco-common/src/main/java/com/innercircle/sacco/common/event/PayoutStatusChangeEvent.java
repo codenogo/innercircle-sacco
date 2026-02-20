@@ -24,4 +24,9 @@ public record PayoutStatusChangeEvent(
     public UUID getCorrelationId() {
         return correlationId;
     }
+
+    @Override
+    public UUID getEntityId() {
+        return payoutId;
+    }
 }

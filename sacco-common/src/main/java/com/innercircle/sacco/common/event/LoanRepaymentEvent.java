@@ -29,4 +29,9 @@ public record LoanRepaymentEvent(
     public UUID getCorrelationId() {
         return correlationId;
     }
+
+    @Override
+    public UUID getEntityId() {
+        return repaymentId;
+    }
 }

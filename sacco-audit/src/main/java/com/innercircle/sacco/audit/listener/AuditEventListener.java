@@ -10,9 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.context.event.EventListener;
 
-import java.lang.reflect.Field;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -39,13 +36,19 @@ public class AuditEventListener {
             String actor = event.getActor();
             String eventType = event.getEventType();
 
-            // Extract entity information from the event
-            Map<String, Object> eventData = extractEventData(event);
+            String entityType = event.getEntityType();
+            UUID entityId = event.getEntityId();
+            Object beforeState = event.getBeforeState();
+            Object afterState = event.getAfterState();
 
-            String entityType = (String) eventData.get("entityType");
-            UUID entityId = (UUID) eventData.get("entityId");
-            Object beforeState = eventData.get("beforeState");
-            Object afterState = eventData.get("afterState");
+            if (entityId == null) {
+                entityId = event.getCorrelationId();
+            }
+            if (entityId == null) {
+                log.warn("Skipping audit event with no entityId/correlationId: eventType={}, actor={}",
+                        eventType, actor);
+                return;
+            }
 
             // Determine audit action from event type
             AuditAction action = mapEventTypeToAction(eventType);
@@ -78,61 +81,6 @@ public class AuditEventListener {
             // Don't fail the business transaction if audit logging fails
             log.error("Failed to log audit event for: {}", event.getEventType(), e);
         }
-    }
-
-    /**
-     * Extract relevant data from the event using reflection.
-     * This allows us to handle any AuditableEvent subtype generically.
-     */
-    private Map<String, Object> extractEventData(AuditableEvent event) {
-        Map<String, Object> data = new HashMap<>();
-
-        try {
-            Class<?> eventClass = event.getClass();
-
-            // Try to extract common fields using reflection
-            data.put("entityType", extractField(event, "entityType", eventClass.getSimpleName()));
-            data.put("entityId", extractField(event, "entityId", null));
-            data.put("beforeState", extractField(event, "beforeState", null));
-            data.put("afterState", extractField(event, "afterState", null));
-
-        } catch (Exception e) {
-            log.warn("Could not extract all event data from: {}", event.getClass().getName(), e);
-        }
-
-        return data;
-    }
-
-    /**
-     * Extract a field value from the event using reflection.
-     */
-    private Object extractField(Object event, String fieldName, Object defaultValue) {
-        try {
-            Field field = findField(event.getClass(), fieldName);
-            if (field != null) {
-                field.setAccessible(true);
-                Object value = field.get(event);
-                return value != null ? value : defaultValue;
-            }
-        } catch (Exception e) {
-            log.trace("Field {} not found in {}", fieldName, event.getClass().getName());
-        }
-        return defaultValue;
-    }
-
-    /**
-     * Find a field in the class hierarchy.
-     */
-    private Field findField(Class<?> clazz, String fieldName) {
-        Class<?> current = clazz;
-        while (current != null && current != Object.class) {
-            try {
-                return current.getDeclaredField(fieldName);
-            } catch (NoSuchFieldException e) {
-                current = current.getSuperclass();
-            }
-        }
-        return null;
     }
 
     /**

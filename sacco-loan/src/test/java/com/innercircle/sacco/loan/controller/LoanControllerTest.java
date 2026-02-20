@@ -114,6 +114,7 @@ class LoanControllerTest {
             assertThat(response.getMessage()).isEqualTo("Loan application submitted successfully");
             assertThat(response.getData()).isNotNull();
             assertThat(response.getData().getMemberId()).isEqualTo(memberId);
+            assertThat(response.getData().getLoanNumber()).isEqualTo("LN-ABCDEF12");
             assertThat(response.getData().getStatus()).isEqualTo(LoanStatus.PENDING);
         }
 
@@ -538,6 +539,7 @@ class LoanControllerTest {
         LoanApplication loan = new LoanApplication();
         loan.setId(loanId);
         loan.setMemberId(memberId);
+        loan.setLoanNumber("LN-ABCDEF12");
         loan.setLoanProductId(loanProductId);
         loan.setPrincipalAmount(new BigDecimal("100000"));
         loan.setInterestRate(new BigDecimal("12"));

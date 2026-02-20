@@ -25,4 +25,9 @@ public record BenefitsDistributedEvent(
     public UUID getCorrelationId() {
         return correlationId;
     }
+
+    @Override
+    public UUID getEntityId() {
+        return loanId;
+    }
 }

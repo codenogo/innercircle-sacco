@@ -1,7 +1,3 @@
-.loans-page {
-  max-width: 900px;
-}
-
 .loan-summary {
   display: flex;
   flex-direction: column;

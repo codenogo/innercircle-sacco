@@ -22,6 +22,8 @@ public interface LoanApplicationRepository extends JpaRepository<LoanApplication
     List<LoanApplication> findByMemberIdAndStatusAndIdGreaterThanOrderById(
             UUID memberId, LoanStatus status, UUID cursor, Pageable pageable);
 
+    boolean existsByLoanNumber(String loanNumber);
+
     List<LoanApplication> findByMemberId(UUID memberId);
 
     List<LoanApplication> findByStatus(LoanStatus status);

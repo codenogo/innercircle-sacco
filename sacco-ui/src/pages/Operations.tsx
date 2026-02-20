@@ -75,8 +75,7 @@ const operationLinks: OperationLink[] = [
     api: '/api/v1/loans/*',
     icon: Landmark,
     allowed: ['ADMIN', 'TREASURER'],
-    status: 'preview',
-    previewNote: 'UI preview only',
+    status: 'ready',
   },
   {
     to: '/loan-batch',

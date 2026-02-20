@@ -1,7 +1,3 @@
-.contributions-page {
-  max-width: 800px;
-}
-
 .contrib-actions {
   display: flex;
   gap: var(--space-2);

@@ -67,6 +67,8 @@ databaseChangeLog:
       file: db/changelog/ledger/007-seed-petty-cash-float-account.yaml
   - include:
       file: db/changelog/ledger/008-add-search-indexes.yaml
+  - include:
+      file: db/changelog/ledger/009-add-journal-entry-idempotency-constraint.yaml
 
   # Loan module
   - include:
@@ -85,6 +87,8 @@ databaseChangeLog:
       file: db/changelog/loan/007-add-penalty-tracking-columns.yaml
   - include:
       file: db/changelog/loan/008-add-penalty-portion-to-repayments.yaml
+  - include:
+      file: db/changelog/loan/009-add-loan-number.yaml
 
   # Payout module
   - include:
