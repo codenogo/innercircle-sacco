@@ -52,9 +52,3 @@
   gap: var(--space-2);
 }
 
-@media (max-width: 900px) {
-  .petty-cash-page .ledger-table {
-    display: block;
-    overflow-x: auto;
-  }
-}

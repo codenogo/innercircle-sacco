@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowDownToLine, Search } from 'lucide-react'
 import { Spinner } from '../components/Spinner'
-import { SkeletonTableRows } from '../components/Skeleton'
+import { DataTable, type ColumnDef } from '../components/DataTable'
 import { NewPayoutModal } from '../components/NewPayoutModal'
 import { MakerCheckerWarning } from '../components/MakerCheckerWarning'
 import { Select } from '../components/Select'
@@ -264,6 +264,65 @@ export function Payouts() {
     })
   }, [filter, payouts, search, getMemberName])
 
+  const payoutColumns = useMemo((): ColumnDef<PayoutResponse>[] => {
+    const cols: ColumnDef<PayoutResponse>[] = [
+      {
+        key: 'member',
+        header: 'Member',
+        render: p => (
+          <>
+            <span className="payout-member">{getMemberName(p.memberId)}</span>
+            <span className="payout-date">{fmtDate(p.createdAt)}</span>
+          </>
+        ),
+      },
+      {
+        key: 'type',
+        header: 'Type',
+        className: 'payout-type',
+        render: p => payoutTypeLabel[p.type],
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        render: p => <span className={`badge ${statusClass[p.status]}`}>{p.status}</span>,
+      },
+      {
+        key: 'reference',
+        header: 'Reference',
+        className: 'data payout-ref',
+        render: p => p.referenceNumber ?? '\u2014',
+      },
+      {
+        key: 'amount',
+        header: 'Amount (KES)',
+        className: 'amount ledger-table-amount',
+        headerClassName: 'ledger-table-amount',
+        render: p => fmtCurrency(p.amount),
+      },
+    ]
+
+    if (canCreatePayout) {
+      cols.push({
+        key: 'actions',
+        header: 'Actions',
+        render: p =>
+          p.status === 'PENDING' ? (
+            <button
+              type="button"
+              className="btn btn--ghost btn--small"
+              disabled={actionLoading === p.id}
+              onClick={() => void handleApprovePayout(p.id)}
+            >
+              Approve
+            </button>
+          ) : null,
+      })
+    }
+
+    return cols
+  }, [canCreatePayout, getMemberName, actionLoading])
+
   const completed = payouts.filter(p => p.status === 'PROCESSED')
   const pending = payouts.filter(p => p.status === 'PENDING' || p.status === 'APPROVED')
   const totalPaid = completed.reduce((s, p) => s + Number(p.amount), 0)
@@ -338,50 +397,14 @@ export function Payouts() {
           </div>
         </div>
 
-        <table className="ledger-table">
-          <thead>
-            <tr>
-              <th className="label">Member</th>
-              <th className="label">Type</th>
-              <th className="label">Status</th>
-              <th className="label">Reference</th>
-              <th className="label ledger-table-amount">Amount (KES)</th>
-              {canCreatePayout && <th className="label">Actions</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <SkeletonTableRows cols={canCreatePayout ? 6 : 5} />
-            ) : filtered.length === 0 ? (
-              <tr><td colSpan={canCreatePayout ? 6 : 5} className="table-empty">No payouts match your search.</td></tr>
-            ) : filtered.map((p, i) => (
-              <tr key={p.id} className={i % 2 === 1 ? 'ledger-row--alt' : ''}>
-                <td>
-                  <span className="payout-member">{getMemberName(p.memberId)}</span>
-                  <span className="payout-date">{fmtDate(p.createdAt)}</span>
-                </td>
-                <td className="payout-type">{payoutTypeLabel[p.type]}</td>
-                <td><span className={`badge ${statusClass[p.status]}`}>{p.status}</span></td>
-                <td className="data payout-ref">{p.referenceNumber ?? '—'}</td>
-                <td className="amount ledger-table-amount">{fmtCurrency(p.amount)}</td>
-                {canCreatePayout && (
-                  <td>
-                    {p.status === 'PENDING' && (
-                      <button
-                        type="button"
-                        className="btn btn--ghost btn--small"
-                        disabled={actionLoading === p.id}
-                        onClick={() => void handleApprovePayout(p.id)}
-                      >
-                        Approve
-                      </button>
-                    )}
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          columns={payoutColumns}
+          data={filtered}
+          getRowKey={p => p.id}
+          loading={loading}
+          emptyMessage="No payouts match your search."
+          getRowClassName={(_, i) => i % 2 === 1 ? 'datatable-row--alt' : ''}
+        />
 
         {hasMore && (
           <div className="ops-pager">

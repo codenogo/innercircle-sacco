@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "feature": "shared-datatable",
+  "planNumber": "01",
+  "goal": "Build the shared DataTable<T> component with virtualization, sticky header, scroll container, skeleton loading, and empty state",
+  "tasks": [
+    {
+      "name": "Create DataTable.tsx with types and component",
+      "cwd": "sacco-ui",
+      "files": [
+        "sacco-ui/src/components/DataTable.tsx"
+      ],
+      "action": "Create DataTable.tsx exporting: ColumnDef<T> type (key, header, width, render, className, headerClassName, sortable, sortKey), DataTableProps<T> interface (columns, data, getRowKey, loading, skeletonRows, emptyMessage, maxHeight, getRowClassName, onRowClick, sortColumn, sortDirection, onSort, stickyTotals, estimateRowSize, overscan), and the DataTable<T> component. Component renders: outer .datatable-frame div, inner .datatable-scroll-container div (ref for virtualizer), <table> with table-layout:fixed, <colgroup> from column widths, sticky <thead> with optional sort indicators, <tbody> with SkeletonTableRows when loading, empty state when no data, virtual spacer rows + mapped virtual rows using column render functions. Uses @tanstack/react-virtual useVirtualizer. Column widths set as CSS custom properties on the frame div. Import SkeletonTableRows from Skeleton.",
+      "verify": [
+        "cd sacco-ui && npx tsc --noEmit"
+      ]
+    },
+    {
+      "name": "Create DataTable.css with shared table styles",
+      "cwd": "sacco-ui",
+      "files": [
+        "sacco-ui/src/components/DataTable.css"
+      ],
+      "action": "Create DataTable.css with styles for: .datatable-frame (border, radius, overflow:hidden, background), .datatable-scroll-container (max-height default, overflow-y:auto), table within frame (width:100%, table-layout:fixed, font-size var(--text-base)), sticky thead (position:sticky, top:0, z-index:10, background var(--paper), border-bottom), th.sortable (cursor, user-select, hover color), td styles (padding, vertical-align, overflow), .datatable-spacer-row td (padding:0, border:0, transparent), .datatable-row--alt (paper-alt background), .datatable-row--alt:hover and regular row:hover (paper-inset background), .datatable-sticky-totals (grid layout, border-top double, background), .datatable-loading-more (flex center, padding, muted text). Mobile responsive at 768px with horizontal scroll. Extract from Ledger.css and components.css patterns.",
+      "verify": [
+        "cd sacco-ui && npm run build"
+      ],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Smoke-test DataTable with a minimal render in Ledger page",
+      "cwd": "sacco-ui",
+      "files": [
+        "sacco-ui/src/components/DataTable.tsx"
+      ],
+      "action": "Ensure the DataTable component builds cleanly and exports are correct. Run both tsc and vite build to verify no type errors or import issues. Fix any type or import issues found. Do NOT migrate Ledger yet — just verify the component compiles and exports correctly.",
+      "verify": [
+        "cd sacco-ui && npx tsc --noEmit",
+        "cd sacco-ui && npm run build"
+      ],
+      "blockedBy": [1]
+    }
+  ],
+  "planVerify": [
+    "cd sacco-ui && npx tsc --noEmit",
+    "cd sacco-ui && npm run build"
+  ],
+  "commitMessage": "feat(ui): add shared DataTable component with virtualization and sticky headers",
+  "timestamp": "2026-02-19T00:00:00Z"
+}

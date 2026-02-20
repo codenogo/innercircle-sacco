@@ -80,13 +80,6 @@
   flex-wrap: wrap;
 }
 
-.ops-page .ledger-table {
-  table-layout: fixed;
-}
-
-.ops-page .ledger-table td {
-  vertical-align: top;
-}
 
 .ops-col-user {
   width: 28%;

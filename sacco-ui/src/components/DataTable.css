@@ -1,0 +1,108 @@
+/* ─── DataTable — shared table component styles ─── */
+
+/* Table frame — border, radius, clip */
+.datatable-frame {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--paper);
+}
+
+/* Scroll container — virtual scroll host */
+.datatable-scroll-container {
+  overflow-y: auto;
+}
+
+/* Table core */
+.datatable {
+  width: 100%;
+  table-layout: fixed;
+  font-size: var(--text-base);
+  border-collapse: collapse;
+}
+
+/* ─── Sticky header ─── */
+
+.datatable thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--paper);
+}
+
+.datatable thead th {
+  border-bottom: 1px solid var(--rule-strong);
+  font-family: var(--font-body);
+}
+
+/* ─── Sort indicator ─── */
+
+.datatable th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--ease-fast);
+}
+
+.datatable th.sortable:hover {
+  color: var(--ink);
+}
+
+.datatable-sort-indicator {
+  font-size: var(--text-xs);
+}
+
+/* ─── Cells ─── */
+
+.datatable td {
+  padding: var(--space-1) var(--space-1);
+  vertical-align: middle;
+  overflow: hidden;
+}
+
+/* ─── Virtual spacer rows ─── */
+
+.datatable-spacer-row td {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+/* ─── Alternating rows ─── */
+
+.datatable-row--alt {
+  background: var(--paper-alt);
+}
+
+.datatable-row--alt:hover {
+  background: var(--paper-inset);
+}
+
+.datatable tbody tr:not(.datatable-spacer-row):not(.datatable-row--alt):not(.skeleton-table-row):hover {
+  background: var(--paper-inset);
+}
+
+/* ─── Amount column alignment — shared utility for right-aligned numeric cols ─── */
+
+.ledger-table-amount {
+  text-align: right;
+}
+
+/* ─── Sticky totals — grid docked below scroll ─── */
+
+.datatable-sticky-totals {
+  border-top: 3px double var(--rule-strong);
+  background: var(--paper);
+  min-height: 40px;
+}
+
+/* ─── Responsive — horizontal scroll at narrow widths ─── */
+
+@media (max-width: 768px) {
+  .datatable-scroll-container {
+    overflow-x: auto;
+  }
+
+  .datatable {
+    min-width: 640px;
+  }
+}

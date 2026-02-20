@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "feature": "shared-datatable",
+  "planNumber": "03",
+  "goal": "Migrate Payouts, PettyCash, and AuditTrail to DataTable component",
+  "tasks": [
+    {
+      "name": "Migrate Payouts table to DataTable",
+      "cwd": "sacco-ui",
+      "files": [
+        "sacco-ui/src/pages/Payouts.tsx"
+      ],
+      "action": "Replace manual table with <DataTable>. Define ColumnDef for columns: Member, Type, Date, Status (badge), Amount (KES), and conditional Actions. Keep filter bar and Load More outside.",
+      "verify": [
+        "cd sacco-ui && npx tsc --noEmit"
+      ]
+    },
+    {
+      "name": "Migrate PettyCash table to DataTable",
+      "cwd": "sacco-ui",
+      "files": [
+        "sacco-ui/src/pages/PettyCash.tsx"
+      ],
+      "action": "Replace manual table with <DataTable>. Define ColumnDef for columns: Voucher #, Date, Description, Category, Status (badge), Amount (KES), and conditional Actions. Keep filter bar and Load More outside.",
+      "verify": [
+        "cd sacco-ui && npx tsc --noEmit"
+      ]
+    },
+    {
+      "name": "Migrate AuditTrail table to DataTable",
+      "cwd": "sacco-ui",
+      "files": [
+        "sacco-ui/src/pages/AuditTrail.tsx"
+      ],
+      "action": "Replace manual table with <DataTable>. Define ColumnDef for 5 columns: Timestamp, User, Action, Entity, Details. Keep filter bar and Load More outside.",
+      "verify": [
+        "cd sacco-ui && npx tsc --noEmit"
+      ]
+    }
+  ],
+  "planVerify": [
+    "cd sacco-ui && npx tsc --noEmit",
+    "cd sacco-ui && npm run build"
+  ],
+  "commitMessage": "refactor(ui): migrate Payouts, PettyCash, AuditTrail to DataTable component",
+  "timestamp": "2026-02-19T00:00:00Z"
+}

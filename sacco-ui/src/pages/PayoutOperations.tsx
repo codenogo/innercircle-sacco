@@ -1,3 +1,4 @@
+import { DataTable, type ColumnDef } from '../components/DataTable'
 import './Operations.css'
 
 type OpsStatus = 'PENDING' | 'APPROVED' | 'PROCESSING' | 'RECONCILE' | 'SIGNED_OFF'
@@ -27,6 +28,24 @@ const statusClass: Record<OpsStatus, string> = {
 
 function fmt(n: number) { return n.toLocaleString('en-KE') }
 
+const columns: ColumnDef<PayoutOpsRow>[] = [
+  { key: 'ref', header: 'Reference', className: 'data', render: row => row.ref },
+  { key: 'member', header: 'Member', render: row => row.member },
+  { key: 'channel', header: 'Channel', render: row => row.channel },
+  { key: 'amount', header: 'Amount (KES)', headerClassName: 'ledger-table-amount', className: 'amount ledger-table-amount', render: row => fmt(row.amount) },
+  { key: 'status', header: 'Status', render: row => <span className={`badge ${statusClass[row.status]}`}>{row.status}</span> },
+  {
+    key: 'actions', header: 'Actions', render: () => (
+      <div className="ops-inline-actions">
+        <button type="button" className="btn btn--secondary btn--small" disabled>Approve</button>
+        <button type="button" className="btn btn--secondary btn--small" disabled>Process</button>
+        <button type="button" className="btn btn--secondary btn--small" disabled>Reconcile</button>
+        <button type="button" className="btn btn--secondary btn--small" disabled>Signoff</button>
+      </div>
+    ),
+  },
+]
+
 export function PayoutOperations() {
   return (
     <div className="ops-page">
@@ -46,37 +65,13 @@ export function PayoutOperations() {
         <span className="ops-tag data">/api/v1/share-withdrawals</span>
       </div>
 
-      <table className="ledger-table">
-        <thead>
-          <tr>
-            <th className="label">Reference</th>
-            <th className="label">Member</th>
-            <th className="label">Channel</th>
-            <th className="label ledger-table-amount">Amount (KES)</th>
-            <th className="label">Status</th>
-            <th className="label">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {payoutOpsRows.map((row, i) => (
-            <tr key={row.ref} className={i % 2 === 1 ? 'ledger-row--alt' : ''}>
-              <td className="data">{row.ref}</td>
-              <td>{row.member}</td>
-              <td>{row.channel}</td>
-              <td className="amount ledger-table-amount">{fmt(row.amount)}</td>
-              <td><span className={`badge ${statusClass[row.status]}`}>{row.status}</span></td>
-              <td>
-                <div className="ops-inline-actions">
-                  <button type="button" className="btn btn--secondary btn--small" disabled>Approve</button>
-                  <button type="button" className="btn btn--secondary btn--small" disabled>Process</button>
-                  <button type="button" className="btn btn--secondary btn--small" disabled>Reconcile</button>
-                  <button type="button" className="btn btn--secondary btn--small" disabled>Signoff</button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable<PayoutOpsRow>
+        columns={columns}
+        data={payoutOpsRows}
+        getRowKey={row => row.ref}
+        emptyMessage="No payout operations found."
+        maxHeight="none"
+      />
     </div>
   )
 }

@@ -7,28 +7,8 @@
   }
 }
 
-/* Table frame + scroll container */
-.ledger-table-frame {
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  background: var(--paper);
-}
-
-.ledger-scroll-container {
-  max-height: calc(100vh - 260px);
-  overflow-y: auto;
-}
-
-/* The journal table — physical ledger feel */
-.ledger-journal {
-  font-size: var(--text-base);
-  width: 100%;
-  table-layout: fixed;
-}
-
-/* ─── Column widths — single source of truth ─── */
-.ledger-table-frame {
+/* Column width variables — shared by table columns and sticky totals grid */
+.ledger-page {
   --col-ref:    10%;
   --col-date:   12%;
   --col-type:   16%;
@@ -36,39 +16,8 @@
   --col-credit: 12%;
 }
 
-.ledger-col-ref     { width: var(--col-ref); }
-.ledger-col-date    { width: var(--col-date); }
-.ledger-col-type    { width: var(--col-type); }
-.ledger-col-desc    { /* flex — takes remaining space */ }
-.ledger-col-debit   { width: var(--col-debit); }
-.ledger-col-credit  { width: var(--col-credit); }
-
-/* Sticky header */
-.ledger-journal thead {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: var(--paper);
-}
-
-.ledger-journal thead th {
-  border-bottom: 1px solid var(--rule-strong);
-}
-
 .ledger-th-amount {
   text-align: right;
-}
-
-/* ─── Sort indicator ─── */
-
-.ledger-journal th.sortable {
-  cursor: pointer;
-  user-select: none;
-  transition: color var(--ease-fast);
-}
-
-.ledger-journal th.sortable:hover {
-  color: var(--ink);
 }
 
 /* ─── Filter bar overrides ─── */
@@ -161,20 +110,6 @@
   .ledger-clear-filters {
     order: 10;
   }
-}
-
-/* ─── Cell styles ─── */
-
-.ledger-journal td {
-  padding: var(--space-1) var(--space-1);
-  vertical-align: middle;
-  overflow: hidden;
-}
-
-.ledger-spacer-row td {
-  padding: 0;
-  border: 0;
-  background: transparent;
 }
 
 .journal-ref {

@@ -1,3 +1,4 @@
+import { DataTable, type ColumnDef } from '../components/DataTable'
 import './Operations.css'
 
 interface UnpaidLoan {
@@ -14,6 +15,14 @@ const unpaidLoans: UnpaidLoan[] = [
 ]
 
 function fmt(n: number) { return n.toLocaleString('en-KE') }
+
+const columns: ColumnDef<UnpaidLoan>[] = [
+  { key: 'loanId', header: 'Loan ID', render: row => <span className="data">{row.loanId}</span> },
+  { key: 'member', header: 'Member', render: row => row.member },
+  { key: 'dueDate', header: 'Due Date', render: row => <span className="data">{row.dueDate}</span> },
+  { key: 'installment', header: 'Installment', headerClassName: 'ledger-table-amount', className: 'amount ledger-table-amount', render: row => fmt(row.installment) },
+  { key: 'arrears', header: 'Arrears', headerClassName: 'ledger-table-amount', className: 'amount ledger-table-amount amount--negative', render: row => fmt(row.arrears) },
+]
 
 export function LoanBatch() {
   const totalArrears = unpaidLoans.reduce((sum, row) => sum + row.arrears, 0)
@@ -49,28 +58,13 @@ export function LoanBatch() {
         </div>
       </div>
 
-      <table className="ledger-table">
-        <thead>
-          <tr>
-            <th className="label">Loan ID</th>
-            <th className="label">Member</th>
-            <th className="label">Due Date</th>
-            <th className="label ledger-table-amount">Installment</th>
-            <th className="label ledger-table-amount">Arrears</th>
-          </tr>
-        </thead>
-        <tbody>
-          {unpaidLoans.map((loan, i) => (
-            <tr key={loan.loanId} className={i % 2 === 1 ? 'ledger-row--alt' : ''}>
-              <td className="data">{loan.loanId}</td>
-              <td>{loan.member}</td>
-              <td className="data">{loan.dueDate}</td>
-              <td className="amount ledger-table-amount">{fmt(loan.installment)}</td>
-              <td className="amount ledger-table-amount amount--negative">{fmt(loan.arrears)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable
+        columns={columns}
+        data={unpaidLoans}
+        getRowKey={row => row.loanId}
+        emptyMessage="No unpaid loans."
+        getRowClassName={(_, i) => i % 2 === 1 ? 'datatable-row--alt' : ''}
+      />
 
       <p className="ops-note">
         API map: POST /api/v1/loans/batch/process, GET /api/v1/loans/batch/unpaid,

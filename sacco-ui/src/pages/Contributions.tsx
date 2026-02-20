@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CircleDollarSign, HandCoins, Plus } from 'lucide-react'
 import { Spinner } from '../components/Spinner'
-import { SkeletonTableRows } from '../components/Skeleton'
+import { DataTable } from '../components/DataTable'
+import type { ColumnDef } from '../components/DataTable'
 import { RecordContributionModal } from '../components/RecordContributionModal'
 import { MonthPicker } from '../components/MonthPicker'
 import { ApiError } from '../services/apiClient'
@@ -198,6 +199,40 @@ export function Contributions() {
     [members],
   )
 
+  const contributionColumns: ColumnDef<ContributionResponse>[] = useMemo(() => [
+    {
+      key: 'member',
+      header: 'Member',
+      render: (c) => memberMap.get(c.memberId) ?? c.memberId,
+    },
+    {
+      key: 'category',
+      header: 'Category',
+      className: 'ledger-date',
+      render: (c) => c.category.name,
+    },
+    {
+      key: 'date',
+      header: 'Date',
+      className: 'data ledger-date',
+      render: (c) => c.contributionDate ? fmtDate(c.contributionDate) : '\u2014',
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (c) => (
+        <span className={`badge ${statusClass[c.status]}`}>{c.status}</span>
+      ),
+    },
+    {
+      key: 'amount',
+      header: 'Amount (KES)',
+      className: 'amount ledger-table-amount',
+      headerClassName: 'ledger-table-amount',
+      render: (c) => c.amount > 0 ? fmt(c.amount) : '\u2014',
+    },
+  ], [memberMap])
+
   async function handleRecordContribution(payload: RecordContributionRequest) {
     if (!canRecordContribution) {
       throw new Error('You are not allowed to record contributions.')
@@ -289,34 +324,13 @@ export function Contributions() {
         <hr className="rule" />
       </section>
 
-      <table className="ledger-table">
-        <thead>
-          <tr>
-            <th className="label">Member</th>
-            <th className="label">Category</th>
-            <th className="label">Date</th>
-            <th className="label">Status</th>
-            <th className="label ledger-table-amount">Amount (KES)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading ? (
-            <SkeletonTableRows cols={5} />
-          ) : monthContributions.length === 0 ? (
-            <tr><td colSpan={5} className="table-empty">No contributions for the selected month.</td></tr>
-          ) : monthContributions.map((c, i) => (
-            <tr key={c.id} className={i % 2 === 1 ? 'ledger-row--alt' : ''}>
-              <td>{memberMap.get(c.memberId) ?? c.memberId}</td>
-              <td className="ledger-date">{c.category.name}</td>
-              <td className="data ledger-date">{c.contributionDate ? fmtDate(c.contributionDate) : '\u2014'}</td>
-              <td><span className={`badge ${statusClass[c.status]}`}>{c.status}</span></td>
-              <td className="amount ledger-table-amount">
-                {c.amount > 0 ? fmt(c.amount) : '\u2014'}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable<ContributionResponse>
+        columns={contributionColumns}
+        data={monthContributions}
+        getRowKey={row => row.id}
+        loading={loading}
+        emptyMessage="No contributions for the selected month."
+      />
 
       {hasMore && (
         <div className="ops-pager">

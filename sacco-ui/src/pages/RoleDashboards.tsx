@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { DataTable, type ColumnDef } from '../components/DataTable'
 import './Operations.css'
 
 const roleCards = {
@@ -19,11 +20,21 @@ const roleCards = {
   ],
 }
 
-const analyticsRows = [
+interface AnalyticsRow {
+  metric: string
+  value: string
+}
+
+const analyticsRows: AnalyticsRow[] = [
   { metric: 'Loan utilization rate', value: '63.8%' },
   { metric: 'Repayment success rate', value: '89.2%' },
   { metric: 'Interest realized (month)', value: 'KES 145,200' },
   { metric: 'Contribution completion', value: '80.6%' },
+]
+
+const analyticsColumns: ColumnDef<AnalyticsRow>[] = [
+  { key: 'metric', header: 'Metric', render: row => row.metric },
+  { key: 'value', header: 'Value', render: row => <span className="data">{row.value}</span> },
 ]
 
 export function RoleDashboards() {
@@ -61,22 +72,13 @@ export function RoleDashboards() {
       <section className="page-section">
         <span className="page-section-title">Analytics</span>
         <hr className="rule" />
-        <table className="ledger-table">
-          <thead>
-            <tr>
-              <th className="label">Metric</th>
-              <th className="label">Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            {analyticsRows.map((row, i) => (
-              <tr key={row.metric} className={i % 2 === 1 ? 'ledger-row--alt' : ''}>
-                <td>{row.metric}</td>
-                <td className="data">{row.value}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          columns={analyticsColumns}
+          data={analyticsRows}
+          getRowKey={row => row.metric}
+          emptyMessage="No analytics data."
+          getRowClassName={(_, i) => i % 2 === 1 ? 'datatable-row--alt' : ''}
+        />
       </section>
 
       <p className="ops-note">
