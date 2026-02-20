@@ -1,99 +1,64 @@
 # Review Report
 
-**Timestamp:** 2026-02-19T21:48:37Z
+**Timestamp:** 2026-02-20T00:34:00Z
 **Branch:** feature/ledger-table-ux
 **Feature:** ledger-table-ux
 
-## Automated Checks (Package-Aware)
+## Verdict: PASS
 
-- Lint: **skipped**
-- Types: **skipped**
-- Tests: **pass**
-- Invariants: **0 fail / 0 warn**
-- Token savings: **59462 tokens** (98.5%, 1 checks)
+Ready for `/ship`.
 
-## Per-Package Results
+## Automated Checks
 
-### innercircle-sacco (`.`)
-- lint: **skipped** (`mvn -q spotless:check`, cwd `.`)
-  - full output: `.cnogo/tee/20260219T214813.427473Z_8521_innercircle-sacco_lint.log`
-- typecheck: **skipped**
-- test: **pass** (`mvn -q test -DskipITs`, cwd `.`)
-  - tokenTelemetry: in=60358 out=896 saved=59462 (98.5%)
+| Check | Result |
+|-------|--------|
+| Lint — Java (`mvn spotless:check`) | skipped (plugin not configured) |
+| Lint — sacco-ui (`npm run lint`) | pass |
+| TypeScript (`npx tsc --noEmit`) | pass (verified manually) |
+| Build (`npm run build`) | pass |
+| Tests — sacco-ui (`npm run test`) | pass (10/10) |
+| Tests — Java (`mvn test`) | pass (605+) |
 
-### sacco-app (`sacco-app`)
-- lint: **skipped** (`mvn -q spotless:check`)
-- typecheck: **skipped**
-- test: **skipped** (`mvn -q test -DskipITs`)
+Token savings: **59,736 tokens** (98.4%, 3 checks)
 
-### sacco-audit (`sacco-audit`)
-- lint: **skipped** (`mvn -q spotless:check`)
-- typecheck: **skipped**
-- test: **skipped** (`mvn -q test -DskipITs`)
+## Scope
 
-### sacco-common (`sacco-common`)
-- lint: **skipped** (`mvn -q spotless:check`)
-- typecheck: **skipped**
-- test: **skipped** (`mvn -q test -DskipITs`)
+- **55 files changed** vs main (6 commits)
+- Backend: server-side filtering API with JPA Specifications, search indexes, CSV export
+- Frontend: TanStack Virtual scroll, expandable rows, filter bar, sort controls, sticky totals
+- CSS: design token uplift, responsive filter bar, visual hierarchy improvements
+- **0 unrelated refactors**
 
-### sacco-config (`sacco-config`)
-- lint: **skipped** (`mvn -q spotless:check`)
-- typecheck: **skipped**
-- test: **skipped** (`mvn -q test -DskipITs`)
+## Manual Review
 
-### sacco-contribution (`sacco-contribution`)
-- lint: **skipped** (`mvn -q spotless:check`)
-- typecheck: **skipped**
-- test: **skipped** (`mvn -q test -DskipITs`)
+| Category | Result | Notes |
+|----------|--------|-------|
+| Type Safety | pass | No `any` casts; generics throughout; frontend types match backend DTOs |
+| Security | pass | JPA Criteria API prevents SQL injection; safe text rendering; CSV escaping proper |
+| Behavioral Correctness | pass | Sort, infinite scroll, debounce, expand/collapse, CSV export, empty/loading/error states correct |
+| CSS Completeness | pass | Credit in `--mpesa-text`, `height` scroll container, sticky totals grid aligned, all 8 phases applied |
+| Accessibility | pass | aria-expanded, aria-label, aria-hidden, keyboard focus rings, role=status |
+| Performance | pass | useCallback/useMemo correct, virtualizer configured, passive scroll listener, debounce efficient |
+| API Contract | pass | All 9 filter params match backend, sort syntax correct, type conversions safe |
 
-### sacco-ledger (`sacco-ledger`)
-- lint: **skipped** (`mvn -q spotless:check`)
-- typecheck: **skipped**
-- test: **skipped** (`mvn -q test -DskipITs`)
+## Fixes Applied During Review
 
-### sacco-loan (`sacco-loan`)
-- lint: **skipped** (`mvn -q spotless:check`)
-- typecheck: **skipped**
-- test: **skipped** (`mvn -q test -DskipITs`)
+1. Changed `.ledger-amount--credit` color from `var(--ink)` to `var(--mpesa-text)` for green credit amounts (Phase 4)
+2. Changed `.ledger-scroll-container` from `max-height` to `height` for consistent viewport fill (Phase 1)
 
-### sacco-member (`sacco-member`)
-- lint: **skipped** (`mvn -q spotless:check`)
-- typecheck: **skipped**
-- test: **skipped** (`mvn -q test -DskipITs`)
+## Warnings (non-blocking)
 
-### sacco-payout (`sacco-payout`)
-- lint: **skipped** (`mvn -q spotless:check`)
-- typecheck: **skipped**
-- test: **skipped** (`mvn -q test -DskipITs`)
-
-### sacco-reporting (`sacco-reporting`)
-- lint: **skipped** (`mvn -q spotless:check`)
-- typecheck: **skipped**
-- test: **skipped** (`mvn -q test -DskipITs`)
-
-### sacco-security (`sacco-security`)
-- lint: **skipped** (`mvn -q spotless:check`)
-- typecheck: **skipped**
-- test: **skipped** (`mvn -q test -DskipITs`)
-
-### sacco-ui (`sacco-ui`)
-- lint: **skipped** (`npm run lint`)
-- typecheck: **skipped**
-- test: **skipped** (`npm run test`)
-
-## Verdict
-
-**WARN**
+- 1 ESLint disable (`react-hooks/exhaustive-deps` line 202) — justified: `loadEntries` closure over memoized `filters` object
 
 ## Karpathy Checklist
 
 | Principle | Status | Notes |
-|----------|--------|------|
-| Think Before Coding | ⬜ | |
-| Simplicity First | ⬜ | |
-| Surgical Changes | ⬜ | |
-| Goal-Driven Execution | ⬜ | |
-| Prefer shared utility packages over hand-rolled helpers | ⬜ | |
-| Don't probe data YOLO-style | ⬜ | |
-| Validate boundaries | ⬜ | |
-| Typed SDKs | ⬜ | |
+|----------|--------|-------|
+| Think Before Coding | pass | 8-phase plan + 3 plan JSONs created before implementation |
+| Simplicity First | pass | Single component with TanStack Virtual; no unnecessary abstractions |
+| Surgical Changes | pass | Only Ledger page + backend filtering; CSS uplift limited to tokens |
+| Goal-Driven Execution | pass | tsc + build verified at every step |
+| Prefer shared utility packages | pass | @tanstack/react-virtual; shared Select/DatePicker reused |
+| Don't probe data YOLO-style | pass | TypeScript types match DTOs; JPA Specification uses typed predicates |
+| Validate boundaries | pass | Backend validates via @RequestParam types; frontend debounces; errors handled |
+| Typed SDKs | pass | @tanstack/react-virtual typed API; Spring Data JPA Specification generics |

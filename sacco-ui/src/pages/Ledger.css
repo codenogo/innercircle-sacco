@@ -16,7 +16,7 @@
 }
 
 .ledger-scroll-container {
-  max-height: calc(100vh - 260px);
+  height: calc(100vh - 260px);
   overflow-y: auto;
 }
 
@@ -261,7 +261,7 @@
 .ledger-amount--credit {
   text-align: right;
   white-space: nowrap;
-  color: var(--ink);
+  color: var(--mpesa-text);
 }
 
 .ledger-entry-amount {
