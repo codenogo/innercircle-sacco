@@ -19,6 +19,7 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -34,10 +35,13 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class LedgerServiceImplTest {
@@ -79,6 +83,9 @@ class LedgerServiceImplTest {
 
         expenseAccount = new Account("5001", "Operating Expenses", AccountType.EXPENSE, BigDecimal.ZERO, "Operating expenses", true, null, null);
         expenseAccount.setId(UUID.randomUUID());
+
+        lenient().when(journalEntryRepository.findByReferenceIdAndTransactionType(any(), any()))
+                .thenReturn(Optional.empty());
     }
 
     @Nested
@@ -90,7 +97,7 @@ class LedgerServiceImplTest {
         void shouldCreateBalancedJournalEntry() {
             JournalEntry entry = buildBalancedEntry(new BigDecimal("5000.00"));
             when(journalEntryRepository.getNextEntryNumber()).thenReturn(1L);
-            when(journalEntryRepository.save(any(JournalEntry.class))).thenAnswer(invocation -> {
+            when(journalEntryRepository.saveAndFlush(any(JournalEntry.class))).thenAnswer(invocation -> {
                 JournalEntry saved = invocation.getArgument(0);
                 saved.setId(UUID.randomUUID());
                 return saved;
@@ -100,7 +107,7 @@ class LedgerServiceImplTest {
 
             assertNotNull(result);
             assertEquals("JE000001", result.getEntryNumber());
-            verify(journalEntryRepository).save(journalEntryCaptor.capture());
+            verify(journalEntryRepository).saveAndFlush(journalEntryCaptor.capture());
             JournalEntry captured = journalEntryCaptor.getValue();
             assertEquals(2, captured.getJournalLines().size());
             // Verify all lines are linked to the entry
@@ -114,7 +121,7 @@ class LedgerServiceImplTest {
         void shouldKeepExistingEntryNumber() {
             JournalEntry entry = buildBalancedEntry(new BigDecimal("3000.00"));
             entry.setEntryNumber("JE999999");
-            when(journalEntryRepository.save(any(JournalEntry.class))).thenAnswer(invocation -> {
+            when(journalEntryRepository.saveAndFlush(any(JournalEntry.class))).thenAnswer(invocation -> {
                 JournalEntry saved = invocation.getArgument(0);
                 saved.setId(UUID.randomUUID());
                 return saved;
@@ -132,7 +139,7 @@ class LedgerServiceImplTest {
             JournalEntry entry = buildBalancedEntry(new BigDecimal("1000.00"));
             entry.setEntryNumber(null);
             when(journalEntryRepository.getNextEntryNumber()).thenReturn(42L);
-            when(journalEntryRepository.save(any(JournalEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(journalEntryRepository.saveAndFlush(any(JournalEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
             JournalEntry result = ledgerService.createJournalEntry(entry);
 
@@ -145,7 +152,7 @@ class LedgerServiceImplTest {
             JournalEntry entry = buildBalancedEntry(new BigDecimal("1000.00"));
             entry.setEntryNumber("");
             when(journalEntryRepository.getNextEntryNumber()).thenReturn(100L);
-            when(journalEntryRepository.save(any(JournalEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(journalEntryRepository.saveAndFlush(any(JournalEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
             JournalEntry result = ledgerService.createJournalEntry(entry);
 
@@ -161,7 +168,7 @@ class LedgerServiceImplTest {
                     () -> ledgerService.createJournalEntry(entry));
 
             assertTrue(exception.getMessage().contains("not balanced"));
-            verify(journalEntryRepository, never()).save(any());
+            verify(journalEntryRepository, never()).saveAndFlush(any());
         }
 
         @Test
@@ -178,7 +185,7 @@ class LedgerServiceImplTest {
                     () -> ledgerService.createJournalEntry(entry));
 
             assertEquals("Journal entry must have at least one line", exception.getMessage());
-            verify(journalEntryRepository, never()).save(any());
+            verify(journalEntryRepository, never()).saveAndFlush(any());
         }
 
         @Test
@@ -189,11 +196,11 @@ class LedgerServiceImplTest {
             entry.getJournalLines().forEach(line -> line.setJournalEntry(null));
 
             when(journalEntryRepository.getNextEntryNumber()).thenReturn(5L);
-            when(journalEntryRepository.save(any(JournalEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(journalEntryRepository.saveAndFlush(any(JournalEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
             ledgerService.createJournalEntry(entry);
 
-            verify(journalEntryRepository).save(journalEntryCaptor.capture());
+            verify(journalEntryRepository).saveAndFlush(journalEntryCaptor.capture());
             JournalEntry captured = journalEntryCaptor.getValue();
             captured.getJournalLines().forEach(line ->
                     assertEquals(captured, line.getJournalEntry())
@@ -231,12 +238,63 @@ class LedgerServiceImplTest {
             entry.addJournalLine(creditInterest);
 
             when(journalEntryRepository.getNextEntryNumber()).thenReturn(10L);
-            when(journalEntryRepository.save(any(JournalEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(journalEntryRepository.saveAndFlush(any(JournalEntry.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
             JournalEntry result = ledgerService.createJournalEntry(entry);
 
             assertNotNull(result);
             assertEquals(3, result.getJournalLines().size());
+        }
+
+        @Test
+        @DisplayName("should return existing entry when reference and transaction type already exist")
+        void shouldReturnExistingEntryWhenIdempotencyMatchExists() {
+            JournalEntry entry = buildBalancedEntry(new BigDecimal("2000.00"));
+            JournalEntry existing = buildBalancedEntry(new BigDecimal("2000.00"));
+            existing.setId(UUID.randomUUID());
+            existing.setEntryNumber("JE000111");
+            when(journalEntryRepository.findByReferenceIdAndTransactionType(
+                    entry.getReferenceId(), entry.getTransactionType()))
+                    .thenReturn(Optional.of(existing));
+
+            JournalEntry result = ledgerService.createJournalEntry(entry);
+
+            assertEquals(existing, result);
+            verify(journalEntryRepository, never()).saveAndFlush(any(JournalEntry.class));
+            verify(journalEntryRepository, never()).getNextEntryNumber();
+        }
+
+        @Test
+        @DisplayName("should recover from entry number collision by resyncing sequence")
+        void shouldRecoverFromEntryNumberCollision() {
+            JournalEntry entry = buildBalancedEntry(new BigDecimal("1800.00"));
+            when(journalEntryRepository.getNextEntryNumber()).thenReturn(1L, 2L);
+            when(journalEntryRepository.saveAndFlush(any(JournalEntry.class)))
+                    .thenThrow(new DataIntegrityViolationException("duplicate key value violates unique constraint uk_entry_number"))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+            when(journalEntryRepository.syncEntryNumberSequenceToMax()).thenReturn(1L);
+
+            JournalEntry result = ledgerService.createJournalEntry(entry);
+
+            assertEquals("JE000002", result.getEntryNumber());
+            verify(journalEntryRepository).syncEntryNumberSequenceToMax();
+            verify(journalEntryRepository, times(2)).saveAndFlush(any(JournalEntry.class));
+        }
+
+        @Test
+        @DisplayName("should throw when entry number collisions exceed retries")
+        void shouldThrowWhenEntryNumberCollisionsExceedRetries() {
+            JournalEntry entry = buildBalancedEntry(new BigDecimal("1800.00"));
+            when(journalEntryRepository.getNextEntryNumber()).thenReturn(1L, 2L, 3L);
+            when(journalEntryRepository.saveAndFlush(any(JournalEntry.class)))
+                    .thenThrow(new DataIntegrityViolationException("unique constraint entry_number"));
+            when(journalEntryRepository.syncEntryNumberSequenceToMax()).thenReturn(1L);
+
+            IllegalStateException exception = assertThrows(IllegalStateException.class,
+                    () -> ledgerService.createJournalEntry(entry));
+
+            assertTrue(exception.getMessage().contains("Unable to generate unique journal entry number"));
+            verify(journalEntryRepository, times(3)).syncEntryNumberSequenceToMax();
         }
     }
 
@@ -403,8 +461,8 @@ class LedgerServiceImplTest {
         }
 
         @Test
-        @DisplayName("should throw BusinessException when entry is already posted")
-        void shouldThrowWhenEntryAlreadyPosted() {
+        @DisplayName("should return entry when already posted")
+        void shouldReturnWhenEntryAlreadyPosted() {
             UUID entryId = UUID.randomUUID();
             JournalEntry entry = buildBalancedEntry(new BigDecimal("1000.00"));
             entry.setId(entryId);
@@ -414,11 +472,11 @@ class LedgerServiceImplTest {
 
             when(journalEntryRepository.findById(entryId)).thenReturn(Optional.of(entry));
 
-            BusinessException exception = assertThrows(BusinessException.class,
-                    () -> ledgerService.postEntry(entryId));
+            JournalEntry result = ledgerService.postEntry(entryId);
 
-            assertTrue(exception.getMessage().contains("already posted"));
+            assertEquals(entry, result);
             verify(accountRepository, never()).save(any());
+            verify(journalEntryRepository, never()).save(any(JournalEntry.class));
         }
 
         @Test

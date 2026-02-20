@@ -29,6 +29,7 @@ public record PettyCashWorkflowEvent(
         return correlationId;
     }
 
+    @Override
     public UUID getEntityId() {
         return voucherId;
     }

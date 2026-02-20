@@ -1,7 +1,3 @@
-.payouts-page {
-  max-width: 900px;
-}
-
 .payout-summary {
   display: flex;
   flex-direction: column;

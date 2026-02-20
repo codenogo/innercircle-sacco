@@ -109,4 +109,7 @@
 
   /* ─── Sidebar ─── */
   --sidebar-width: 220px;
+
+  /* ─── App content layout ─── */
+  --app-content-max-width: 1200px;
 }

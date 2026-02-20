@@ -17,6 +17,7 @@ import java.util.UUID;
 public class LoanResponse {
 
     private UUID id;
+    private String loanNumber;
     private UUID memberId;
     private UUID loanProductId;
     private BigDecimal principalAmount;
@@ -39,6 +40,7 @@ public class LoanResponse {
     public static LoanResponse from(LoanApplication loan) {
         return LoanResponse.builder()
                 .id(loan.getId())
+                .loanNumber(loan.getLoanNumber())
                 .memberId(loan.getMemberId())
                 .loanProductId(loan.getLoanProductId())
                 .principalAmount(loan.getPrincipalAmount())

@@ -26,4 +26,9 @@ public record PayoutProcessedEvent(
     public UUID getCorrelationId() {
         return correlationId;
     }
+
+    @Override
+    public UUID getEntityId() {
+        return payoutId;
+    }
 }

@@ -7,7 +7,7 @@
   flex: 1;
   margin-left: var(--sidebar-width);
   padding: var(--space-6) var(--space-7);
-  max-width: 960px;
+  max-width: var(--app-content-max-width);
 }
 
 /* ─── Mobile header — hidden on desktop ─── */

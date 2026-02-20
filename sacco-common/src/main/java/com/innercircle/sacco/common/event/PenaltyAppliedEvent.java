@@ -26,4 +26,9 @@ public record PenaltyAppliedEvent(
     public UUID getCorrelationId() {
         return correlationId;
     }
+
+    @Override
+    public UUID getEntityId() {
+        return penaltyId;
+    }
 }

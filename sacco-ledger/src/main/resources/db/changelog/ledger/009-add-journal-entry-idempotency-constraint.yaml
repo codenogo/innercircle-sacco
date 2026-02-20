@@ -1,0 +1,19 @@
+databaseChangeLog:
+  - changeSet:
+      id: 009-add-journal-entry-idempotency-constraint
+      author: codex
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - uniqueConstraintExists:
+                tableName: journal_entries
+                constraintName: uk_journal_entries_reference_type
+      changes:
+        - addUniqueConstraint:
+            tableName: journal_entries
+            columnNames: reference_id, transaction_type
+            constraintName: uk_journal_entries_reference_type
+      rollback:
+        - dropUniqueConstraint:
+            tableName: journal_entries
+            constraintName: uk_journal_entries_reference_type

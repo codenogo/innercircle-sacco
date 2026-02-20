@@ -1,9 +1,5 @@
 /* ─── Dashboard — the opening page of the ledger ─── */
 
-.dashboard {
-  max-width: 800px;
-}
-
 /* ─── Header — like the top of a ledger page ─── */
 
 .dashboard-header {

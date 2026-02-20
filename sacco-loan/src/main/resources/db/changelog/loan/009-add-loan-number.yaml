@@ -1,0 +1,36 @@
+databaseChangeLog:
+  - changeSet:
+      id: loan-009-add-loan-number-column
+      author: system
+      changes:
+        - addColumn:
+            tableName: loan_applications
+            columns:
+              - column:
+                  name: loan_number
+                  type: varchar(50)
+                  constraints:
+                    nullable: true
+
+  - changeSet:
+      id: loan-009-backfill-loan-number
+      author: system
+      changes:
+        - sql:
+            sql: >-
+              UPDATE loan_applications
+              SET loan_number = 'LN-' || UPPER(SUBSTRING(REPLACE(gen_random_uuid()::text, '-', ''), 1, 8))
+              WHERE loan_number IS NULL
+
+  - changeSet:
+      id: loan-009-add-loan-number-constraints
+      author: system
+      changes:
+        - addNotNullConstraint:
+            tableName: loan_applications
+            columnName: loan_number
+            columnDataType: varchar(50)
+        - addUniqueConstraint:
+            tableName: loan_applications
+            columnNames: loan_number
+            constraintName: uk_loan_applications_loan_number

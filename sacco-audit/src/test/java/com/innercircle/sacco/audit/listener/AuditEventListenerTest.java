@@ -387,6 +387,62 @@ class AuditEventListenerTest {
                 any(AuditAction.class), any(), any(), any(), any(), isNull());
     }
 
+    @Test
+    void handleAuditableEvent_withNullEntityId_shouldFallbackToCorrelationId() {
+        UUID correlationId = UUID.randomUUID();
+        AuditableEvent event = new AuditableEvent() {
+            @Override
+            public String getEventType() {
+                return "MEMBER_CREATE";
+            }
+
+            @Override
+            public String getActor() {
+                return "admin";
+            }
+
+            @Override
+            public UUID getCorrelationId() {
+                return correlationId;
+            }
+        };
+
+        when(auditService.logEvent(anyString(), anyString(), any(AuditAction.class),
+                anyString(), any(), any(), any(), any()))
+                .thenReturn(AuditEvent.builder().build());
+
+        auditEventListener.handleAuditableEvent(event);
+
+        verify(auditService).logEvent(
+                eq("admin"), eq("admin"), eq(AuditAction.CREATE),
+                eq(event.getClass().getSimpleName()), eq(correlationId), any(), any(), isNull());
+    }
+
+    @Test
+    void handleAuditableEvent_withNullEntityAndCorrelation_shouldSkipAuditWrite() {
+        AuditableEvent event = new AuditableEvent() {
+            @Override
+            public String getEventType() {
+                return "MEMBER_CREATE";
+            }
+
+            @Override
+            public String getActor() {
+                return "admin";
+            }
+
+            @Override
+            public UUID getCorrelationId() {
+                return null;
+            }
+        };
+
+        auditEventListener.handleAuditableEvent(event);
+
+        verify(auditService, never()).logEvent(anyString(), anyString(), any(AuditAction.class),
+                anyString(), any(), any(), any(), any());
+    }
+
     // --- Helpers ---
 
     private AuditableEvent createTestEvent(String eventType, String actor) {
@@ -446,6 +502,26 @@ class AuditEventListenerTest {
         @Override
         public UUID getCorrelationId() {
             return UUID.randomUUID();
+        }
+
+        @Override
+        public UUID getEntityId() {
+            return entityId;
+        }
+
+        @Override
+        public String getEntityType() {
+            return entityType;
+        }
+
+        @Override
+        public Object getBeforeState() {
+            return beforeState;
+        }
+
+        @Override
+        public Object getAfterState() {
+            return afterState;
         }
     }
 }
