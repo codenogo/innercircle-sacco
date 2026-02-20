@@ -1,106 +1,166 @@
 /* ─── Ledger Page — the core accounts book ─── */
 
+/* Override parent .app-main constraint — progressive enhancement */
+@supports selector(:has(*)) {
+  .app-main:has(.ledger-page) {
+    max-width: 1200px;
+  }
+}
+
+/* Column width variables — shared by table columns and sticky totals grid */
 .ledger-page {
-  max-width: 1000px;
+  --col-ref:    10%;
+  --col-date:   12%;
+  --col-type:   16%;
+  --col-debit:  12%;
+  --col-credit: 12%;
 }
 
-/* ─── Scroll container for virtual scrolling ─── */
-.ledger-scroll-container {
-  height: calc(100vh - 220px);
-  overflow-y: auto;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-sm);
+.ledger-th-amount {
+  text-align: right;
 }
 
-/* The journal table needs to feel most like the physical ledger */
-.ledger-journal {
-  font-size: var(--text-sm);
-  width: 100%;
-  table-layout: fixed;
+/* ─── Filter bar overrides ─── */
+
+.ledger-filter-bar {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
-/* Sticky header */
-.ledger-journal thead {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: var(--paper);
+.ledger-filter-bar .filter-search-wrap {
+  min-width: 260px;
+  flex: 1 1 320px;
 }
 
-.ledger-journal thead th {
-  border-bottom: 1px solid var(--rule-strong);
-}
-
-/* ─── Column header filter row ─── */
-
-.ledger-th-filter th {
-  padding: var(--space-1) var(--space-1);
-  border-bottom: 1px solid var(--rule);
-  background: var(--paper);
-  vertical-align: middle;
-}
-
-.ledger-filter-input {
-  font-size: var(--text-xs);
-  padding: var(--space-1);
-  width: 100%;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-sm);
-  background: var(--paper);
-  color: var(--ink);
-  box-sizing: border-box;
-}
-
-.ledger-filter-input:focus {
-  outline: none;
-  border-color: var(--accent, #2563eb);
-}
-
-.ledger-filter-select {
-  font-size: var(--text-xs);
-  padding: var(--space-1);
-  width: 100%;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-sm);
-  background: var(--paper);
-  color: var(--ink);
-  box-sizing: border-box;
-  cursor: pointer;
-}
-
-.ledger-filter-select:focus {
-  outline: none;
-  border-color: var(--accent, #2563eb);
+.ledger-filter-bar .filter-search {
+  min-width: 0;
 }
 
 .ledger-filter-date {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-2);
 }
 
-.ledger-filter-date .ledger-filter-input {
-  min-width: 0;
-  flex: 1;
+.ledger-filter-date-label {
+  margin: 0;
+  color: var(--ink-faint);
+  letter-spacing: 0.06em;
+  font-size: 10px;
 }
 
-.ledger-filter-date-sep {
-  color: var(--ink-muted);
-  font-size: var(--text-xs);
-  flex-shrink: 0;
+.ledger-filter-date-wrap {
+  width: 168px;
+  min-width: 168px;
 }
 
-/* ─── Cell styles ─── */
+.ledger-filter-date-wrap .datepicker {
+  width: 100%;
+}
+
+.ledger-filter-date-wrap .datepicker-trigger {
+  font-size: var(--text-sm);
+  color: var(--ink-secondary);
+  box-shadow: var(--inset-shadow);
+}
+
+.ledger-filter-date-wrap .datepicker-trigger:hover {
+  color: var(--ink);
+  box-shadow: var(--inset-shadow-hover);
+}
+
+.ledger-filter-date-wrap .datepicker-trigger:focus-visible {
+  border-color: var(--mpesa);
+  box-shadow: 0 0 0 3px var(--mpesa-soft);
+  outline: none;
+}
+
+.ledger-filter-date-wrap .datepicker-trigger--open {
+  border-color: var(--mpesa);
+  box-shadow: 0 0 0 3px var(--mpesa-soft);
+}
+
+.ledger-filter-date-wrap .datepicker-trigger--placeholder .datepicker-trigger-text {
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+.ledger-clear-filters {
+  min-width: 76px;
+  margin-left: 0;
+}
+
+.ledger-clear-filters:disabled {
+  opacity: 0.6;
+}
+
+@media (max-width: 1200px) {
+  .ledger-filter-date-wrap {
+    width: 152px;
+    min-width: 152px;
+  }
+}
+
+@media (max-width: 1080px) {
+  .ledger-filter-bar .filter-search-wrap {
+    flex-basis: 100%;
+  }
+
+  .ledger-clear-filters {
+    order: 10;
+  }
+}
 
 .journal-ref {
   font-size: var(--text-xs);
-  color: var(--ink-muted);
+  color: var(--ink-secondary);
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.ledger-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--ink-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  padding: 0;
+}
+
+.ledger-expand-btn:hover {
+  color: var(--ink-secondary);
+  background: var(--paper-inset);
+}
+
+.ledger-expand-btn:focus-visible {
+  outline: 2px solid var(--mpesa);
+  outline-offset: 1px;
 }
 
 .journal-desc {
   color: var(--ink);
-  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ledger-entry-desc-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.ledger-entry-description {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -110,50 +170,88 @@
   font-size: var(--text-xs);
   color: var(--ink-secondary);
   white-space: nowrap;
-  padding-left: var(--space-3);
-}
-
-.journal-balance {
-  font-weight: 600;
-  color: var(--ink);
+  padding-left: var(--space-5);
 }
 
 .ledger-type {
   font-size: var(--text-xs);
-  text-transform: capitalize;
+  color: var(--ink-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.ledger-expand-cell {
-  width: 32px;
-  text-align: center;
+.ledger-date {
+  white-space: nowrap;
+}
+
+/* ─── Debit / Credit amount styles ─── */
+
+.ledger-amount--debit {
+  text-align: right;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.ledger-amount--credit {
+  text-align: right;
+  white-space: nowrap;
+  color: var(--ink);
+}
+
+.ledger-entry-amount {
+  color: var(--ink-secondary);
+  font-size: var(--text-sm);
+}
+
+.entry-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  border: 1px solid var(--rule);
+  background: var(--paper-inset);
   color: var(--ink-muted);
+  flex-shrink: 0;
+}
+
+.entry-status--imbalance {
+  border-color: rgba(185, 74, 61, 0.15);
+  color: var(--deficit);
+  background: var(--deficit-soft);
 }
 
 /* ─── Expandable entry rows ─── */
 
 .ledger-row--expandable {
-  cursor: pointer;
+  transition: background var(--ease-fast);
 }
 
 .ledger-row--expandable:hover {
-  background: var(--hover);
+  background: var(--paper-inset);
+}
+
+/* Expanded parent row — left border accent */
+.ledger-row--expanded {
+  border-left: 3px solid var(--mpesa);
 }
 
 /* ─── Alternating row shading by journal entry ─── */
 
 .ledger-row--alt {
-  background: var(--paper-alt, rgba(0, 0, 0, 0.02));
+  background: var(--paper-alt);
 }
 
 .ledger-row--alt:hover {
-  background: var(--hover);
+  background: var(--paper-inset);
 }
 
 /* ─── Sub-rows (journal lines) ─── */
 
 .ledger-subrow {
-  background: var(--paper-inset, rgba(0, 0, 0, 0.03));
+  background: var(--paper-inset);
   font-size: var(--text-xs);
 }
 
@@ -162,15 +260,36 @@
   padding-bottom: var(--space-1);
 }
 
-/* ─── Totals row — double ruled line above, like accounting convention ─── */
-
-.journal-totals {
+/* Sticky totals docked below the scroll region */
+.ledger-sticky-totals {
+  display: grid;
+  grid-template-columns: var(--col-ref) var(--col-date) var(--col-type) minmax(0, 1fr) var(--col-debit) var(--col-credit);
+  align-items: center;
   border-top: 3px double var(--rule-strong);
+  background: var(--paper);
+  min-height: 40px;
 }
 
-.journal-totals td {
-  padding-top: var(--space-3);
+.ledger-sticky-totals__ghost {
+  min-height: 1px;
+}
+
+.ledger-sticky-totals__label {
+  font-size: var(--text-xs);
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--ink-muted);
+  padding: 0 var(--space-1);
+}
+
+.ledger-sticky-totals__debit,
+.ledger-sticky-totals__credit {
+  text-align: right;
+  font-family: var(--font-data);
+  font-size: var(--text-base);
+  color: var(--ink);
+  padding: 0 var(--space-1);
 }
 
 /* ─── Loading indicator for infinite scroll ─── */

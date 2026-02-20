@@ -110,7 +110,7 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--rule-strong);
-  border-radius: 3px;
+  border-radius: var(--radius-md);
 }
 
 ::-webkit-scrollbar-thumb:hover {

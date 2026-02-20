@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "feature": "shared-datatable",
+  "planNumber": "06",
+  "goal": "Convert Ledger page to use DataTable component and clean up deprecated table CSS",
+  "tasks": [
+    {
+      "name": "Migrate Ledger.tsx to use DataTable",
+      "cwd": "sacco-ui",
+      "files": [
+        "sacco-ui/src/pages/Ledger.tsx"
+      ],
+      "action": "Replace the manual table in Ledger.tsx with <DataTable>. This is the most complex migration because Ledger uses expandable rows (entry + sub-rows), custom row types (LedgerDisplayRow discriminated union), and sticky totals. Define ColumnDef for 6 columns: Ref (with expand button), Date (sortable), Type, Description (with imbalance badge), Debit, Credit. Pass stickyTotals prop for the loaded totals footer. The displayRows flattening and virtualizer setup move into DataTable — Ledger passes flat data with getRowKey and estimateRowSize. Keep all filter bar, data fetching, and pagination logic in Ledger.",
+      "verify": [
+        "cd sacco-ui && npx tsc --noEmit"
+      ]
+    },
+    {
+      "name": "Remove deprecated ledger-table styles from components.css",
+      "cwd": "sacco-ui",
+      "files": [
+        "sacco-ui/src/styles/components.css",
+        "sacco-ui/src/pages/Ledger.css"
+      ],
+      "action": "Remove the old .ledger-table, .ledger-table th, .ledger-table th.sortable styles from components.css (lines ~357-373) since all tables now use DataTable's own CSS classes. Remove any Ledger.css rules that are now handled by DataTable.css (table frame, scroll container, sticky thead, spacer rows). Keep Ledger-specific styles that aren't shared (expand button, journal-ref, journal-desc, subrow indent, entry-status, filter bar overrides, amount color classes).",
+      "verify": [
+        "cd sacco-ui && npm run build"
+      ],
+      "blockedBy": [0]
+    },
+    {
+      "name": "Final build and visual verification checklist",
+      "cwd": "sacco-ui",
+      "files": [
+        "sacco-ui/src/components/DataTable.tsx",
+        "sacco-ui/src/components/DataTable.css"
+      ],
+      "action": "Run full TypeScript check and Vite build. Fix any unused imports or dead CSS found. Confirm DataTable.tsx exports are clean and DataTable.css has no orphaned selectors. Verify the complete build succeeds with all 16 tables migrated.",
+      "verify": [
+        "cd sacco-ui && npx tsc --noEmit",
+        "cd sacco-ui && npm run build"
+      ],
+      "blockedBy": [1]
+    }
+  ],
+  "planVerify": [
+    "cd sacco-ui && npx tsc --noEmit",
+    "cd sacco-ui && npm run build"
+  ],
+  "commitMessage": "refactor(ui): convert Ledger to DataTable and remove deprecated table CSS",
+  "timestamp": "2026-02-19T00:00:00Z"
+}

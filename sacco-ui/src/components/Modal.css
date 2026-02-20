@@ -7,7 +7,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(45, 40, 32, 0.40);
+  background: var(--backdrop);
   backdrop-filter: blur(2px);
   animation: modal-fade-in 200ms ease-out;
 }

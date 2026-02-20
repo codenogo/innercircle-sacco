@@ -85,7 +85,7 @@
 
 .btn--primary {
   background: var(--mpesa);
-  color: #fff;
+  color: var(--text-on-accent);
   border: none;
 }
 
@@ -210,14 +210,14 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b6d80' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
-  box-shadow: inset 0 1px 2px rgba(30, 32, 48, 0.04);
+  box-shadow: var(--inset-shadow-hover);
   transition: border-color var(--ease), box-shadow var(--ease), color var(--ease);
 }
 
 .filter-select:hover {
   border-color: var(--rule-strong);
   color: var(--ink);
-  box-shadow: inset 0 1px 2px rgba(30, 32, 48, 0.02);
+  box-shadow: none;
 }
 
 .filter-select:focus {
@@ -239,7 +239,7 @@
   background: var(--paper-inset);
   border: 1px solid var(--rule);
   border-radius: var(--radius-sm);
-  box-shadow: inset 0 1px 2px rgba(30, 32, 48, 0.06);
+  box-shadow: var(--inset-shadow);
   outline: none;
   transition: border-color var(--ease), background var(--ease), box-shadow var(--ease);
   min-width: 200px;
@@ -274,7 +274,7 @@
 .filter-search:focus {
   border-color: var(--mpesa);
   background: var(--paper);
-  box-shadow: 0 0 0 3px var(--mpesa-soft), inset 0 1px 2px rgba(30, 32, 48, 0.02);
+  box-shadow: 0 0 0 3px var(--mpesa-soft);
 }
 
 .filter-search:focus-visible {
@@ -350,26 +350,6 @@
   color: var(--ink-muted);
   font-size: var(--text-sm);
   font-style: italic;
-}
-
-/* ─── Ledger Table — extended for all pages ─── */
-
-.ledger-table {
-  width: 100%;
-  table-layout: fixed;
-}
-
-.ledger-table th {
-  font-family: var(--font-body);
-}
-
-.ledger-table th.sortable {
-  cursor: pointer;
-  user-select: none;
-}
-
-.ledger-table th.sortable:hover {
-  color: var(--ink-secondary);
 }
 
 /* ─── Settings sections ─── */
@@ -500,26 +480,6 @@
     width: 100%;
   }
 
-  /* Horizontal scroll wrapper for tables */
-  .ledger-table {
-    display: block;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .ledger-table thead,
-  .ledger-table tbody,
-  .ledger-table tfoot {
-    display: table;
-    width: 100%;
-    min-width: 560px;
-    table-layout: fixed;
-  }
-
-  .ledger-table thead {
-    display: table-header-group;
-  }
-
   .report-card {
     flex-direction: column;
     gap: var(--space-3);
@@ -538,21 +498,6 @@
     text-align: left;
   }
 
-  /* ─── Table scroll indicator ─── */
-  .ledger-table-wrap {
-    position: relative;
-  }
-
-  .ledger-table-wrap::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 24px;
-    background: linear-gradient(to right, transparent, rgba(229, 223, 211, 0.8));
-    pointer-events: none;
-  }
 }
 
 /* ─── Inline feedback ─── */

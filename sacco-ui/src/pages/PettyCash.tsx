@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Plus, Search } from 'lucide-react'
 import { Spinner } from '../components/Spinner'
-import { SkeletonTableRows } from '../components/Skeleton'
+import { DataTable, type ColumnDef } from '../components/DataTable'
 import { MonthPicker } from '../components/MonthPicker'
 import { DatePicker } from '../components/DatePicker'
 import { Modal } from '../components/Modal'
@@ -212,6 +212,95 @@ export function PettyCash() {
       return text.includes(query)
     })
   }, [search, vouchers])
+
+  const voucherColumns = useMemo((): ColumnDef<PettyCashVoucherResponse>[] => [
+    {
+      key: 'reference',
+      header: 'Reference',
+      className: 'data',
+      render: v => v.referenceNumber,
+    },
+    {
+      key: 'purpose',
+      header: 'Purpose',
+      render: v => (
+        <>
+          <span className="petty-cash-purpose">{v.purpose}</span>
+          <span className="petty-cash-purpose-sub">{v.notes || '\u2014'}</span>
+        </>
+      ),
+    },
+    {
+      key: 'expenseType',
+      header: 'Expense Type',
+      render: v => expenseTypeLabel[v.expenseType],
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: v => <span className={`badge ${statusClass[v.status]}`}>{v.status}</span>,
+    },
+    {
+      key: 'requested',
+      header: 'Requested',
+      className: 'data',
+      render: v => fmtDate(v.requestDate),
+    },
+    {
+      key: 'amount',
+      header: 'Amount (KES)',
+      className: 'amount ledger-table-amount',
+      headerClassName: 'ledger-table-amount',
+      render: v => fmtCurrency(v.amount),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      render: v => (
+        <div className="petty-cash-actions">
+          {v.status === 'SUBMITTED' && (
+            <>
+              <button
+                type="button"
+                className="btn btn--secondary btn--small"
+                onClick={() => void handleApprove(v.id)}
+                disabled={actionLoading === v.id}
+              >
+                {actionLoading === v.id ? 'Approving...' : 'Approve'}
+              </button>
+              <button
+                type="button"
+                className="btn btn--secondary btn--small"
+                onClick={() => setRejectTarget(v)}
+                disabled={actionLoading === v.id}
+              >
+                Reject
+              </button>
+            </>
+          )}
+          {v.status === 'APPROVED' && (
+            <button
+              type="button"
+              className="btn btn--secondary btn--small"
+              onClick={() => void handleDisburse(v.id)}
+              disabled={actionLoading === v.id}
+            >
+              {actionLoading === v.id ? 'Disbursing...' : 'Disburse'}
+            </button>
+          )}
+          {v.status === 'DISBURSED' && (
+            <button
+              type="button"
+              className="btn btn--secondary btn--small"
+              onClick={() => setSettleTarget(v)}
+            >
+              Settle
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ], [actionLoading])
 
   async function handleCreateVoucher() {
     const amount = Number(createAmount)
@@ -438,85 +527,14 @@ export function PettyCash() {
         </div>
       </section>
 
-      <table className="ledger-table">
-        <thead>
-          <tr>
-            <th className="label">Reference</th>
-            <th className="label">Purpose</th>
-            <th className="label">Expense Type</th>
-            <th className="label">Status</th>
-            <th className="label">Requested</th>
-            <th className="label ledger-table-amount">Amount (KES)</th>
-            <th className="label">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading ? (
-            <SkeletonTableRows cols={7} />
-          ) : filtered.length === 0 ? (
-            <tr>
-              <td colSpan={7} className="table-empty">No petty cash vouchers found.</td>
-            </tr>
-          ) : filtered.map((voucher, index) => (
-            <tr key={voucher.id} className={index % 2 === 1 ? 'ledger-row--alt' : ''}>
-              <td className="data">{voucher.referenceNumber}</td>
-              <td>
-                <span className="petty-cash-purpose">{voucher.purpose}</span>
-                <span className="petty-cash-purpose-sub">{voucher.notes || '\u2014'}</span>
-              </td>
-              <td>{expenseTypeLabel[voucher.expenseType]}</td>
-              <td><span className={`badge ${statusClass[voucher.status]}`}>{voucher.status}</span></td>
-              <td className="data">{fmtDate(voucher.requestDate)}</td>
-              <td className="amount ledger-table-amount">{fmtCurrency(voucher.amount)}</td>
-              <td>
-                <div className="petty-cash-actions">
-                  {voucher.status === 'SUBMITTED' && (
-                    <>
-                      <button
-                        type="button"
-                        className="btn btn--secondary btn--small"
-                        onClick={() => void handleApprove(voucher.id)}
-                        disabled={actionLoading === voucher.id}
-                      >
-                        {actionLoading === voucher.id ? 'Approving...' : 'Approve'}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn--secondary btn--small"
-                        onClick={() => setRejectTarget(voucher)}
-                        disabled={actionLoading === voucher.id}
-                      >
-                        Reject
-                      </button>
-                    </>
-                  )}
-
-                  {voucher.status === 'APPROVED' && (
-                    <button
-                      type="button"
-                      className="btn btn--secondary btn--small"
-                      onClick={() => void handleDisburse(voucher.id)}
-                      disabled={actionLoading === voucher.id}
-                    >
-                      {actionLoading === voucher.id ? 'Disbursing...' : 'Disburse'}
-                    </button>
-                  )}
-
-                  {voucher.status === 'DISBURSED' && (
-                    <button
-                      type="button"
-                      className="btn btn--secondary btn--small"
-                      onClick={() => setSettleTarget(voucher)}
-                    >
-                      Settle
-                    </button>
-                  )}
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable
+        columns={voucherColumns}
+        data={filtered}
+        getRowKey={v => v.id}
+        loading={loading}
+        emptyMessage="No petty cash vouchers found."
+        getRowClassName={(_, i) => i % 2 === 1 ? 'datatable-row--alt' : ''}
+      />
 
       {hasMore && (
         <div className="ops-pager">

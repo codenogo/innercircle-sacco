@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { ArrowUpRight, ArrowDownRight, TrendingUp } from 'lucide-react'
 import { SkeletonRow, SkeletonStat } from '../components/Skeleton'
+import { DataTable, type ColumnDef } from '../components/DataTable'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { ApiError } from '../services/apiClient'
 import type { TreasurerDashboardResponse, SaccoStateResponse } from '../types/dashboard'
@@ -15,6 +16,11 @@ function toErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error) return error.message
   return fallback
 }
+
+const keyMetricColumns: ColumnDef<{ key: string; label: ReactNode; value: ReactNode }>[] = [
+  { key: 'metric', header: 'Metric', render: row => row.label },
+  { key: 'value', header: 'Value', headerClassName: 'ledger-table-amount', className: 'amount ledger-table-amount', render: row => row.value },
+]
 
 export function Dashboard() {
   const { request } = useAuthenticatedApi()
@@ -177,42 +183,35 @@ export function Dashboard() {
       <section className="dashboard-section">
         <h2 className="label dashboard-section-title">Key Metrics</h2>
         <hr className="rule" />
-        <table className="ledger-table">
-          <thead>
-            <tr>
-              <th className="label">Metric</th>
-              <th className="label ledger-table-amount">Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
+        <DataTable<{ key: string; label: ReactNode; value: ReactNode }>
+          columns={keyMetricColumns}
+          data={[
+            {
+              key: 'contributions',
+              label: (
                 <span className="entry-type entry-type--in">
                   <ArrowDownRight size={12} strokeWidth={2} />
                   Total Contributions
                 </span>
-              </td>
-              <td className="amount ledger-table-amount">KES {formatAmount(saccoState?.totalContributions ?? 0)}</td>
-            </tr>
-            <tr className="ledger-row--alt">
-              <td>
+              ),
+              value: <>KES {formatAmount(saccoState?.totalContributions ?? 0)}</>,
+            },
+            {
+              key: 'payouts',
+              label: (
                 <span className="entry-type entry-type--out">
                   <ArrowUpRight size={12} strokeWidth={2} />
                   Total Payouts
                 </span>
-              </td>
-              <td className="amount ledger-table-amount amount--negative">KES {formatAmount(saccoState?.totalPayouts ?? 0)}</td>
-            </tr>
-            <tr>
-              <td>Pending Approvals</td>
-              <td className="amount ledger-table-amount">{pendingApprovals}</td>
-            </tr>
-            <tr className="ledger-row--alt">
-              <td>Member Growth Rate</td>
-              <td className="amount ledger-table-amount">{(saccoState?.memberGrowthRate ?? 0).toFixed(1)}%</td>
-            </tr>
-          </tbody>
-        </table>
+              ),
+              value: <>KES {formatAmount(saccoState?.totalPayouts ?? 0)}</>,
+            },
+            { key: 'approvals', label: 'Pending Approvals', value: pendingApprovals },
+            { key: 'growth', label: 'Member Growth Rate', value: `${(saccoState?.memberGrowthRate ?? 0).toFixed(1)}%` },
+          ]}
+          getRowKey={row => row.key}
+          getRowClassName={(_, i) => i % 2 === 1 ? 'datatable-row--alt' : ''}
+        />
         <hr className="rule rule--strong" />
       </section>
 

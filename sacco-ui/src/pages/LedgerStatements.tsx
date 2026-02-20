@@ -1,14 +1,27 @@
+import { DataTable, type ColumnDef } from '../components/DataTable'
 import './Operations.css'
 
 function fmt(n: number) {
   return n.toLocaleString('en-KE')
 }
 
-const trialBalance = [
+interface TrialBalanceRow {
+  account: string
+  debit: number
+  credit: number
+}
+
+const trialBalance: TrialBalanceRow[] = [
   { account: 'Cash at Bank', debit: 2476500, credit: 0 },
   { account: 'Loan Receivable', debit: 0, credit: 890000 },
   { account: 'Member Savings', debit: 0, credit: 2450000 },
   { account: 'Interest Revenue', debit: 0, credit: 145200 },
+]
+
+const trialColumns: ColumnDef<TrialBalanceRow>[] = [
+  { key: 'account', header: 'Account', render: row => row.account },
+  { key: 'debit', header: 'Debit (KES)', headerClassName: 'ledger-table-amount', className: 'amount ledger-table-amount', render: row => row.debit > 0 ? fmt(row.debit) : '-' },
+  { key: 'credit', header: 'Credit (KES)', headerClassName: 'ledger-table-amount', className: 'amount ledger-table-amount', render: row => row.credit > 0 ? fmt(row.credit) : '-' },
 ]
 
 export function LedgerStatements() {
@@ -29,31 +42,24 @@ export function LedgerStatements() {
       <section className="page-section">
         <span className="page-section-title">Trial Balance</span>
         <hr className="rule" />
-        <table className="ledger-table">
-          <thead>
-            <tr>
-              <th className="label">Account</th>
-              <th className="label ledger-table-amount">Debit (KES)</th>
-              <th className="label ledger-table-amount">Credit (KES)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {trialBalance.map((row, i) => (
-              <tr key={row.account} className={i % 2 === 1 ? 'ledger-row--alt' : ''}>
-                <td>{row.account}</td>
-                <td className="amount ledger-table-amount">{row.debit > 0 ? fmt(row.debit) : '-'}</td>
-                <td className="amount ledger-table-amount">{row.credit > 0 ? fmt(row.credit) : '-'}</td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="journal-totals">
-              <td className="label">Totals</td>
-              <td className="amount ledger-table-amount">{fmt(totalDebit)}</td>
-              <td className="amount ledger-table-amount">{fmt(totalCredit)}</td>
-            </tr>
-          </tfoot>
-        </table>
+        <DataTable
+          columns={trialColumns}
+          data={trialBalance}
+          getRowKey={row => row.account}
+          emptyMessage="No trial balance data."
+          getRowClassName={(_, i) => i % 2 === 1 ? 'datatable-row--alt' : ''}
+          stickyTotals={
+            <table className="datatable">
+              <tfoot>
+                <tr className="journal-totals">
+                  <td className="label">Totals</td>
+                  <td className="amount ledger-table-amount">{fmt(totalDebit)}</td>
+                  <td className="amount ledger-table-amount">{fmt(totalCredit)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          }
+        />
       </section>
 
       <section className="page-section">
