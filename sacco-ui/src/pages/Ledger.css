@@ -196,7 +196,7 @@
 .ledger-amount--credit {
   text-align: right;
   white-space: nowrap;
-  color: var(--ink);
+  color: var(--mpesa-text);
 }
 
 .ledger-entry-amount {
