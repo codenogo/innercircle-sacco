@@ -352,26 +352,6 @@
   font-style: italic;
 }
 
-/* ─── Ledger Table — extended for all pages ─── */
-
-.ledger-table {
-  width: 100%;
-  table-layout: fixed;
-}
-
-.ledger-table th {
-  font-family: var(--font-body);
-}
-
-.ledger-table th.sortable {
-  cursor: pointer;
-  user-select: none;
-}
-
-.ledger-table th.sortable:hover {
-  color: var(--ink-secondary);
-}
-
 /* ─── Settings sections ─── */
 
 .settings-group {
@@ -500,26 +480,6 @@
     width: 100%;
   }
 
-  /* Horizontal scroll wrapper for tables */
-  .ledger-table {
-    display: block;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .ledger-table thead,
-  .ledger-table tbody,
-  .ledger-table tfoot {
-    display: table;
-    width: 100%;
-    min-width: 560px;
-    table-layout: fixed;
-  }
-
-  .ledger-table thead {
-    display: table-header-group;
-  }
-
   .report-card {
     flex-direction: column;
     gap: var(--space-3);
@@ -538,21 +498,6 @@
     text-align: left;
   }
 
-  /* ─── Table scroll indicator ─── */
-  .ledger-table-wrap {
-    position: relative;
-  }
-
-  .ledger-table-wrap::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 24px;
-    background: linear-gradient(to right, transparent, rgba(229, 223, 211, 0.8));
-    pointer-events: none;
-  }
 }
 
 /* ─── Inline feedback ─── */

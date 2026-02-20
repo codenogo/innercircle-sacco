@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "feature": "shared-datatable",
+  "planNumber": "05",
+  "goal": "Migrate secondary and dashboard tables (LoanWorkflow, LoanBatch, LoanBenefits, LedgerStatements, Dashboard, RoleDashboards) to DataTable",
+  "tasks": [
+    {
+      "name": "Migrate LoanWorkflow and LoanBatch to DataTable",
+      "cwd": "sacco-ui",
+      "files": [
+        "sacco-ui/src/pages/LoanWorkflow.tsx",
+        "sacco-ui/src/pages/LoanBatch.tsx"
+      ],
+      "action": "Replace manual tables with <DataTable> in both files. LoanWorkflow has columns: Description, Type, Date, Amount, Status. LoanBatch has columns: Member, Loan ID, Status, Installment, Arrears, and conditional action column. These are sub-page tables typically with small datasets.",
+      "verify": [
+        "cd sacco-ui && npx tsc --noEmit"
+      ]
+    },
+    {
+      "name": "Migrate LoanBenefits and LedgerStatements to DataTable",
+      "cwd": "sacco-ui",
+      "files": [
+        "sacco-ui/src/pages/LoanBenefits.tsx",
+        "sacco-ui/src/pages/LedgerStatements.tsx"
+      ],
+      "action": "Replace manual tables with <DataTable>. LoanBenefits has columns: Benefit Type, Description, Eligible, Utilized, Available. LedgerStatements has columns: Date, Description, Debit, Credit — and uses a tfoot for totals which should migrate to stickyTotals prop.",
+      "verify": [
+        "cd sacco-ui && npx tsc --noEmit"
+      ]
+    },
+    {
+      "name": "Migrate Dashboard and RoleDashboards tables to DataTable",
+      "cwd": "sacco-ui",
+      "files": [
+        "sacco-ui/src/pages/Dashboard.tsx",
+        "sacco-ui/src/pages/RoleDashboards.tsx"
+      ],
+      "action": "Replace manual tables with <DataTable>. Dashboard has a small summary table (Item, Description, Value). RoleDashboards has a simple pending-approvals table. These are small static tables — use DataTable for consistency but may not need virtualization overscan tuning.",
+      "verify": [
+        "cd sacco-ui && npx tsc --noEmit"
+      ]
+    }
+  ],
+  "planVerify": [
+    "cd sacco-ui && npx tsc --noEmit",
+    "cd sacco-ui && npm run build"
+  ],
+  "commitMessage": "refactor(ui): migrate secondary and dashboard tables to DataTable component",
+  "timestamp": "2026-02-19T00:00:00Z"
+}

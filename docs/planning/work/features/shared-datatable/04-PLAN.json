@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "feature": "shared-datatable",
+  "planNumber": "04",
+  "goal": "Migrate ContributionOperations, UsersAdmin, and ContributionCategories to DataTable component",
+  "tasks": [
+    {
+      "name": "Migrate ContributionOperations table to DataTable",
+      "cwd": "sacco-ui",
+      "files": [
+        "sacco-ui/src/pages/ContributionOperations.tsx"
+      ],
+      "action": "Replace manual table with <DataTable>. Define ColumnDef for columns matching existing thead: Member, Category, Date, Status, Amount (KES), and any action columns. Keep filter bar outside.",
+      "verify": [
+        "cd sacco-ui && npx tsc --noEmit"
+      ]
+    },
+    {
+      "name": "Migrate UsersAdmin table to DataTable",
+      "cwd": "sacco-ui",
+      "files": [
+        "sacco-ui/src/pages/UsersAdmin.tsx"
+      ],
+      "action": "Replace manual table with <DataTable>. Define ColumnDef for 5 columns matching existing thead. Keep filter bar and modal outside.",
+      "verify": [
+        "cd sacco-ui && npx tsc --noEmit"
+      ]
+    },
+    {
+      "name": "Migrate ContributionCategories table to DataTable",
+      "cwd": "sacco-ui",
+      "files": [
+        "sacco-ui/src/pages/ContributionCategories.tsx"
+      ],
+      "action": "Replace manual table with <DataTable>. Define ColumnDef for 4 columns matching existing thead. Keep filter bar outside.",
+      "verify": [
+        "cd sacco-ui && npx tsc --noEmit"
+      ]
+    }
+  ],
+  "planVerify": [
+    "cd sacco-ui && npx tsc --noEmit",
+    "cd sacco-ui && npm run build"
+  ],
+  "commitMessage": "refactor(ui): migrate ContributionOps, UsersAdmin, ContributionCategories to DataTable",
+  "timestamp": "2026-02-19T00:00:00Z"
+}

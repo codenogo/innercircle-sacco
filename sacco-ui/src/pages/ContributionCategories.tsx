@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { DataTable, type ColumnDef } from '../components/DataTable'
 import { Modal } from '../components/Modal'
-import { SkeletonTableRows } from '../components/Skeleton'
 import { ApiError } from '../services/apiClient'
 import { getCategories as fetchAllCategories } from '../services/contributionService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
@@ -130,6 +130,51 @@ export function ContributionCategories() {
     }
   }
 
+  const categoryColumns: ColumnDef<ContributionCategoryResponse>[] = [
+    {
+      key: 'category',
+      header: 'Category',
+      render: category => (
+        <>
+          <span className="ops-member-name">{category.name}</span>
+          <span className="ops-member-sub">{category.description}</span>
+        </>
+      ),
+    },
+    {
+      key: 'mandatory',
+      header: 'Mandatory',
+      render: category => (
+        <span className={`badge ${category.isMandatory ? 'badge--active' : 'badge--inactive'}`}>
+          {category.isMandatory ? 'Yes' : 'No'}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: category => (
+        <span className={`badge ${category.active ? 'badge--active' : 'badge--inactive'}`}>
+          {category.active ? 'Active' : 'Inactive'}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      render: category => (
+        <div className="ops-inline-actions">
+          <button type="button" className="btn btn--secondary btn--small" onClick={() => handleOpenEdit(category)}>
+            Edit
+          </button>
+          <button type="button" className="btn btn--secondary btn--small" onClick={() => void handleDelete(category)}>
+            Delete
+          </button>
+        </div>
+      ),
+    },
+  ]
+
   async function handleDelete(category: ContributionCategoryResponse) {
     if (!window.confirm(`Delete category "${category.name}"? This action cannot be undone.`)) return
 
@@ -163,58 +208,14 @@ export function ContributionCategories() {
         </div>
       )}
 
-      <table className="ledger-table">
-        <thead>
-          <tr>
-            <th className="label">Category</th>
-            <th className="label">Mandatory</th>
-            <th className="label">Status</th>
-            <th className="label">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading ? (
-            <SkeletonTableRows cols={4} />
-          ) : categories.length === 0 ? (
-            <tr><td colSpan={4} className="table-empty">No categories found.</td></tr>
-          ) : categories.map((category, i) => (
-            <tr key={category.id} className={i % 2 === 1 ? 'ledger-row--alt' : ''}>
-              <td>
-                <span className="ops-member-name">{category.name}</span>
-                <span className="ops-member-sub">{category.description}</span>
-              </td>
-              <td>
-                <span className={`badge ${category.isMandatory ? 'badge--active' : 'badge--inactive'}`}>
-                  {category.isMandatory ? 'Yes' : 'No'}
-                </span>
-              </td>
-              <td>
-                <span className={`badge ${category.active ? 'badge--active' : 'badge--inactive'}`}>
-                  {category.active ? 'Active' : 'Inactive'}
-                </span>
-              </td>
-              <td>
-                <div className="ops-inline-actions">
-                  <button
-                    type="button"
-                    className="btn btn--secondary btn--small"
-                    onClick={() => handleOpenEdit(category)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn--secondary btn--small"
-                    onClick={() => void handleDelete(category)}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable<ContributionCategoryResponse>
+        columns={categoryColumns}
+        data={categories}
+        getRowKey={row => row.id}
+        loading={loading}
+        emptyMessage="No categories found."
+        getRowClassName={(_, i) => i % 2 === 1 ? 'datatable-row--alt' : ''}
+      />
 
       <Modal
         open={showModal}

@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronRight, ChevronDown, Search, Download } from 'lucide-react'
-import { useVirtualizer } from '@tanstack/react-virtual'
 import { Select } from '../components/Select'
 import { DatePicker } from '../components/DatePicker'
 import { Spinner } from '../components/Spinner'
-import { SkeletonTableRows } from '../components/Skeleton'
+import { DataTable, type ColumnDef } from '../components/DataTable'
 import { ApiError } from '../services/apiClient'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { useDebounce } from '../hooks/useDebounce'
@@ -209,6 +208,14 @@ export function Ledger() {
     setSortDir(prev => prev === 'desc' ? 'asc' : 'desc')
   }, [])
 
+  const getRowClassName = useCallback((row: LedgerDisplayRow) => {
+    if (row.kind === 'line') return 'ledger-subrow'
+    const classes = ['ledger-row--expandable']
+    if (!row.isAlt) classes.push('ledger-row--alt')
+    if (row.isExpanded) classes.push('ledger-row--expanded')
+    return classes.join(' ')
+  }, [])
+
   const handleExportCsv = useCallback(async () => {
     if (totalElements === 0 || exporting) return
 
@@ -295,18 +302,106 @@ export function Ledger() {
     return rows
   }, [entries, expanded])
 
-  const rowVirtualizer = useVirtualizer({
-    count: displayRows.length,
-    getScrollElement: () => scrollContainerRef.current,
-    estimateSize: index => (displayRows[index]?.kind === 'line' ? LINE_ROW_ESTIMATE : ENTRY_ROW_ESTIMATE),
-    overscan: 14,
-  })
+  const estimateRowSize = useCallback(
+    (index: number) => displayRows[index]?.kind === 'line' ? LINE_ROW_ESTIMATE : ENTRY_ROW_ESTIMATE,
+    [displayRows],
+  )
 
-  const virtualRows = rowVirtualizer.getVirtualItems()
-  const topPadding = virtualRows.length > 0 ? virtualRows[0].start : 0
-  const bottomPadding = virtualRows.length > 0
-    ? rowVirtualizer.getTotalSize() - virtualRows[virtualRows.length - 1].end
-    : 0
+  const columns = useMemo<ColumnDef<LedgerDisplayRow>[]>(() => [
+    {
+      key: 'ref',
+      header: 'Ref',
+      width: 'var(--col-ref)',
+      className: 'data journal-ref',
+      render: (row) => {
+        if (row.kind !== 'entry') return null
+        return (
+          <>
+            <button
+              type="button"
+              className="ledger-expand-btn"
+              aria-expanded={row.isExpanded}
+              aria-label={row.isExpanded ? `Collapse ${row.entry.entryNumber}` : `Expand ${row.entry.entryNumber}`}
+              onClick={() => toggleExpanded(row.entry.id)}
+            >
+              {row.isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            </button>
+            {row.entry.entryNumber}
+          </>
+        )
+      },
+    },
+    {
+      key: 'date',
+      header: 'Date',
+      width: 'var(--col-date)',
+      sortable: true,
+      sortKey: 'date',
+      className: 'data ledger-date',
+      render: (row) => row.kind === 'entry' ? fmtDate(row.entry.transactionDate) : null,
+    },
+    {
+      key: 'type',
+      header: 'Type',
+      width: 'var(--col-type)',
+      className: 'data ledger-type',
+      render: (row) => {
+        if (row.kind !== 'entry') return null
+        const label = fmtType(row.entry.transactionType)
+        return <span title={label}>{label}</span>
+      },
+    },
+    {
+      key: 'desc',
+      header: 'Description',
+      className: 'journal-desc',
+      render: (row) => {
+        if (row.kind === 'line') {
+          return <span className="journal-account">{`${row.line.accountCode} — ${row.line.accountName}`}</span>
+        }
+        return (
+          <div className="ledger-entry-desc-wrap">
+            <span className="ledger-entry-description" title={row.entry.description}>
+              {row.entry.description}
+            </span>
+            {!row.isBalanced && (
+              <span className="entry-status entry-status--imbalance">
+                {`Imbalance KES ${fmtCurrency(row.imbalance)}`}
+              </span>
+            )}
+          </div>
+        )
+      },
+    },
+    {
+      key: 'debit',
+      header: 'Debit (Dr)',
+      width: 'var(--col-debit)',
+      headerClassName: 'ledger-th-amount',
+      className: 'amount ledger-amount--debit',
+      render: (row) => {
+        if (row.kind === 'line') {
+          const debit = Number(row.line.debitAmount) || 0
+          return debit > 0 ? fmtCurrency(debit) : ''
+        }
+        return <span className="ledger-entry-amount">{row.isExpanded ? '' : fmtCurrency(row.entryDebit)}</span>
+      },
+    },
+    {
+      key: 'credit',
+      header: 'Credit (Cr)',
+      width: 'var(--col-credit)',
+      headerClassName: 'ledger-th-amount',
+      className: 'amount ledger-amount--credit',
+      render: (row) => {
+        if (row.kind === 'line') {
+          const credit = Number(row.line.creditAmount) || 0
+          return credit > 0 ? fmtCurrency(credit) : ''
+        }
+        return <span className="ledger-entry-amount">{row.isExpanded ? '' : fmtCurrency(row.entryCredit)}</span>
+      },
+    },
+  ], [toggleExpanded])
 
   // Account options for Select
   const accountOptions = useMemo(() => [
@@ -429,132 +524,24 @@ export function Ledger() {
         </button>
       </div>
 
-      <div className="ledger-table-frame">
-        <div className="ledger-scroll-container" ref={scrollContainerRef}>
-          <table className="ledger-table ledger-journal">
-            <colgroup>
-              <col className="ledger-col-ref" />
-              <col className="ledger-col-date" />
-              <col className="ledger-col-type" />
-              <col className="ledger-col-desc" />
-              <col className="ledger-col-debit" />
-              <col className="ledger-col-credit" />
-            </colgroup>
-            <thead>
-              <tr>
-                <th className="label">Ref</th>
-                <th className="label sortable" onClick={toggleSort}>
-                  Date {sortDir === 'desc' ? '\u25BC' : '\u25B2'}
-                </th>
-                <th className="label">Type</th>
-                <th className="label">Description</th>
-                <th className="label ledger-th-amount">Debit (Dr)</th>
-                <th className="label ledger-th-amount">Credit (Cr)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && entries.length === 0 ? (
-                <SkeletonTableRows cols={6} />
-              ) : entries.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="table-empty">
-                    No journal entries found.
-                  </td>
-                </tr>
-              ) : (
-                <>
-                  {topPadding > 0 && (
-                    <tr className="ledger-spacer-row" aria-hidden="true">
-                      <td colSpan={6} style={{ height: `${topPadding}px` }} />
-                    </tr>
-                  )}
-
-                  {virtualRows.map(virtualRow => {
-                    const row = displayRows[virtualRow.index]
-                    if (!row) return null
-
-                    if (row.kind === 'line') {
-                      const debit = Number(row.line.debitAmount) || 0
-                      const credit = Number(row.line.creditAmount) || 0
-                      return (
-                        <tr key={row.key} className="ledger-subrow">
-                          <td></td>
-                          <td></td>
-                          <td></td>
-                          <td className="journal-account">{`${row.line.accountCode} — ${row.line.accountName}`}</td>
-                          <td className="amount ledger-amount--debit">
-                            {debit > 0 ? fmtCurrency(debit) : ''}
-                          </td>
-                          <td className="amount ledger-amount--credit">
-                            {credit > 0 ? fmtCurrency(credit) : ''}
-                          </td>
-                        </tr>
-                      )
-                    }
-
-                    return (
-                      <tr
-                        key={row.key}
-                        className={`ledger-row--expandable${row.isAlt ? '' : ' ledger-row--alt'}${row.isExpanded ? ' ledger-row--expanded' : ''}`}
-                      >
-                        <td className="data journal-ref">
-                          <button
-                            type="button"
-                            className="ledger-expand-btn"
-                            aria-expanded={row.isExpanded}
-                            aria-label={row.isExpanded ? `Collapse ${row.entry.entryNumber}` : `Expand ${row.entry.entryNumber}`}
-                            onClick={() => toggleExpanded(row.entry.id)}
-                          >
-                            {row.isExpanded
-                              ? <ChevronDown size={12} />
-                              : <ChevronRight size={12} />}
-                          </button>
-                          {row.entry.entryNumber}
-                        </td>
-                        <td className="data ledger-date">{fmtDate(row.entry.transactionDate)}</td>
-                        <td className="data ledger-type" title={fmtType(row.entry.transactionType)}>
-                          {fmtType(row.entry.transactionType)}
-                        </td>
-                        <td className="journal-desc">
-                          <div className="ledger-entry-desc-wrap">
-                            <span className="ledger-entry-description" title={row.entry.description}>
-                              {row.entry.description}
-                            </span>
-                            {!row.isBalanced && (
-                              <span className="entry-status entry-status--imbalance">
-                                {`Imbalance KES ${fmtCurrency(row.imbalance)}`}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="amount ledger-amount--debit ledger-entry-amount">
-                          {row.isExpanded ? '' : fmtCurrency(row.entryDebit)}
-                        </td>
-                        <td className="amount ledger-amount--credit ledger-entry-amount">
-                          {row.isExpanded ? '' : fmtCurrency(row.entryCredit)}
-                        </td>
-                      </tr>
-                    )
-                  })}
-
-                  {bottomPadding > 0 && (
-                    <tr className="ledger-spacer-row" aria-hidden="true">
-                      <td colSpan={6} style={{ height: `${bottomPadding}px` }} />
-                    </tr>
-                  )}
-                </>
-              )}
-            </tbody>
-          </table>
-
-          {loadingMore && (
-            <div className="ledger-loading-more">
-              <Spinner size="sm" /> Loading more entries…
-            </div>
-          )}
-        </div>
-
-        {entries.length > 0 && (
+      <DataTable<LedgerDisplayRow>
+        columns={columns}
+        data={displayRows}
+        getRowKey={(row) => row.key}
+        loading={loading}
+        emptyMessage="No journal entries found."
+        getRowClassName={getRowClassName}
+        sortColumn="date"
+        sortDirection={sortDir}
+        onSort={toggleSort}
+        estimateRowSize={estimateRowSize}
+        scrollRef={scrollContainerRef}
+        afterScrollContent={loadingMore ? (
+          <div className="ledger-loading-more">
+            <Spinner size="sm" /> Loading more entries…
+          </div>
+        ) : undefined}
+        stickyTotals={entries.length > 0 ? (
           <div className="ledger-sticky-totals" role="status" aria-live="polite">
             <div className="ledger-sticky-totals__ghost"></div>
             <div className="ledger-sticky-totals__ghost"></div>
@@ -563,8 +550,8 @@ export function Ledger() {
             <div className="ledger-sticky-totals__debit">{fmtCurrency(loadedTotals.debit)}</div>
             <div className="ledger-sticky-totals__credit">{fmtCurrency(loadedTotals.credit)}</div>
           </div>
-        )}
-      </div>
+        ) : undefined}
+      />
     </div>
   )
 }

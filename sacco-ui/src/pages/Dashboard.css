@@ -126,46 +126,6 @@
   transition: width 600ms ease-out;
 }
 
-/* ─── Ledger Table — the heart of it ─── */
-
-.ledger-table {
-  width: 100%;
-  font-size: var(--text-base);
-}
-
-.ledger-table thead th {
-  padding: var(--space-2) var(--space-4) var(--space-2) 0;
-  text-align: left;
-  font-size: var(--text-xs);
-  border-bottom: 1px solid var(--rule-strong);
-}
-
-.ledger-table tbody tr {
-  border-bottom: 1px solid var(--rule-subtle);
-  transition: background var(--ease), box-shadow var(--ease-fast);
-}
-
-.ledger-table tbody tr:hover {
-  background: var(--hover);
-  box-shadow: inset 2px 0 0 var(--mpesa);
-}
-
-/* Alternating row — like ruled ledger paper */
-.ledger-row--alt {
-  background: var(--paper-alt);
-}
-
-.ledger-table td {
-  padding: var(--space-2) 0;
-  padding-right: var(--space-4);
-  vertical-align: baseline;
-}
-
-.ledger-table th.ledger-table-amount,
-.ledger-table td.ledger-table-amount {
-  text-align: right;
-  padding-right: 0 !important;
-}
 
 .ledger-date {
   font-size: var(--text-sm);

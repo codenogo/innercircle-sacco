@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Download } from 'lucide-react'
 import { Spinner } from '../components/Spinner'
-import { SkeletonTableRows } from '../components/Skeleton'
+import { DataTable, type ColumnDef } from '../components/DataTable'
 import { ApiError } from '../services/apiClient'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { localISODate } from '../utils/date'
@@ -129,6 +129,37 @@ export function AuditTrail() {
     setHasMore(false)
   }, [typeFilter, startDate, endDate])
 
+  const auditColumns = useMemo((): ColumnDef<AuditEventResponse>[] => [
+    {
+      key: 'eventId',
+      header: 'Event ID',
+      className: 'data',
+      render: event => event.id,
+    },
+    {
+      key: 'time',
+      header: 'Time',
+      className: 'data',
+      render: event => fmtTimestamp(event.timestamp),
+    },
+    {
+      key: 'actor',
+      header: 'Actor',
+      render: event => event.actorName,
+    },
+    {
+      key: 'entity',
+      header: 'Entity',
+      className: 'data',
+      render: event => `${event.entityType}:${event.entityId}`,
+    },
+    {
+      key: 'action',
+      header: 'Action',
+      render: event => <span className="badge badge--completed">{event.action}</span>,
+    },
+  ], [])
+
   return (
     <div className="ops-page">
       <div className="page-header">
@@ -188,32 +219,14 @@ export function AuditTrail() {
         />
       </div>
 
-      <table className="ledger-table">
-        <thead>
-          <tr>
-            <th className="label">Event ID</th>
-            <th className="label">Time</th>
-            <th className="label">Actor</th>
-            <th className="label">Entity</th>
-            <th className="label">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading ? (
-            <SkeletonTableRows cols={5} />
-          ) : events.length === 0 ? (
-            <tr><td colSpan={5} className="table-empty">No events found.</td></tr>
-          ) : events.map((event, i) => (
-            <tr key={event.id} className={i % 2 === 1 ? 'ledger-row--alt' : ''}>
-              <td className="data">{event.id}</td>
-              <td className="data">{fmtTimestamp(event.timestamp)}</td>
-              <td>{event.actorName}</td>
-              <td className="data">{event.entityType}:{event.entityId}</td>
-              <td><span className="badge badge--completed">{event.action}</span></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable
+        columns={auditColumns}
+        data={events}
+        getRowKey={event => event.id}
+        loading={loading}
+        emptyMessage="No events found."
+        getRowClassName={(_, i) => i % 2 === 1 ? 'datatable-row--alt' : ''}
+      />
 
       {hasMore && (
         <div className="ops-pager">

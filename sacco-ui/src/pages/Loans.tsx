@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Landmark, Search } from 'lucide-react'
 import { Spinner } from '../components/Spinner'
-import { SkeletonTableRows } from '../components/Skeleton'
+import { DataTable } from '../components/DataTable'
+import type { ColumnDef } from '../components/DataTable'
 import { NewLoanModal } from '../components/NewLoanModal'
 import { MakerCheckerWarning } from '../components/MakerCheckerWarning'
 import { ApiError } from '../services/apiClient'
@@ -240,6 +241,89 @@ export function Loans() {
     })
   }, [loans, search])
 
+  const loanColumns: ColumnDef<LoanResponse>[] = useMemo(() => {
+    const cols: ColumnDef<LoanResponse>[] = [
+      {
+        key: 'loanId',
+        header: 'Loan ID',
+        className: 'data loan-id',
+        render: (loan) => shortId(loan.id),
+      },
+      {
+        key: 'memberId',
+        header: 'Member ID',
+        render: (loan) => (
+          <span className="loan-member">{shortId(loan.memberId)}</span>
+        ),
+      },
+      {
+        key: 'rate',
+        header: 'Rate',
+        className: 'data',
+        render: (loan) => `${loan.interestRate}%`,
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        render: (loan) => (
+          <span className={`badge ${statusClass[loan.status]}`}>{loan.status}</span>
+        ),
+      },
+      {
+        key: 'disbursed',
+        header: 'Disbursed',
+        className: 'ledger-date',
+        render: (loan) => fmtDate(loan.disbursedAt),
+      },
+      {
+        key: 'principal',
+        header: 'Principal',
+        className: 'amount ledger-table-amount',
+        headerClassName: 'ledger-table-amount',
+        render: (loan) => fmt(loan.principalAmount),
+      },
+      {
+        key: 'balance',
+        header: 'Balance',
+        headerClassName: 'ledger-table-amount',
+        render: (loan) => (
+          <span className={`amount ledger-table-amount${loan.status === 'DEFAULTED' ? ' amount--negative' : ''}`}>
+            {Number(loan.outstandingBalance) > 0 ? fmt(loan.outstandingBalance) : '\u2014'}
+          </span>
+        ),
+      },
+    ]
+
+    if (canManageLoans) {
+      cols.push({
+        key: 'actions',
+        header: 'Actions',
+        render: (loan) => loan.status === 'PENDING' ? (
+          <div className="table-actions">
+            <button
+              type="button"
+              className="btn btn--ghost btn--small"
+              disabled={actionLoading === loan.id}
+              onClick={() => void handleLoanAction(loan.id, 'approve')}
+            >
+              Approve
+            </button>
+            <button
+              type="button"
+              className="btn btn--ghost btn--small btn--danger-text"
+              disabled={actionLoading === loan.id}
+              onClick={() => void handleLoanAction(loan.id, 'reject')}
+            >
+              Reject
+            </button>
+          </div>
+        ) : null,
+      })
+    }
+
+    return cols
+  }, [canManageLoans, actionLoading])
+
   const activeLoans = loans.filter(l => l.status === 'DISBURSED' || l.status === 'REPAYING')
   const totalDisbursed = activeLoans.reduce((s, l) => s + Number(l.principalAmount), 0)
   const totalOutstanding = activeLoans.reduce((s, l) => s + Number(l.outstandingBalance), 0)
@@ -314,65 +398,13 @@ export function Loans() {
         <span className="page-section-title">All Loans</span>
         <hr className="rule" />
 
-        <table className="ledger-table">
-          <thead>
-            <tr>
-              <th className="label">Loan ID</th>
-              <th className="label">Member ID</th>
-              <th className="label">Rate</th>
-              <th className="label">Status</th>
-              <th className="label">Disbursed</th>
-              <th className="label ledger-table-amount">Principal</th>
-              <th className="label ledger-table-amount">Balance</th>
-              {canManageLoans && <th className="label">Actions</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <SkeletonTableRows cols={canManageLoans ? 8 : 7} />
-            ) : filtered.length === 0 ? (
-              <tr><td colSpan={canManageLoans ? 8 : 7} className="table-empty">No loans match your search.</td></tr>
-            ) : filtered.map((loan, i) => (
-              <tr key={loan.id} className={i % 2 === 1 ? 'ledger-row--alt' : ''}>
-                <td className="data loan-id">{shortId(loan.id)}</td>
-                <td>
-                  <span className="loan-member">{shortId(loan.memberId)}</span>
-                </td>
-                <td className="data">{loan.interestRate}%</td>
-                <td><span className={`badge ${statusClass[loan.status]}`}>{loan.status}</span></td>
-                <td className="ledger-date">{fmtDate(loan.disbursedAt)}</td>
-                <td className="amount ledger-table-amount">{fmt(loan.principalAmount)}</td>
-                <td className={`amount ledger-table-amount ${loan.status === 'DEFAULTED' ? 'amount--negative' : ''}`}>
-                  {Number(loan.outstandingBalance) > 0 ? fmt(loan.outstandingBalance) : '—'}
-                </td>
-                {canManageLoans && (
-                  <td>
-                    {loan.status === 'PENDING' && (
-                      <div className="table-actions">
-                        <button
-                          type="button"
-                          className="btn btn--ghost btn--small"
-                          disabled={actionLoading === loan.id}
-                          onClick={() => void handleLoanAction(loan.id, 'approve')}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn--ghost btn--small btn--danger-text"
-                          disabled={actionLoading === loan.id}
-                          onClick={() => void handleLoanAction(loan.id, 'reject')}
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable<LoanResponse>
+          columns={loanColumns}
+          data={filtered}
+          getRowKey={row => row.id}
+          loading={loading}
+          emptyMessage="No loans match your search."
+        />
 
         {hasMore && (
           <div className="ops-pager">

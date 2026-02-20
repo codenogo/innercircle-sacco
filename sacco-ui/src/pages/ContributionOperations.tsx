@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { DataTable, type ColumnDef } from '../components/DataTable'
 import { MonthPicker } from '../components/MonthPicker'
 import { Spinner } from '../components/Spinner'
 import { Select } from '../components/Select'
@@ -169,6 +170,34 @@ export function ContributionOperations() {
     }
   }, [showBulkForm, categories.length, fetchCategories])
 
+  // --- Columns ---
+  const contribColumns = useMemo((): ColumnDef<ContributionResponse>[] => [
+    { key: 'ref', header: 'Ref', render: c => <span className="data">{c.id.slice(0, 8)}</span> },
+    { key: 'member', header: 'Member', render: c => memberMap.get(c.memberId) ?? c.memberId.slice(0, 8) },
+    { key: 'category', header: 'Category', render: c => <span className="data">{c.category.name}</span> },
+    { key: 'status', header: 'Status', render: c => <span className={`badge ${statusClass[c.status]}`}>{c.status}</span> },
+    { key: 'date', header: 'Date', render: c => <span className="data">{fmtDate(c.contributionDate)}</span> },
+    { key: 'amount', header: 'Amount (KES)', headerClassName: 'ledger-table-amount', className: 'amount ledger-table-amount', render: c => fmt(c.amount) },
+    {
+      key: 'actions',
+      header: 'Actions',
+      render: c => (
+        <div className="ops-inline-actions">
+          {c.status === 'PENDING' && (
+            <button type="button" className="btn btn--secondary btn--small" disabled={actionInProgress === c.id} onClick={() => void handleConfirm(c.id)}>
+              Confirm
+            </button>
+          )}
+          {(c.status === 'PENDING' || c.status === 'CONFIRMED') && (
+            <button type="button" className="btn btn--secondary btn--small" disabled={actionInProgress === c.id} onClick={() => void handleReverse(c.id)}>
+              Reverse
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ], [memberMap, actionInProgress])
+
   // --- Filtered contributions ---
   const filtered = useMemo(() => {
     return contributions.filter(c => {
@@ -282,69 +311,14 @@ export function ContributionOperations() {
       </div>
 
       {/* --- Operations Table --- */}
-      {loading ? (
-        <p className="ops-note">Loading contributions...</p>
-      ) : (
-        <table className="ledger-table">
-          <thead>
-            <tr>
-              <th className="label">Ref</th>
-              <th className="label">Member</th>
-              <th className="label">Category</th>
-              <th className="label">Status</th>
-              <th className="label">Date</th>
-              <th className="label ledger-table-amount">Amount (KES)</th>
-              <th className="label">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="table-empty">
-                  No contributions found for the selected filters.
-                </td>
-              </tr>
-            ) : (
-              filtered.map((c, i) => (
-                <tr key={c.id} className={i % 2 === 1 ? 'ledger-row--alt' : ''}>
-                  <td className="data">{c.id.slice(0, 8)}</td>
-                  <td>{memberMap.get(c.memberId) ?? c.memberId.slice(0, 8)}</td>
-                  <td className="data">{c.category.name}</td>
-                  <td>
-                    <span className={`badge ${statusClass[c.status]}`}>{c.status}</span>
-                  </td>
-                  <td className="data">{fmtDate(c.contributionDate)}</td>
-                  <td className="amount ledger-table-amount">{fmt(c.amount)}</td>
-                  <td>
-                    <div className="ops-inline-actions">
-                      {c.status === 'PENDING' && (
-                        <button
-                          type="button"
-                          className="btn btn--secondary btn--small"
-                          disabled={actionInProgress === c.id}
-                          onClick={() => void handleConfirm(c.id)}
-                        >
-                          Confirm
-                        </button>
-                      )}
-                      {(c.status === 'PENDING' || c.status === 'CONFIRMED') && (
-                        <button
-                          type="button"
-                          className="btn btn--secondary btn--small"
-                          disabled={actionInProgress === c.id}
-                          onClick={() => void handleReverse(c.id)}
-                        >
-                          Reverse
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      )}
+      <DataTable<ContributionResponse>
+        columns={contribColumns}
+        data={filtered}
+        getRowKey={row => row.id}
+        loading={loading}
+        emptyMessage="No contributions found for the selected filters."
+        getRowClassName={(_, i) => i % 2 === 1 ? 'datatable-row--alt' : ''}
+      />
 
       {/* --- Load More --- */}
       {hasMore && (

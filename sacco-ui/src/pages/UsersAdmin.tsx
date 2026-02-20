@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Search, UserPlus } from 'lucide-react'
+import { DataTable, type ColumnDef } from '../components/DataTable'
 import { Spinner } from '../components/Spinner'
-import { SkeletonTableRows } from '../components/Skeleton'
 import { Modal } from '../components/Modal'
 import { ApiError } from '../services/apiClient'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
@@ -303,6 +303,99 @@ export function UsersAdmin() {
     setDetailsLoading(false)
   }
 
+  const userColumns = useMemo((): ColumnDef<UserResponse>[] => [
+    {
+      key: 'user',
+      header: 'User',
+      headerClassName: 'ops-col-user',
+      className: 'ops-cell-user',
+      render: user => (
+        <>
+          <span className="ops-member-name">{user.username}</span>
+          <span className="ops-member-sub">{user.email}</span>
+        </>
+      ),
+    },
+    {
+      key: 'roles',
+      header: 'Roles',
+      headerClassName: 'ops-col-roles',
+      className: 'ops-cell-roles',
+      render: user => (
+        <div className="ops-inline-actions">
+          {(user.roles ?? []).map(role => (
+            <span key={role} className={`badge ${roleBadgeClass(role)}`}>{role}</span>
+          ))}
+        </div>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      headerClassName: 'ops-col-status',
+      className: 'ops-cell-status',
+      render: user => {
+        const status = deriveStatus(user)
+        return <span className={`badge ${statusClass(status)}`}>{status}</span>
+      },
+    },
+    {
+      key: 'updated',
+      header: 'Updated',
+      headerClassName: 'ops-col-updated',
+      className: 'data ops-cell-updated',
+      render: user => formatDateTime(user.updatedAt),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      headerClassName: 'ops-col-actions',
+      className: 'ops-actions-cell',
+      render: user => {
+        const status = deriveStatus(user)
+        const rowBusy = Boolean(busyAction && busyAction.includes(user.id))
+        const canActivate = status === 'INACTIVE'
+        const canLock = status === 'ACTIVE'
+        const canUnlock = status === 'LOCKED'
+
+        return (
+          <div className="ops-actions">
+            <div className="ops-actions-quick">
+              {canActivate ? (
+                <button type="button" className="btn btn--secondary btn--small" disabled={rowBusy} onClick={() => void updateUserInList(`/api/v1/users/${user.id}/activate`, 'PATCH', 'User activated.')}>
+                  Activate
+                </button>
+              ) : (
+                <button type="button" className="btn btn--secondary btn--small" disabled={rowBusy} onClick={() => void updateUserInList(`/api/v1/users/${user.id}/deactivate`, 'PATCH', 'User deactivated.')}>
+                  Deactivate
+                </button>
+              )}
+              {canLock && (
+                <button type="button" className="btn btn--secondary btn--small" disabled={rowBusy} onClick={() => void updateUserInList(`/api/v1/users/${user.id}/lock`, 'PATCH', 'User locked.')}>
+                  Lock
+                </button>
+              )}
+              {canUnlock && (
+                <button type="button" className="btn btn--secondary btn--small" disabled={rowBusy} onClick={() => void updateUserInList(`/api/v1/users/${user.id}/unlock`, 'PATCH', 'User unlocked.')}>
+                  Unlock
+                </button>
+              )}
+            </div>
+            <details className="ops-action-menu">
+              <summary className="btn btn--secondary btn--small">More</summary>
+              <div className="ops-action-menu-list">
+                <button type="button" className="ops-action-menu-item" disabled={rowBusy} onClick={() => void openUserDetails(user.id)}>View details</button>
+                <button type="button" className="ops-action-menu-item" disabled={rowBusy} onClick={() => openRolesEditor(user)}>Edit roles</button>
+                <button type="button" className="ops-action-menu-item" disabled={rowBusy} onClick={() => void handlePasswordReset(user.id)}>Send reset</button>
+                <button type="button" className="ops-action-menu-item ops-action-menu-item--danger" disabled={rowBusy} onClick={() => void handleDeleteUser(user.id, user.username)}>Delete user</button>
+              </div>
+            </details>
+          </div>
+        )
+      },
+    },
+  ], [busyAction])
+
   return (
     <div className="ops-page">
       <div className="page-header">
@@ -361,136 +454,14 @@ export function UsersAdmin() {
         </select>
       </div>
 
-      <table className="ledger-table">
-        <thead>
-          <tr>
-            <th className="label ops-col-user">User</th>
-            <th className="label ops-col-roles">Roles</th>
-            <th className="label ops-col-status">Status</th>
-            <th className="label ops-col-updated">Updated</th>
-            <th className="label ops-col-actions">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading ? (
-            <SkeletonTableRows cols={5} />
-          ) : filteredUsers.length === 0 ? (
-            <tr><td colSpan={5} className="table-empty">No users found.</td></tr>
-          ) : filteredUsers.map((user, i) => {
-            const status = deriveStatus(user)
-            const rowBusy = Boolean(busyAction && busyAction.includes(user.id))
-            const canActivate = status === 'INACTIVE'
-            const canLock = status === 'ACTIVE'
-            const canUnlock = status === 'LOCKED'
-
-            return (
-              <tr key={user.id} className={i % 2 === 1 ? 'ledger-row--alt' : ''}>
-                <td className="ops-cell-user">
-                  <span className="ops-member-name">{user.username}</span>
-                  <span className="ops-member-sub">{user.email}</span>
-                </td>
-                <td className="ops-cell-roles">
-                  <div className="ops-inline-actions">
-                    {(user.roles ?? []).map(role => (
-                      <span key={role} className={`badge ${roleBadgeClass(role)}`}>{role}</span>
-                    ))}
-                  </div>
-                </td>
-                <td className="ops-cell-status"><span className={`badge ${statusClass(status)}`}>{status}</span></td>
-                <td className="data ops-cell-updated">{formatDateTime(user.updatedAt)}</td>
-                <td className="ops-actions-cell">
-                  <div className="ops-actions">
-                    <div className="ops-actions-quick">
-                    {canActivate ? (
-                      <button
-                        type="button"
-                        className="btn btn--secondary btn--small"
-                        disabled={rowBusy}
-                        onClick={() => void updateUserInList(`/api/v1/users/${user.id}/activate`, 'PATCH', 'User activated.')}
-                      >
-                        Activate
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="btn btn--secondary btn--small"
-                        disabled={rowBusy}
-                        onClick={() => void updateUserInList(`/api/v1/users/${user.id}/deactivate`, 'PATCH', 'User deactivated.')}
-                      >
-                        Deactivate
-                      </button>
-                    )}
-
-                    {canLock && (
-                      <button
-                        type="button"
-                        className="btn btn--secondary btn--small"
-                        disabled={rowBusy}
-                        onClick={() => void updateUserInList(`/api/v1/users/${user.id}/lock`, 'PATCH', 'User locked.')}
-                      >
-                        Lock
-                      </button>
-                    )}
-
-                    {canUnlock && (
-                      <button
-                        type="button"
-                        className="btn btn--secondary btn--small"
-                        disabled={rowBusy}
-                        onClick={() => void updateUserInList(`/api/v1/users/${user.id}/unlock`, 'PATCH', 'User unlocked.')}
-                      >
-                        Unlock
-                      </button>
-                    )}
-                    </div>
-
-                    <details className="ops-action-menu">
-                      <summary className="btn btn--secondary btn--small">More</summary>
-                      <div className="ops-action-menu-list">
-                    <button
-                      type="button"
-                      className="ops-action-menu-item"
-                      disabled={rowBusy}
-                      onClick={() => void openUserDetails(user.id)}
-                    >
-                      View details
-                    </button>
-
-                    <button
-                      type="button"
-                      className="ops-action-menu-item"
-                      disabled={rowBusy}
-                      onClick={() => openRolesEditor(user)}
-                    >
-                      Edit roles
-                    </button>
-
-                    <button
-                      type="button"
-                      className="ops-action-menu-item"
-                      disabled={rowBusy}
-                      onClick={() => void handlePasswordReset(user.id)}
-                    >
-                      Send reset
-                    </button>
-
-                    <button
-                      type="button"
-                      className="ops-action-menu-item ops-action-menu-item--danger"
-                      disabled={rowBusy}
-                      onClick={() => void handleDeleteUser(user.id, user.username)}
-                    >
-                      Delete user
-                    </button>
-                      </div>
-                    </details>
-                  </div>
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+      <DataTable<UserResponse>
+        columns={userColumns}
+        data={filteredUsers}
+        getRowKey={row => row.id}
+        loading={loading}
+        emptyMessage="No users found."
+        getRowClassName={(_, i) => i % 2 === 1 ? 'datatable-row--alt' : ''}
+      />
 
       {hasMore && (
         <div className="ops-pager">

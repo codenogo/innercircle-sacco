@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Search, UserPlus } from 'lucide-react'
 import { Spinner } from '../components/Spinner'
-import { SkeletonTableRows } from '../components/Skeleton'
 import { Link } from 'react-router-dom'
 import { AddMemberModal } from '../components/AddMemberModal'
 import { Select } from '../components/Select'
+import { DataTable } from '../components/DataTable'
+import type { ColumnDef } from '../components/DataTable'
 import { ApiError } from '../services/apiClient'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { useAuthorization } from '../hooks/useAuthorization'
@@ -151,6 +152,48 @@ export function Members() {
     })
   }, [filter, members, search])
 
+  const memberColumns: ColumnDef<MemberResponse>[] = useMemo(() => [
+    {
+      key: 'name',
+      header: 'Name',
+      render: (member) => (
+        <>
+          <Link to={`/members/${member.id}`} className="member-link">
+            <span className="member-name">{fullName(member)}</span>
+          </Link>
+          <span className="member-sub">{member.memberNumber}</span>
+          <span className="member-email">{member.email}</span>
+        </>
+      ),
+    },
+    {
+      key: 'phone',
+      header: 'Phone',
+      className: 'data',
+      render: (member) => member.phone,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (member) => (
+        <span className={`badge ${statusClass[member.status]}`}>{member.status}</span>
+      ),
+    },
+    {
+      key: 'joined',
+      header: 'Joined',
+      className: 'ledger-date',
+      render: (member) => fmtJoinDate(member.joinDate),
+    },
+    {
+      key: 'shares',
+      header: 'Shares (KES)',
+      className: 'amount ledger-table-amount',
+      headerClassName: 'ledger-table-amount',
+      render: (member) => fmtCurrency(member.shareBalance),
+    },
+  ], [])
+
   const active = members.filter(member => member.status === 'ACTIVE').length
   const suspended = members.filter(member => member.status === 'SUSPENDED').length
   const deactivated = members.filter(member => member.status === 'DEACTIVATED').length
@@ -216,38 +259,13 @@ export function Members() {
         </div>
       </div>
 
-      <table className="ledger-table">
-        <thead>
-          <tr>
-            <th className="label">Name</th>
-            <th className="label">Phone</th>
-            <th className="label">Status</th>
-            <th className="label">Joined</th>
-            <th className="label ledger-table-amount">Shares (KES)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading ? (
-            <SkeletonTableRows cols={5} />
-          ) : filtered.length === 0 ? (
-            <tr><td colSpan={5} className="table-empty">No members match your search.</td></tr>
-          ) : filtered.map((member, i) => (
-            <tr key={member.id} className={i % 2 === 1 ? 'ledger-row--alt' : ''}>
-              <td>
-                <Link to={`/members/${member.id}`} className="member-link">
-                  <span className="member-name">{fullName(member)}</span>
-                </Link>
-                <span className="member-sub">{member.memberNumber}</span>
-                <span className="member-email">{member.email}</span>
-              </td>
-              <td className="data">{member.phone}</td>
-              <td><span className={`badge ${statusClass[member.status]}`}>{member.status}</span></td>
-              <td className="ledger-date">{fmtJoinDate(member.joinDate)}</td>
-              <td className="amount ledger-table-amount">{fmtCurrency(member.shareBalance)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable<MemberResponse>
+        columns={memberColumns}
+        data={filtered}
+        getRowKey={row => row.id}
+        loading={loading}
+        emptyMessage="No members match your search."
+      />
 
       {hasMore && (
         <div className="ops-pager">
