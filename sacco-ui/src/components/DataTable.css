@@ -31,10 +31,10 @@
 }
 
 .datatable thead th {
-  padding: var(--space-1) var(--space-1);
+  padding: var(--space-1) var(--space-2);
   vertical-align: middle;
   text-align: left;
-  border-bottom: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule);
   font-family: var(--font-body);
 }
 
@@ -57,7 +57,7 @@
 /* ─── Cells ─── */
 
 .datatable td {
-  padding: var(--space-1) var(--space-1);
+  padding: var(--space-1) var(--space-2);
   vertical-align: middle;
   overflow: hidden;
 }
@@ -95,7 +95,7 @@
 .datatable-sticky-totals {
   border-top: 3px double var(--rule-strong);
   background: var(--paper);
-  min-height: 40px;
+  min-height: 36px;
 }
 
 /* ─── Responsive — horizontal scroll at narrow widths ─── */

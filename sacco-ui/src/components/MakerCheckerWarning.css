@@ -13,7 +13,7 @@
 .maker-checker-warning__message {
   font-size: var(--text-sm);
   color: var(--ink-secondary);
-  line-height: 1.5;
+  line-height: var(--leading-normal);
 }
 
 .maker-checker-warning__override {

@@ -39,8 +39,8 @@
 .ledger-filter-date-label {
   margin: 0;
   color: var(--ink-faint);
-  letter-spacing: 0.06em;
-  font-size: 10px;
+  letter-spacing: var(--tracking-wide);
+  font-size: var(--text-xs);
 }
 
 .ledger-filter-date-wrap {
@@ -65,13 +65,13 @@
 
 .ledger-filter-date-wrap .datepicker-trigger:focus-visible {
   border-color: var(--mpesa);
-  box-shadow: 0 0 0 3px var(--mpesa-soft);
+  box-shadow: var(--focus-ring);
   outline: none;
 }
 
 .ledger-filter-date-wrap .datepicker-trigger--open {
   border-color: var(--mpesa);
-  box-shadow: 0 0 0 3px var(--mpesa-soft);
+  box-shadow: var(--focus-ring);
 }
 
 .ledger-filter-date-wrap .datepicker-trigger--placeholder .datepicker-trigger-text {
@@ -135,10 +135,11 @@
 
 .ledger-expand-btn:focus-visible {
   outline: 2px solid var(--mpesa);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
 .journal-desc {
+  font-family: var(--font-body);
   color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -211,7 +212,7 @@
 }
 
 .entry-status--imbalance {
-  border-color: rgba(185, 74, 61, 0.15);
+  border-color: transparent;
   color: var(--deficit);
   background: var(--deficit-soft);
 }
@@ -260,7 +261,7 @@
   align-items: center;
   border-top: 3px double var(--rule-strong);
   background: var(--paper);
-  min-height: 40px;
+  min-height: 36px;
 }
 
 .ledger-sticky-totals__ghost {

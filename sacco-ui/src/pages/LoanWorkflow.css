@@ -24,11 +24,3 @@
   color: var(--ink-secondary);
 }
 
-.btn--danger-text {
-  color: var(--deficit);
-}
-
-.btn--danger-text:hover {
-  color: var(--deficit);
-  background: var(--deficit-soft);
-}

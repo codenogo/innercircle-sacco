@@ -32,6 +32,11 @@
   outline-offset: 2px;
 }
 
+.monthpicker-trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .monthpicker-trigger--open {
   border-color: var(--rule-strong);
   color: var(--ink);
@@ -53,6 +58,7 @@
   background: var(--paper);
   border: 1px solid var(--rule);
   border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
   padding: var(--space-3);
   animation: datepicker-in 120ms ease-out;
 }
@@ -133,7 +139,7 @@
 }
 
 .monthpicker-month--current:hover {
-  background: rgba(58, 125, 68, 0.15);
+  background: var(--mpesa-soft-hover);
 }
 
 .monthpicker-month--selected {

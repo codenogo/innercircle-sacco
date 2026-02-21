@@ -66,7 +66,7 @@ export function Dashboard() {
           </div>
         </header>
         <hr className="rule rule--strong" />
-        <div style={{ padding: 'var(--space-4) 0', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+        <div className="dashboard-skeleton">
           <SkeletonStat />
           <SkeletonStat />
           <SkeletonRow cells={4} />

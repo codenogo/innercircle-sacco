@@ -15,13 +15,13 @@
 .petty-cash-feedback--success {
   color: var(--mpesa-text);
   background: var(--mpesa-soft);
-  border-color: rgba(26, 127, 56, 0.2);
+  border-color: transparent;
 }
 
 .petty-cash-feedback--error {
   color: var(--deficit);
   background: var(--deficit-soft);
-  border-color: rgba(183, 66, 55, 0.2);
+  border-color: transparent;
 }
 
 .petty-cash-purpose {

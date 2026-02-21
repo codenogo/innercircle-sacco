@@ -373,7 +373,7 @@ export function Payouts() {
 
         <div className="filter-bar">
           <div className="filter-search-wrap">
-            <MagnifyingGlass size={14} className="filter-search-icon" />
+            <MagnifyingGlass size={16} className="filter-search-icon" />
             <input
               type="text"
               className="filter-search"
