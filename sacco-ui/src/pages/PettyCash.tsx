@@ -567,7 +567,7 @@ export function PettyCash() {
         )}
       >
         <div className="petty-cash-form-grid">
-          <label className="form-label" htmlFor="petty-cash-amount">Amount (KES)</label>
+          <label className="field-label" htmlFor="petty-cash-amount">Amount (KES)</label>
           <input
             id="petty-cash-amount"
             className="field-input"
@@ -578,10 +578,10 @@ export function PettyCash() {
             placeholder="0"
           />
 
-          <label className="form-label" htmlFor="petty-cash-purpose">Purpose</label>
+          <label className="field-label" htmlFor="petty-cash-purpose">Purpose</label>
           <textarea
             id="petty-cash-purpose"
-            className="form-textarea"
+            className="field-input"
             rows={3}
             maxLength={500}
             value={createPurpose}
@@ -589,7 +589,7 @@ export function PettyCash() {
             placeholder="Describe what this petty cash will be used for"
           />
 
-          <label className="form-label" htmlFor="petty-cash-expense-type">Expense Type</label>
+          <label className="field-label" htmlFor="petty-cash-expense-type">Expense Type</label>
           <select
             id="petty-cash-expense-type"
             className="filter-select"
@@ -601,13 +601,13 @@ export function PettyCash() {
             ))}
           </select>
 
-          <label className="form-label">Request Date</label>
+          <label className="field-label">Request Date</label>
           <DatePicker value={createRequestDate} onChange={setCreateRequestDate} required />
 
-          <label className="form-label" htmlFor="petty-cash-notes">Notes</label>
+          <label className="field-label" htmlFor="petty-cash-notes">Notes</label>
           <textarea
             id="petty-cash-notes"
-            className="form-textarea"
+            className="field-input"
             rows={3}
             maxLength={500}
             value={createNotes}
@@ -648,7 +648,7 @@ export function PettyCash() {
         )}
       >
         <div className="petty-cash-form-grid">
-          <label className="form-label" htmlFor="settle-receipt-number">Receipt Number</label>
+          <label className="field-label" htmlFor="settle-receipt-number">Receipt Number</label>
           <input
             id="settle-receipt-number"
             className="field-input"
@@ -659,10 +659,10 @@ export function PettyCash() {
             placeholder="e.g. RCT-0001"
           />
 
-          <label className="form-label" htmlFor="settle-notes">Notes</label>
+          <label className="field-label" htmlFor="settle-notes">Notes</label>
           <textarea
             id="settle-notes"
-            className="form-textarea"
+            className="field-input"
             rows={3}
             maxLength={500}
             value={settleNotes}
@@ -701,10 +701,10 @@ export function PettyCash() {
         )}
       >
         <div className="petty-cash-form-grid">
-          <label className="form-label" htmlFor="reject-reason">Rejection Reason</label>
+          <label className="field-label" htmlFor="reject-reason">Rejection Reason</label>
           <textarea
             id="reject-reason"
-            className="form-textarea"
+            className="field-input"
             rows={4}
             maxLength={500}
             value={rejectReason}

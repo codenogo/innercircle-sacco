@@ -233,39 +233,39 @@ export function ContributionCategories() {
           </div>
         }
       >
-        <form id="category-form" onSubmit={e => void handleSubmit(e)}>
-          <div className="form-group">
-            <label htmlFor="cat-name" className="form-label">Name</label>
+        <form id="category-form" className="auth-form" onSubmit={e => void handleSubmit(e)}>
+          <div className="field">
+            <label htmlFor="cat-name" className="field-label">Name</label>
             <input
               id="cat-name"
               name="name"
               type="text"
-              className="form-input"
+              className="field-input"
               required
               defaultValue={editingCategory?.name ?? ''}
               key={editingCategory?.id ?? 'new'}
             />
           </div>
-          <div className="form-group">
-            <label htmlFor="cat-description" className="form-label">Description</label>
+          <div className="field">
+            <label htmlFor="cat-description" className="field-label">Description</label>
             <textarea
               id="cat-description"
               name="description"
-              className="form-input"
+              className="field-input"
               rows={3}
               defaultValue={editingCategory?.description ?? ''}
               key={`desc-${editingCategory?.id ?? 'new'}`}
             />
           </div>
-          <div className="form-group">
-            <label className="form-checkbox-label">
+          <div className="field">
+            <label className="field-checkbox">
               <input
                 type="checkbox"
                 name="isMandatory"
                 defaultChecked={editingCategory?.isMandatory ?? false}
                 key={`mandatory-${editingCategory?.id ?? 'new'}`}
               />
-              Mandatory category
+              <span>Mandatory category</span>
             </label>
           </div>
         </form>

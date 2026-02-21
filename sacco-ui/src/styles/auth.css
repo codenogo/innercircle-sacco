@@ -97,6 +97,25 @@ input[type="number"].field-input {
   color: var(--deficit);
 }
 
+/* ─── Checkbox field ─── */
+
+.field-checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.field-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--mpesa);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 /* ─── Row layout for side-by-side fields ─── */
 
 .field-row {
