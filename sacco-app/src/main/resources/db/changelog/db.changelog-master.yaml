@@ -89,6 +89,8 @@ databaseChangeLog:
       file: db/changelog/loan/008-add-penalty-portion-to-repayments.yaml
   - include:
       file: db/changelog/loan/009-add-loan-number.yaml
+  - include:
+      file: db/changelog/loan/010-spring-batch-schema.yaml
 
   # Payout module
   - include:

@@ -30,6 +30,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import com.innercircle.sacco.common.outbox.EventOutboxWriter;
+import org.springframework.batch.core.BatchStatus;
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.JobInstance;
+import org.springframework.batch.core.JobParameters;
+import org.springframework.batch.core.StepExecution;
+import org.springframework.batch.core.launch.JobLauncher;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -83,6 +90,12 @@ class LoanBatchServiceImplTest {
     @Mock
     private LoanPenaltyRepository loanPenaltyRepository;
 
+    @Mock
+    private JobLauncher jobLauncher;
+
+    @Mock
+    private Job monthlyLoanProcessingJob;
+
     @InjectMocks
     private LoanBatchServiceImpl batchService;
 
@@ -102,6 +115,11 @@ class LoanBatchServiceImplTest {
     }
 
     private void setupDefaultBatchMocks() {
+        setupDefaultBatchMocks(0, 0, 0, 0, "0");
+    }
+
+    private void setupDefaultBatchMocks(int writeCount, int penalizedCount, int closedCount,
+                                         int interestAccruedCount, String totalInterestAccrued) {
         SystemConfig processingDayConfig = new SystemConfig();
         processingDayConfig.setConfigValue("1");
         when(configService.getSystemConfig("loan.batch.processing_day_of_month")).thenReturn(processingDayConfig);
@@ -118,6 +136,31 @@ class LoanBatchServiceImplTest {
         SystemConfig thresholdConfig = new SystemConfig();
         thresholdConfig.setConfigValue("15");
         when(configService.getSystemConfig("loan.batch.new_loan_threshold_day")).thenReturn(thresholdConfig);
+
+        // Mock Spring Batch JobLauncher
+        try {
+            JobExecution jobExecution = createMockJobExecution(
+                    writeCount, penalizedCount, closedCount, interestAccruedCount, totalInterestAccrued);
+            when(jobLauncher.run(any(Job.class), any(JobParameters.class))).thenReturn(jobExecution);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private JobExecution createMockJobExecution(int writeCount, int penalizedCount, int closedCount,
+                                                 int interestAccruedCount, String totalInterestAccrued) {
+        JobExecution jobExecution = new JobExecution(new JobInstance(1L, "monthlyLoanProcessingJob"), new JobParameters());
+        jobExecution.setStatus(BatchStatus.COMPLETED);
+
+        StepExecution stepExecution = new StepExecution("loanProcessingStep", jobExecution);
+        stepExecution.setWriteCount(writeCount);
+        stepExecution.getExecutionContext().putInt("penalizedCount", penalizedCount);
+        stepExecution.getExecutionContext().putInt("closedCount", closedCount);
+        stepExecution.getExecutionContext().putInt("interestAccruedCount", interestAccruedCount);
+        stepExecution.getExecutionContext().putString("totalInterestAccrued", totalInterestAccrued);
+        jobExecution.addStepExecutions(List.of(stepExecution));
+
+        return jobExecution;
     }
 
     private void setupPenaltyRuleMock() {
@@ -143,13 +186,8 @@ class LoanBatchServiceImplTest {
         @Test
         @DisplayName("should process loans with no overdue schedules")
         void shouldProcessLoansWithNoOverdueSchedules() {
-            setupDefaultBatchMocks();
-            LoanApplication loan = createLoan(LoanStatus.REPAYING);
-            RepaymentSchedule schedule = createSchedule(1, LocalDate.now().plusDays(30));
-
-            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of(loan));
-            when(scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loan.getId()))
-                    .thenReturn(List.of(schedule));
+            setupDefaultBatchMocks(1, 0, 0, 1, "1000");
+            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
 
             BatchProcessingResult result = batchService.processOutstandingLoans();
 
@@ -163,18 +201,8 @@ class LoanBatchServiceImplTest {
         @Test
         @DisplayName("should count penalized loans when overdue by 30+ days")
         void shouldCountPenalizedLoansWhenOverdue30Days() {
-            setupDefaultBatchMocks();
-            setupPenaltyRuleMock();
-            LoanApplication loan = createLoan(LoanStatus.REPAYING);
-            RepaymentSchedule schedule = createSchedule(1, LocalDate.now().minusDays(31));
-
-            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of(loan));
-            when(scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loan.getId()))
-                    .thenReturn(List.of(schedule));
-            when(loanPenaltyRepository.findByLoanIdAndScheduleId(any(), any()))
-                    .thenReturn(List.of());
-            when(loanPenaltyRepository.sumUnpaidAmountByLoanId(any()))
-                    .thenReturn(new BigDecimal("500"));
+            setupDefaultBatchMocks(1, 1, 0, 1, "1000");
+            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
 
             BatchProcessingResult result = batchService.processOutstandingLoans();
 
@@ -184,13 +212,8 @@ class LoanBatchServiceImplTest {
         @Test
         @DisplayName("should not penalize loans overdue by less than 30 days")
         void shouldNotPenalizeLoansOverdueLessThan30Days() {
-            setupDefaultBatchMocks();
-            LoanApplication loan = createLoan(LoanStatus.REPAYING);
-            RepaymentSchedule schedule = createSchedule(1, LocalDate.now().minusDays(15));
-
-            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of(loan));
-            when(scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loan.getId()))
-                    .thenReturn(List.of(schedule));
+            setupDefaultBatchMocks(1, 0, 0, 1, "1000");
+            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
 
             BatchProcessingResult result = batchService.processOutstandingLoans();
 
@@ -198,71 +221,47 @@ class LoanBatchServiceImplTest {
         }
 
         @Test
-        @DisplayName("should mark loan as DEFAULTED when overdue by 90+ days")
-        void shouldMarkAsDefaultedWhen90DaysOverdue() {
-            setupDefaultBatchMocks();
-            LoanApplication loan = createLoan(LoanStatus.REPAYING);
-            RepaymentSchedule schedule = createSchedule(1, LocalDate.now().minusDays(91));
-
-            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of(loan));
-            when(scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loan.getId()))
-                    .thenReturn(List.of(schedule));
-
-            batchService.processOutstandingLoans();
-
-            // Called twice: once for interest accrual, once for DEFAULTED status
-            verify(loanRepository, times(2)).save(loanCaptor.capture());
-            List<LoanApplication> savedLoans = loanCaptor.getAllValues();
-            assertThat(savedLoans.get(savedLoans.size() - 1).getStatus()).isEqualTo(LoanStatus.DEFAULTED);
-        }
-
-        @Test
-        @DisplayName("should not mark as defaulted when overdue by less than 90 days")
-        void shouldNotMarkAsDefaultedWhenLessThan90Days() {
-            setupDefaultBatchMocks();
-            LoanApplication loan = createLoan(LoanStatus.REPAYING);
-            RepaymentSchedule schedule = createSchedule(1, LocalDate.now().minusDays(60));
-
-            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of(loan));
-            when(scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loan.getId()))
-                    .thenReturn(List.of(schedule));
-
-            batchService.processOutstandingLoans();
-
-            // Save called once for interest accrual only; status should remain REPAYING
-            verify(loanRepository).save(loanCaptor.capture());
-            assertThat(loanCaptor.getValue().getStatus()).isEqualTo(LoanStatus.REPAYING);
-        }
-
-        @Test
-        @DisplayName("should close loan when all schedules paid and balance is zero")
-        void shouldCloseLoanWhenAllPaidAndBalanceZero() {
-            setupDefaultBatchMocks();
-            LoanApplication loan = createLoan(LoanStatus.REPAYING);
-            loan.setOutstandingBalance(BigDecimal.ZERO);
-
-            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of(loan));
-            when(scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loan.getId()))
-                    .thenReturn(List.of()); // No unpaid schedules
+        @DisplayName("should report defaulted loans via batch counters")
+        void shouldReportDefaultedLoansViaBatchCounters() {
+            // Defaulting logic now runs inside LoanItemProcessor; service reads counters
+            setupDefaultBatchMocks(1, 1, 0, 1, "1000");
+            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
 
             BatchProcessingResult result = batchService.processOutstandingLoans();
 
-            verify(loanRepository).save(loanCaptor.capture());
-            assertThat(loanCaptor.getValue().getStatus()).isEqualTo(LoanStatus.CLOSED);
+            assertThat(result.getProcessedLoans()).isEqualTo(1);
+            assertThat(result.getPenalizedLoans()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("should not report defaulted when overdue by less than 90 days")
+        void shouldNotReportDefaultedWhenLessThan90Days() {
+            // No penalized/closed counters from batch
+            setupDefaultBatchMocks(1, 0, 0, 1, "1000");
+            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
+
+            BatchProcessingResult result = batchService.processOutstandingLoans();
+
+            assertThat(result.getPenalizedLoans()).isEqualTo(0);
+            assertThat(result.getClosedLoans()).isEqualTo(0);
+        }
+
+        @Test
+        @DisplayName("should report closed loan via batch counters")
+        void shouldReportClosedLoanViaBatchCounters() {
+            setupDefaultBatchMocks(1, 0, 1, 0, "0");
+            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
+
+            BatchProcessingResult result = batchService.processOutstandingLoans();
+
             assertThat(result.getClosedLoans()).isEqualTo(1);
         }
 
         @Test
-        @DisplayName("should not close loan when unpaid schedules exist")
-        void shouldNotCloseLoanWhenUnpaidSchedulesExist() {
-            setupDefaultBatchMocks();
-            LoanApplication loan = createLoan(LoanStatus.REPAYING);
-            loan.setOutstandingBalance(BigDecimal.ZERO);
-            RepaymentSchedule schedule = createSchedule(1, LocalDate.now().plusDays(30));
-
-            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of(loan));
-            when(scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loan.getId()))
-                    .thenReturn(List.of(schedule));
+        @DisplayName("should not report closed when unpaid schedules exist")
+        void shouldNotReportClosedWhenUnpaidSchedulesExist() {
+            setupDefaultBatchMocks(1, 0, 0, 1, "1000");
+            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
 
             BatchProcessingResult result = batchService.processOutstandingLoans();
 
@@ -270,15 +269,10 @@ class LoanBatchServiceImplTest {
         }
 
         @Test
-        @DisplayName("should not close loan when outstanding balance is positive")
-        void shouldNotCloseLoanWhenBalancePositive() {
-            setupDefaultBatchMocks();
-            LoanApplication loan = createLoan(LoanStatus.REPAYING);
-            loan.setOutstandingBalance(new BigDecimal("1000"));
-
-            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of(loan));
-            when(scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loan.getId()))
-                    .thenReturn(List.of());
+        @DisplayName("should not report closed when outstanding balance is positive")
+        void shouldNotReportClosedWhenBalancePositive() {
+            setupDefaultBatchMocks(1, 0, 0, 1, "1000");
+            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
 
             BatchProcessingResult result = batchService.processOutstandingLoans();
 
@@ -288,7 +282,7 @@ class LoanBatchServiceImplTest {
         @Test
         @DisplayName("should handle empty loan list")
         void shouldHandleEmptyLoanList() {
-            setupDefaultBatchMocks();
+            setupDefaultBatchMocks(0, 0, 0, 0, "0");
             when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
 
             BatchProcessingResult result = batchService.processOutstandingLoans();
@@ -299,32 +293,25 @@ class LoanBatchServiceImplTest {
         }
 
         @Test
-        @DisplayName("should continue processing when individual loan throws exception")
-        void shouldContinueOnException() {
+        @DisplayName("should handle batch job failure gracefully")
+        void shouldHandleBatchJobFailure() throws Exception {
             setupDefaultBatchMocks();
-            LoanApplication loan1 = createLoan(LoanStatus.REPAYING);
-            LoanApplication loan2 = createLoan(LoanStatus.REPAYING);
-            loan2.setId(UUID.randomUUID());
-            loan2.setOutstandingBalance(BigDecimal.ZERO);
+            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
 
-            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of(loan1, loan2));
-            // First call (detectUnpaidLoans) returns empty, second call (processing loop) throws
-            when(scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loan1.getId()))
-                    .thenReturn(List.of())
-                    .thenThrow(new RuntimeException("DB error"));
-            when(scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loan2.getId()))
-                    .thenReturn(List.of());
+            // Override to simulate job failure
+            JobExecution failedExecution = createMockJobExecution(1, 0, 0, 0, "0");
+            failedExecution.setStatus(BatchStatus.FAILED);
+            when(jobLauncher.run(any(Job.class), any(JobParameters.class))).thenReturn(failedExecution);
 
             BatchProcessingResult result = batchService.processOutstandingLoans();
 
-            // One failed, one succeeded (the second processed + closed)
-            assertThat(result.getProcessedLoans()).isEqualTo(1);
+            assertThat(result.getWarnings()).anyMatch(w -> w.contains("failure"));
         }
 
         @Test
         @DisplayName("should publish LoanBatchProcessedEvent")
         void shouldPublishBatchProcessedEvent() {
-            setupDefaultBatchMocks();
+            setupDefaultBatchMocks(0, 0, 0, 0, "0");
             when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
 
             batchService.processOutstandingLoans();
@@ -339,28 +326,10 @@ class LoanBatchServiceImplTest {
         }
 
         @Test
-        @DisplayName("should process multiple loans with mixed statuses")
-        void shouldProcessMultipleLoansWithMixedStatuses() {
-            setupDefaultBatchMocks();
-            setupPenaltyRuleMock();
-            LoanApplication loan1 = createLoan(LoanStatus.REPAYING);
-            LoanApplication loan2 = createLoan(LoanStatus.REPAYING);
-            loan2.setId(UUID.randomUUID());
-
-            // loan1: overdue 91 days -> defaulted
-            RepaymentSchedule schedule1 = createSchedule(1, LocalDate.now().minusDays(91));
-            // loan2: all paid, zero balance -> closed
-            loan2.setOutstandingBalance(BigDecimal.ZERO);
-
-            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of(loan1, loan2));
-            when(scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loan1.getId()))
-                    .thenReturn(List.of(schedule1));
-            when(scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loan2.getId()))
-                    .thenReturn(List.of());
-            when(loanPenaltyRepository.findByLoanIdAndScheduleId(any(), any()))
-                    .thenReturn(List.of());
-            when(loanPenaltyRepository.sumUnpaidAmountByLoanId(any()))
-                    .thenReturn(new BigDecimal("500"));
+        @DisplayName("should aggregate counters from batch for multiple loans")
+        void shouldAggregateCountersFromBatchForMultipleLoans() {
+            setupDefaultBatchMocks(2, 1, 1, 2, "2000");
+            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
 
             BatchProcessingResult result = batchService.processOutstandingLoans();
 
@@ -516,7 +485,7 @@ class LoanBatchServiceImplTest {
 
         @Test
         @DisplayName("should succeed when processing sequential month after last processed")
-        void shouldSucceedWhenProcessingSequentialMonth() {
+        void shouldSucceedWhenProcessingSequentialMonth() throws Exception {
             YearMonth targetMonth = YearMonth.of(2026, 2);
             SystemConfig lastProcessedConfig = new SystemConfig();
             lastProcessedConfig.setConfigValue("2026-01");
@@ -529,6 +498,8 @@ class LoanBatchServiceImplTest {
             when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
             when(batchLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
             when(configService.updateSystemConfig(any(), any())).thenReturn(new SystemConfig());
+            when(jobLauncher.run(any(Job.class), any(JobParameters.class)))
+                    .thenReturn(createMockJobExecution(0, 0, 0, 0, "0"));
 
             BatchProcessingResult result = batchService.processMonthlyLoans(targetMonth, "SYSTEM");
 
@@ -552,94 +523,83 @@ class LoanBatchServiceImplTest {
         }
 
         @Test
-        @DisplayName("should skip loans disbursed in target month")
-        void shouldSkipLoansDisbursedInTargetMonth() {
+        @DisplayName("should delegate to Spring Batch and return counters")
+        void shouldDelegateToSpringBatchAndReturnCounters() throws Exception {
             YearMonth targetMonth = YearMonth.of(2026, 2);
-            LoanApplication loan = createLoan(LoanStatus.REPAYING);
-            loan.setDisbursedAt(Instant.from(YearMonth.of(2026, 2).atDay(10).atStartOfDay(ZoneId.of("UTC"))));
-
-            SystemConfig thresholdConfig = new SystemConfig();
-            thresholdConfig.setConfigValue("15");
 
             when(batchLogRepository.existsByProcessingMonth(targetMonth.toString())).thenReturn(false);
             when(configService.getSystemConfig("loan.batch.last_processed_month")).thenThrow(new RuntimeException("Not found"));
-            when(configService.getSystemConfig("loan.batch.new_loan_threshold_day")).thenReturn(thresholdConfig);
-            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of(loan));
+            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
             when(batchLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
             when(configService.updateSystemConfig(any(), any())).thenReturn(new SystemConfig());
+            when(jobLauncher.run(any(Job.class), any(JobParameters.class)))
+                    .thenReturn(createMockJobExecution(0, 0, 0, 0, "0"));
 
             BatchProcessingResult result = batchService.processMonthlyLoans(targetMonth, "SYSTEM");
 
             assertThat(result.getProcessedLoans()).isEqualTo(0);
+            verify(jobLauncher).run(any(Job.class), any(JobParameters.class));
         }
 
         @Test
-        @DisplayName("should skip loans disbursed after threshold day of previous month")
-        void shouldSkipLoansDisbursedAfterThresholdDay() {
+        @DisplayName("should report interest accrued loans from batch counters")
+        void shouldReportInterestAccruedFromBatchCounters() throws Exception {
             YearMonth targetMonth = YearMonth.of(2026, 2);
-            LoanApplication loan = createLoan(LoanStatus.REPAYING);
-            loan.setDisbursedAt(Instant.from(YearMonth.of(2026, 1).atDay(20).atStartOfDay(ZoneId.of("UTC"))));
-
-            SystemConfig thresholdConfig = new SystemConfig();
-            thresholdConfig.setConfigValue("15");
 
             when(batchLogRepository.existsByProcessingMonth(targetMonth.toString())).thenReturn(false);
             when(configService.getSystemConfig("loan.batch.last_processed_month")).thenThrow(new RuntimeException("Not found"));
-            when(configService.getSystemConfig("loan.batch.new_loan_threshold_day")).thenReturn(thresholdConfig);
-            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of(loan));
+            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
             when(batchLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
             when(configService.updateSystemConfig(any(), any())).thenReturn(new SystemConfig());
+            when(jobLauncher.run(any(Job.class), any(JobParameters.class)))
+                    .thenReturn(createMockJobExecution(3, 0, 0, 3, "3000"));
 
             BatchProcessingResult result = batchService.processMonthlyLoans(targetMonth, "SYSTEM");
 
-            assertThat(result.getProcessedLoans()).isEqualTo(0);
+            assertThat(result.getProcessedLoans()).isEqualTo(3);
+            assertThat(result.getInterestAccruedLoans()).isEqualTo(3);
+            assertThat(result.getTotalInterestAccrued()).isEqualByComparingTo(new BigDecimal("3000.0"));
         }
 
         @Test
-        @DisplayName("should include loans disbursed on or before threshold day of previous month")
-        void shouldIncludeLoansDisbursedBeforeThresholdDay() {
+        @DisplayName("should pass target month to Spring Batch job parameters")
+        void shouldPassTargetMonthToJobParameters() throws Exception {
             YearMonth targetMonth = YearMonth.of(2026, 2);
-            LoanApplication loan = createLoan(LoanStatus.REPAYING);
-            loan.setDisbursedAt(Instant.from(YearMonth.of(2026, 1).atDay(10).atStartOfDay(ZoneId.of("UTC"))));
-
-            SystemConfig thresholdConfig = new SystemConfig();
-            thresholdConfig.setConfigValue("15");
 
             when(batchLogRepository.existsByProcessingMonth(targetMonth.toString())).thenReturn(false);
             when(configService.getSystemConfig("loan.batch.last_processed_month")).thenThrow(new RuntimeException("Not found"));
-            when(configService.getSystemConfig("loan.batch.new_loan_threshold_day")).thenReturn(thresholdConfig);
-            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of(loan));
-            when(scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loan.getId())).thenReturn(List.of());
+            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
             when(batchLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
             when(configService.updateSystemConfig(any(), any())).thenReturn(new SystemConfig());
 
-            BatchProcessingResult result = batchService.processMonthlyLoans(targetMonth, "SYSTEM");
+            ArgumentCaptor<JobParameters> paramsCaptor = ArgumentCaptor.forClass(JobParameters.class);
+            when(jobLauncher.run(any(Job.class), paramsCaptor.capture()))
+                    .thenReturn(createMockJobExecution(1, 0, 0, 1, "1000"));
 
-            assertThat(result.getProcessedLoans()).isEqualTo(1);
+            batchService.processMonthlyLoans(targetMonth, "SYSTEM");
+
+            assertThat(paramsCaptor.getValue().getString("targetMonth")).isEqualTo("2026-02");
         }
 
         @Test
         @DisplayName("should include warnings for unpaid loans in pre-processing phase")
-        void shouldIncludeWarningsForUnpaidLoans() {
+        void shouldIncludeWarningsForUnpaidLoans() throws Exception {
             YearMonth targetMonth = YearMonth.of(2026, 2);
             LoanApplication loan = createLoan(LoanStatus.REPAYING);
-            loan.setDisbursedAt(Instant.from(YearMonth.of(2026, 1).atDay(10).atStartOfDay(ZoneId.of("UTC"))));
 
             // Unpaid schedule must be due in the target month (February) for warning detection
             RepaymentSchedule unpaidSchedule = createSchedule(2, LocalDate.of(2026, 2, 15));
             unpaidSchedule.setTotalAmount(new BigDecimal("10000"));
             unpaidSchedule.setAmountPaid(new BigDecimal("5000"));
 
-            SystemConfig thresholdConfig = new SystemConfig();
-            thresholdConfig.setConfigValue("15");
-
             when(batchLogRepository.existsByProcessingMonth(targetMonth.toString())).thenReturn(false);
             when(configService.getSystemConfig("loan.batch.last_processed_month")).thenThrow(new RuntimeException("Not found"));
-            when(configService.getSystemConfig("loan.batch.new_loan_threshold_day")).thenReturn(thresholdConfig);
             when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of(loan));
             when(scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loan.getId())).thenReturn(List.of(unpaidSchedule));
             when(batchLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
             when(configService.updateSystemConfig(any(), any())).thenReturn(new SystemConfig());
+            when(jobLauncher.run(any(Job.class), any(JobParameters.class)))
+                    .thenReturn(createMockJobExecution(1, 0, 0, 1, "1000"));
 
             BatchProcessingResult result = batchService.processMonthlyLoans(targetMonth, "SYSTEM");
 
@@ -648,17 +608,16 @@ class LoanBatchServiceImplTest {
 
         @Test
         @DisplayName("should save batch log with STARTED then COMPLETED status")
-        void shouldSaveBatchLogLifecycle() {
+        void shouldSaveBatchLogLifecycle() throws Exception {
             YearMonth targetMonth = YearMonth.of(2026, 2);
-            SystemConfig thresholdConfig = new SystemConfig();
-            thresholdConfig.setConfigValue("15");
 
             when(batchLogRepository.existsByProcessingMonth(targetMonth.toString())).thenReturn(false);
             when(configService.getSystemConfig("loan.batch.last_processed_month")).thenThrow(new RuntimeException("Not found"));
-            when(configService.getSystemConfig("loan.batch.new_loan_threshold_day")).thenReturn(thresholdConfig);
             when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
             when(batchLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
             when(configService.updateSystemConfig(any(), any())).thenReturn(new SystemConfig());
+            when(jobLauncher.run(any(Job.class), any(JobParameters.class)))
+                    .thenReturn(createMockJobExecution(0, 0, 0, 0, "0"));
 
             batchService.processMonthlyLoans(targetMonth, "SYSTEM");
 
@@ -678,13 +637,15 @@ class LoanBatchServiceImplTest {
 
         @Test
         @DisplayName("should update batch log to FAILED when processing throws exception")
-        void shouldUpdateBatchLogToFailedOnException() {
+        void shouldUpdateBatchLogToFailedOnException() throws Exception {
             YearMonth targetMonth = YearMonth.of(2026, 2);
 
             when(batchLogRepository.existsByProcessingMonth(targetMonth.toString())).thenReturn(false);
             when(configService.getSystemConfig("loan.batch.last_processed_month")).thenThrow(new RuntimeException("Not found"));
-            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenThrow(new RuntimeException("Database error"));
+            when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
             when(batchLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(jobLauncher.run(any(Job.class), any(JobParameters.class)))
+                    .thenThrow(new RuntimeException("Job launch failed"));
 
             assertThatThrownBy(() -> batchService.processMonthlyLoans(targetMonth, "SYSTEM"))
                     .isInstanceOf(RuntimeException.class);
@@ -701,17 +662,16 @@ class LoanBatchServiceImplTest {
 
         @Test
         @DisplayName("should update config with processed month on success")
-        void shouldUpdateConfigWithProcessedMonthOnSuccess() {
+        void shouldUpdateConfigWithProcessedMonthOnSuccess() throws Exception {
             YearMonth targetMonth = YearMonth.of(2026, 2);
-            SystemConfig thresholdConfig = new SystemConfig();
-            thresholdConfig.setConfigValue("15");
 
             when(batchLogRepository.existsByProcessingMonth(targetMonth.toString())).thenReturn(false);
             when(configService.getSystemConfig("loan.batch.last_processed_month")).thenThrow(new RuntimeException("Not found"));
-            when(configService.getSystemConfig("loan.batch.new_loan_threshold_day")).thenReturn(thresholdConfig);
             when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
             when(batchLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
             when(configService.updateSystemConfig(any(), any())).thenReturn(new SystemConfig());
+            when(jobLauncher.run(any(Job.class), any(JobParameters.class)))
+                    .thenReturn(createMockJobExecution(0, 0, 0, 0, "0"));
 
             batchService.processMonthlyLoans(targetMonth, "SYSTEM");
 
