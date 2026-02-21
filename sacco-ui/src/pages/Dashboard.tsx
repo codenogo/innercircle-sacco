@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { ArrowUpRight, ArrowDownRight, TrendingUp } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, TrendUp } from '@phosphor-icons/react'
 import { SkeletonRow, SkeletonStat } from '../components/Skeleton'
 import { DataTable, type ColumnDef } from '../components/DataTable'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
@@ -164,7 +164,7 @@ export function Dashboard() {
           </div>
           <div className="collection-rate">
             <div className="collection-rate-number">
-              <TrendingUp size={14} strokeWidth={1.75} />
+              <TrendUp size={14} />
               <span className="data">{collectionRate.toFixed(1)}%</span>
             </div>
             <span className="collection-rate-label">Recovery Rate</span>
@@ -190,7 +190,7 @@ export function Dashboard() {
               key: 'contributions',
               label: (
                 <span className="entry-type entry-type--in">
-                  <ArrowDownRight size={12} strokeWidth={2} />
+                  <ArrowDownRight size={12} weight="bold" />
                   Total Contributions
                 </span>
               ),
@@ -200,7 +200,7 @@ export function Dashboard() {
               key: 'payouts',
               label: (
                 <span className="entry-type entry-type--out">
-                  <ArrowUpRight size={12} strokeWidth={2} />
+                  <ArrowUpRight size={12} weight="bold" />
                   Total Payouts
                 </span>
               ),

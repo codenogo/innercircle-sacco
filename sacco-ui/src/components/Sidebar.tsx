@@ -1,19 +1,19 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard,
+  SquaresFour,
   Users,
   Wallet,
   HandCoins,
-  Landmark,
-  ArrowDownToLine,
+  Bank,
+  ArrowLineDown,
   BookOpen,
-  BarChart3,
-  BriefcaseBusiness,
-  Settings,
-  UserCog,
-  LogOut,
+  ChartBar,
+  Briefcase,
+  Gear,
+  UserGear,
+  Power,
   X,
-} from 'lucide-react'
+} from '@phosphor-icons/react'
 import { useAuth } from '../hooks/useAuth'
 import { useAuthorization } from '../hooks/useAuthorization'
 import { useCurrentUser } from '../hooks/useCurrentUser'
@@ -21,15 +21,15 @@ import type { UserRole } from '../types/roles'
 import './Sidebar.css'
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Overview', allowed: ['ADMIN', 'TREASURER'] as UserRole[] },
+  { to: '/', icon: SquaresFour, label: 'Overview', allowed: ['ADMIN', 'TREASURER'] as UserRole[] },
   { to: '/members', icon: Users, label: 'Members', allowed: ['ADMIN', 'TREASURER', 'MEMBER'] as UserRole[] },
   { to: '/contributions', icon: Wallet, label: 'Contributions', allowed: ['ADMIN', 'TREASURER', 'MEMBER'] as UserRole[] },
-  { to: '/loans', icon: Landmark, label: 'Loans', allowed: ['ADMIN', 'TREASURER', 'MEMBER'] as UserRole[] },
-  { to: '/payouts', icon: ArrowDownToLine, label: 'Payouts', allowed: ['ADMIN', 'TREASURER', 'MEMBER'] as UserRole[] },
+  { to: '/loans', icon: Bank, label: 'Loans', allowed: ['ADMIN', 'TREASURER', 'MEMBER'] as UserRole[] },
+  { to: '/payouts', icon: ArrowLineDown, label: 'Payouts', allowed: ['ADMIN', 'TREASURER', 'MEMBER'] as UserRole[] },
   { to: '/petty-cash', icon: HandCoins, label: 'Petty Cash', allowed: ['ADMIN', 'TREASURER'] as UserRole[] },
   { to: '/ledger', icon: BookOpen, label: 'Ledger', allowed: ['ADMIN', 'TREASURER'] as UserRole[] },
-  { to: '/reports', icon: BarChart3, label: 'Reports', allowed: ['ADMIN', 'TREASURER'] as UserRole[] },
-  { to: '/operations', icon: BriefcaseBusiness, label: 'Operations', allowed: ['ADMIN', 'TREASURER'] as UserRole[] },
+  { to: '/reports', icon: ChartBar, label: 'Reports', allowed: ['ADMIN', 'TREASURER'] as UserRole[] },
+  { to: '/operations', icon: Briefcase, label: 'Operations', allowed: ['ADMIN', 'TREASURER'] as UserRole[] },
 ]
 
 interface SidebarProps {
@@ -73,7 +73,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             <span className="sidebar-title">InnerCircle</span>
           </div>
           <button className="sidebar-close" onClick={onClose} aria-label="Close menu">
-            <X size={16} strokeWidth={1.75} />
+            <X size={16} />
           </button>
         </div>
 
@@ -90,7 +90,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               }
               onClick={onClose}
             >
-              <Icon size={16} strokeWidth={1.75} />
+              <Icon size={16} />
               <span>{label}</span>
               {to === '/' && location.pathname === '/' && (
                 <span className="sidebar-indicator" />
@@ -109,7 +109,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               }
               onClick={onClose}
             >
-              <Settings size={16} strokeWidth={1.75} />
+              <Gear size={16} />
               <span>Settings</span>
             </NavLink>
           )}
@@ -120,7 +120,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             }
             onClick={onClose}
           >
-            <UserCog size={16} strokeWidth={1.75} />
+            <UserGear size={16} />
             <span>My Profile</span>
           </NavLink>
 
@@ -132,7 +132,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             </div>
           </div>
           <button type="button" className="sidebar-logout" onClick={handleLogout}>
-            <LogOut size={14} strokeWidth={1.75} />
+            <Power size={14} />
             <span>Sign Out</span>
           </button>
         </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AlertTriangle } from 'lucide-react'
+import { Warning } from '@phosphor-icons/react'
 import { Modal } from './Modal'
 import './MakerCheckerWarning.css'
 
@@ -68,7 +68,7 @@ export function MakerCheckerWarning({
     >
       <div className="maker-checker-warning">
         <div className="maker-checker-warning__icon">
-          <AlertTriangle size={20} strokeWidth={1.75} />
+          <Warning size={20} />
         </div>
         <p className="maker-checker-warning__message">
           You cannot {action} this record because you created it. A different authorized user must {action} it.

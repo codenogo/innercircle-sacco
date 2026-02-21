@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react'
+import { SpinnerGap } from '@phosphor-icons/react'
 
 interface SpinnerProps {
   size?: 'sm' | 'md' | 'lg'
@@ -10,7 +10,7 @@ const SIZES = { sm: 14, md: 20, lg: 28 } as const
 export function Spinner({ size = 'md', muted }: SpinnerProps) {
   return (
     <span className={`spinner spinner--${size}${muted ? ' spinner--muted' : ''}`}>
-      <Loader2 size={SIZES[size]} strokeWidth={2} />
+      <SpinnerGap size={SIZES[size]} weight="bold" />
     </span>
   )
 }

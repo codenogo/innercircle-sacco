@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Plus, Search } from 'lucide-react'
+import { Plus, MagnifyingGlass } from '@phosphor-icons/react'
 import { Spinner } from '../components/Spinner'
 import { DataTable, type ColumnDef } from '../components/DataTable'
 import { MonthPicker } from '../components/MonthPicker'
@@ -461,7 +461,7 @@ export function PettyCash() {
           <p className="page-subtitle">Voucher workflow: submit, approve, disburse, settle</p>
         </div>
         <button type="button" className="btn btn--primary" onClick={() => setShowCreateModal(true)}>
-          <Plus size={14} strokeWidth={2} />
+          <Plus size={14} weight="bold" />
           New Voucher
         </button>
       </div>
@@ -500,7 +500,7 @@ export function PettyCash() {
       <section className="page-section">
         <div className="filter-bar">
           <div className="filter-search-wrap">
-            <Search size={14} strokeWidth={1.75} className="filter-search-icon" />
+            <MagnifyingGlass size={14} className="filter-search-icon" />
             <input
               type="text"
               className="filter-search"

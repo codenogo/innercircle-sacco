@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Calendar, CaretLeft, CaretRight } from '@phosphor-icons/react'
 import './DatePicker.css'
 
 interface DatePickerProps {
@@ -179,7 +179,7 @@ export function DatePicker({ value, onChange, required }: DatePickerProps) {
         aria-haspopup="dialog"
         aria-expanded={open}
       >
-        <Calendar size={14} strokeWidth={1.75} />
+        <Calendar size={14} />
         <span className="datepicker-trigger-text">
           {value ? formatDisplay(value) : 'Select date'}
         </span>
@@ -198,13 +198,13 @@ export function DatePicker({ value, onChange, required }: DatePickerProps) {
         >
           <div className="datepicker-header">
             <button type="button" className="datepicker-nav" onClick={prevMonth} aria-label="Previous month">
-              <ChevronLeft size={16} strokeWidth={2} />
+              <CaretLeft size={16} weight="bold" />
             </button>
             <span className="datepicker-month-label">
               {MONTHS[viewMonth]} {viewYear}
             </span>
             <button type="button" className="datepicker-nav" onClick={nextMonth} aria-label="Next month">
-              <ChevronRight size={16} strokeWidth={2} />
+              <CaretRight size={16} weight="bold" />
             </button>
           </div>
 

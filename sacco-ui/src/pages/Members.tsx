@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Search, UserPlus } from 'lucide-react'
+import { MagnifyingGlass, UserPlus } from '@phosphor-icons/react'
 import { Spinner } from '../components/Spinner'
 import { Link } from 'react-router-dom'
 import { AddMemberModal } from '../components/AddMemberModal'
@@ -208,7 +208,7 @@ export function Members() {
         </div>
         {canCreateMember && (
           <button className="btn btn--primary" onClick={() => setShowModal(true)}>
-            <UserPlus size={14} strokeWidth={2} />
+            <UserPlus size={14} weight="bold" />
             Add Member
           </button>
         )}
@@ -236,7 +236,7 @@ export function Members() {
 
       <div className="filter-bar">
         <div className="filter-search-wrap">
-          <Search size={14} strokeWidth={1.75} className="filter-search-icon" />
+          <MagnifyingGlass size={14} className="filter-search-icon" />
           <input
             type="text"
             className="filter-search"

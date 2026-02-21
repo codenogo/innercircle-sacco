@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { Check } from 'lucide-react'
+import { Check } from '@phosphor-icons/react'
 import { forgotPassword } from '../services/authService'
 import { ApiError } from '../services/apiClient'
 

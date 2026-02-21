@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { FileText, Download, BarChart3, TrendingUp, Users, Wallet, Search } from 'lucide-react'
+import { FileText, DownloadSimple, ChartBar, TrendUp, Users, Wallet, MagnifyingGlass, type Icon } from '@phosphor-icons/react'
 import { Spinner } from '../components/Spinner'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { ApiError } from '../services/apiClient'
@@ -17,7 +17,7 @@ interface ReportDefinition {
   id: string
   title: string
   description: string
-  icon: typeof FileText
+  icon: Icon
   formats: string[]
 }
 
@@ -26,7 +26,7 @@ const reports: ReportDefinition[] = [
     id: 'financial-summary',
     title: 'Financial Summary',
     description: 'Overview of group fund, income, expenses, and balances for a given period.',
-    icon: BarChart3,
+    icon: ChartBar,
     formats: ['CSV'],
   },
   {
@@ -40,7 +40,7 @@ const reports: ReportDefinition[] = [
     id: 'loan-portfolio',
     title: 'Loan Portfolio Report',
     description: 'Active loans, repayment schedules, interest accrued, and arrears summary.',
-    icon: TrendingUp,
+    icon: TrendUp,
     formats: ['PDF', 'CSV'],
   },
   {
@@ -61,7 +61,7 @@ const reports: ReportDefinition[] = [
     id: 'trial-balance',
     title: 'Trial Balance',
     description: 'Summary of all ledger account balances — debits and credits for the period.',
-    icon: BarChart3,
+    icon: ChartBar,
     formats: ['PDF', 'CSV'],
   },
 ]
@@ -254,7 +254,7 @@ export function Reports() {
           <div className="reports-member-modal" onClick={e => e.stopPropagation()}>
             <h3 className="reports-member-modal-title">Select Member for Statement</h3>
             <div className="reports-member-search-wrap">
-              <Search size={14} strokeWidth={1.75} className="reports-member-search-icon" />
+              <MagnifyingGlass size={14} className="reports-member-search-icon" />
               <input
                 type="text"
                 className="reports-member-search"
@@ -312,7 +312,7 @@ export function Reports() {
               <div key={r.id} className="report-card">
                 <div className="report-card-info">
                   <div className="report-card-header">
-                    <Icon size={15} strokeWidth={1.75} className="report-card-icon" />
+                    <Icon size={15} className="report-card-icon" />
                     <span className="report-card-title">{r.title}</span>
                   </div>
                   <span className="report-card-desc">{r.description}</span>
@@ -338,7 +338,7 @@ export function Reports() {
                         {isDownloading ? (
                           <Spinner size="sm" />
                         ) : (
-                          <Download size={11} strokeWidth={2} />
+                          <DownloadSimple size={11} weight="bold" />
                         )}
                         {isDownloading ? 'Downloading...' : isAvailable ? f : `${f} (Soon)`}
                       </button>

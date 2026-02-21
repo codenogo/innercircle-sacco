@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Landmark, Search } from 'lucide-react'
+import { Bank, MagnifyingGlass } from '@phosphor-icons/react'
 import { Spinner } from '../components/Spinner'
 import { DataTable } from '../components/DataTable'
 import type { ColumnDef } from '../components/DataTable'
@@ -346,7 +346,7 @@ export function Loans() {
         </div>
         {canManageLoans && (
           <button className="btn btn--primary" onClick={() => setShowModal(true)}>
-            <Landmark size={14} strokeWidth={2} />
+            <Bank size={14} weight="bold" />
             New Loan Application
           </button>
         )}
@@ -390,7 +390,7 @@ export function Loans() {
       {/* Search bar */}
       <div className="filter-bar">
         <div className="filter-search-wrap">
-          <Search size={14} strokeWidth={1.75} className="filter-search-icon" />
+          <MagnifyingGlass size={14} className="filter-search-icon" />
           <input
             type="text"
             className="filter-search"

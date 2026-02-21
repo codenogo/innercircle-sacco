@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Calendar, CaretLeft, CaretRight } from '@phosphor-icons/react'
 import './MonthPicker.css'
 
 interface MonthPickerProps {
@@ -61,7 +61,7 @@ export function MonthPicker({ value, onChange }: MonthPickerProps) {
         aria-haspopup="dialog"
         aria-expanded={open}
       >
-        <Calendar size={14} strokeWidth={1.75} />
+        <Calendar size={14} />
         {displayText}
       </button>
 
@@ -69,11 +69,11 @@ export function MonthPicker({ value, onChange }: MonthPickerProps) {
         <div className="monthpicker-panel" role="dialog" aria-label="Choose month">
           <div className="monthpicker-header">
             <button type="button" className="monthpicker-nav" onClick={() => setViewYear(y => y - 1)} aria-label="Previous year">
-              <ChevronLeft size={16} strokeWidth={2} />
+              <CaretLeft size={16} weight="bold" />
             </button>
             <span className="monthpicker-year">{viewYear}</span>
             <button type="button" className="monthpicker-nav" onClick={() => setViewYear(y => y + 1)} aria-label="Next year">
-              <ChevronRight size={16} strokeWidth={2} />
+              <CaretRight size={16} weight="bold" />
             </button>
           </div>
 
