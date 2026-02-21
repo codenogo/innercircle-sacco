@@ -56,8 +56,8 @@ public class FinancialReportServiceImpl implements FinancialReportService {
                 fromDate.atStartOfDay(), toDate.plusDays(1).atStartOfDay());
 
         BigDecimal totalPenalties = querySum(
-                "SELECT COALESCE(SUM(amount), 0) FROM contribution_penalties WHERE applied_date BETWEEN ? AND ?",
-                fromDate, toDate);
+                "SELECT COALESCE(SUM(amount), 0) FROM contribution_penalties WHERE created_at BETWEEN ? AND ?",
+                fromDate.atStartOfDay(), toDate.plusDays(1).atStartOfDay());
 
         BigDecimal netPosition = totalContributions.add(totalRepayments).add(totalPenalties)
                 .subtract(totalLoansDisbursed).subtract(totalPayouts);
