@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Check } from 'lucide-react'
+import { Check } from '@phosphor-icons/react'
 import { validatePasswordConfirmation } from '../utils/auth'
 import { resetPassword } from '../services/authService'
 import { ApiError } from '../services/apiClient'

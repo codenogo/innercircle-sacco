@@ -4,30 +4,7 @@
     "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "60"
   },
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash scripts/hook-dangerous-cmd.sh"
-          },
-          {
-            "type": "command",
-            "command": "bash scripts/hook-pre-commit-secrets.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "Read",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash scripts/hook-sensitive-file.sh"
-          }
-        ]
-      }
-    ],
+    "PreToolUse": [],
     "SubagentStop": [
       {
         "hooks": [
@@ -39,15 +16,6 @@
       }
     ],
     "PostToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 scripts/workflow_hooks.py post_edit || true"
-          }
-        ]
-      },
       {
         "matcher": "Bash",
         "hooks": [

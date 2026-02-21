@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronRight, ChevronDown, Search, Download } from 'lucide-react'
+import { CaretRight, CaretDown, MagnifyingGlass, DownloadSimple } from '@phosphor-icons/react'
 import { Select } from '../components/Select'
 import { DatePicker } from '../components/DatePicker'
 import { Spinner } from '../components/Spinner'
@@ -324,7 +324,7 @@ export function Ledger() {
               aria-label={row.isExpanded ? `Collapse ${row.entry.entryNumber}` : `Expand ${row.entry.entryNumber}`}
               onClick={() => toggleExpanded(row.entry.id)}
             >
-              {row.isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              {row.isExpanded ? <CaretDown size={12} /> : <CaretRight size={12} />}
             </button>
             {row.entry.entryNumber}
           </>
@@ -456,7 +456,7 @@ export function Ledger() {
           disabled={totalElements === 0 || exporting}
           onClick={() => void handleExportCsv()}
         >
-          <Download size={14} strokeWidth={2} />
+          <DownloadSimple size={14} weight="bold" />
           {exporting ? 'Exporting…' : 'Export CSV'}
         </button>
       </div>
@@ -477,7 +477,7 @@ export function Ledger() {
       {/* Filter bar */}
       <div className="filter-bar ledger-filter-bar">
         <div className="filter-search-wrap">
-          <Search size={14} strokeWidth={1.75} className="filter-search-icon" />
+          <MagnifyingGlass size={16} className="filter-search-icon" />
           <input
             type="text"
             className="filter-search"

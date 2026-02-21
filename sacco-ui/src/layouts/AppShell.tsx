@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from '../components/Sidebar'
-import { Menu } from 'lucide-react'
+import { List } from '@phosphor-icons/react'
 import './AppShell.css'
 
 export function AppShell() {
@@ -11,7 +11,7 @@ export function AppShell() {
     <div className="app-shell">
       <div className="mobile-header">
         <button className="mobile-menu-btn" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
-          <Menu size={18} strokeWidth={1.75} />
+          <List size={18} />
         </button>
         <div className="mobile-brand">
           <span className="mobile-monogram">IC</span>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { Search, UserPlus } from 'lucide-react'
+import { MagnifyingGlass, UserPlus } from '@phosphor-icons/react'
 import { DataTable, type ColumnDef } from '../components/DataTable'
 import { Spinner } from '../components/Spinner'
 import { Modal } from '../components/Modal'
@@ -404,7 +404,7 @@ export function UsersAdmin() {
           <p className="page-subtitle">User lifecycle and role management</p>
         </div>
         <button type="button" className="btn btn--primary" onClick={() => setShowCreateModal(true)}>
-          <UserPlus size={14} strokeWidth={2} />
+          <UserPlus size={14} weight="bold" />
           Create User
         </button>
       </div>
@@ -431,7 +431,7 @@ export function UsersAdmin() {
 
       <div className="filter-bar">
         <div className="filter-search-wrap">
-          <Search size={14} strokeWidth={1.75} className="filter-search-icon" />
+          <MagnifyingGlass size={16} className="filter-search-icon" />
           <input
             type="text"
             className="filter-search"

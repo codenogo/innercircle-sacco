@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, Check, Search } from 'lucide-react'
+import { CaretDown, Check, MagnifyingGlass } from '@phosphor-icons/react'
 import './Select.css'
 
 interface SelectOption {
@@ -157,7 +157,7 @@ export function Select({ value, onChange, options, placeholder = 'Select...', re
         <span className="select-trigger-text">
           {selected ? selected.label : placeholder}
         </span>
-        <ChevronDown size={14} strokeWidth={2} className={`select-chevron ${open ? 'select-chevron--open' : ''}`} />
+        <CaretDown size={14} weight="bold" className={`select-chevron ${open ? 'select-chevron--open' : ''}`} />
       </button>
 
       {required && (
@@ -182,7 +182,7 @@ export function Select({ value, onChange, options, placeholder = 'Select...', re
         >
           {searchable && (
             <div className="select-search-wrap">
-              <Search size={12} strokeWidth={2} className="select-search-icon" />
+              <MagnifyingGlass size={12} weight="bold" className="select-search-icon" />
               <input
                 ref={searchRef}
                 type="text"
@@ -211,7 +211,7 @@ export function Select({ value, onChange, options, placeholder = 'Select...', re
                   aria-selected={o.value === value}
                 >
                   <span className="select-option-label">{o.label}</span>
-                  {o.value === value && <Check size={14} strokeWidth={2} className="select-option-check" />}
+                  {o.value === value && <Check size={14} weight="bold" className="select-option-check" />}
                 </button>
               ))
             )}

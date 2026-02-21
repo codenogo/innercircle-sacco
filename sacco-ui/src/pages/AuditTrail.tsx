@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Download } from 'lucide-react'
+import { DownloadSimple } from '@phosphor-icons/react'
 import { Spinner } from '../components/Spinner'
 import { DataTable, type ColumnDef } from '../components/DataTable'
 import { ApiError } from '../services/apiClient'
@@ -173,7 +173,7 @@ export function AuditTrail() {
           disabled={exporting}
           onClick={() => void handleExportCsv()}
         >
-          <Download size={14} strokeWidth={2} />
+          <DownloadSimple size={14} weight="bold" />
           {exporting ? 'Exporting...' : 'Export CSV'}
         </button>
       </div>

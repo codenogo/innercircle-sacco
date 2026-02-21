@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react'
-import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react'
+import { CheckCircle, XCircle, Warning, Info, X } from '@phosphor-icons/react'
 
 type AlertVariant = 'success' | 'error' | 'warning' | 'info'
 
@@ -11,10 +11,10 @@ interface AlertProps {
 }
 
 const ICONS: Record<AlertVariant, ReactNode> = {
-  success: <CheckCircle2 size={16} strokeWidth={1.75} />,
-  error:   <XCircle size={16} strokeWidth={1.75} />,
-  warning: <AlertTriangle size={16} strokeWidth={1.75} />,
-  info:    <Info size={16} strokeWidth={1.75} />,
+  success: <CheckCircle size={16} />,
+  error:   <XCircle size={16} />,
+  warning: <Warning size={16} />,
+  info:    <Info size={16} />,
 }
 
 export function Alert({ variant, title, children, onDismiss }: AlertProps) {
@@ -27,7 +27,7 @@ export function Alert({ variant, title, children, onDismiss }: AlertProps) {
       </div>
       {onDismiss && (
         <button className="alert-dismiss" onClick={onDismiss} aria-label="Dismiss">
-          <X size={14} strokeWidth={1.75} />
+          <X size={14} />
         </button>
       )}
     </div>

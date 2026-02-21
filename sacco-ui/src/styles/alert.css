@@ -16,25 +16,25 @@
 .alert--success {
   color: var(--mpesa-text);
   background: var(--mpesa-soft);
-  border-color: rgba(58, 125, 68, 0.15);
+  border-color: transparent;
 }
 
 .alert--error {
   color: var(--deficit);
   background: var(--deficit-soft);
-  border-color: rgba(185, 74, 61, 0.15);
+  border-color: transparent;
 }
 
 .alert--warning {
   color: var(--caution);
   background: var(--caution-soft);
-  border-color: rgba(192, 138, 21, 0.15);
+  border-color: transparent;
 }
 
 .alert--info {
   color: var(--info);
   background: var(--info-soft);
-  border-color: rgba(74, 111, 165, 0.15);
+  border-color: transparent;
 }
 
 /* ─── Icon ─── */

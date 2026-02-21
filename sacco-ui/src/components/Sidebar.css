@@ -91,7 +91,6 @@
 .sidebar-link--active {
   color: var(--ink);
   font-weight: 600;
-  background: linear-gradient(to right, var(--mpesa-soft), transparent 80%);
 }
 
 .sidebar-link:focus-visible {
@@ -211,14 +210,14 @@
 @media (max-width: 768px) {
   .sidebar {
     transform: translateX(-100%);
-    transition: transform 200ms ease-out;
+    transition: transform var(--ease-medium);
     z-index: 100;
     box-shadow: none;
   }
 
   .sidebar--open {
     transform: translateX(0);
-    box-shadow: 4px 0 24px rgba(30, 32, 48, 0.08);
+    box-shadow: var(--shadow-lg);
   }
 
   .sidebar-close {

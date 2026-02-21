@@ -31,15 +31,6 @@
   gap: var(--space-1);
 }
 
-.btn--danger-text {
-  color: var(--deficit);
-}
-
-.btn--danger-text:hover {
-  color: var(--deficit);
-  background: var(--deficit-soft);
-}
-
 .loan-date {
   display: block;
   font-size: var(--text-xs);

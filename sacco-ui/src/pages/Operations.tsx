@@ -1,21 +1,21 @@
 import { Link } from 'react-router-dom'
-import type { LucideIcon } from 'lucide-react'
+import type { Icon } from '@phosphor-icons/react'
 import {
-  UsersRound,
-  UserSquare2,
+  UsersThree,
+  UserSquare,
   HandCoins,
-  CircleDollarSign,
-  Landmark,
-  Blocks,
+  CurrencyCircleDollar,
+  Bank,
+  Stack,
   Gift,
   Wallet,
   BookOpen,
-  Download,
-  LayoutDashboard,
+  DownloadSimple,
+  SquaresFour,
   SlidersHorizontal,
-  History,
-  UserCog,
-} from 'lucide-react'
+  ClockCounterClockwise,
+  UserGear,
+} from '@phosphor-icons/react'
 import { useAuthorization } from '../hooks/useAuthorization'
 import type { UserRole } from '../types/roles'
 import './Operations.css'
@@ -25,7 +25,7 @@ interface OperationLink {
   title: string
   description: string
   api: string
-  icon: LucideIcon
+  icon: Icon
   allowed: UserRole[]
   status: 'ready' | 'preview'
   previewNote?: string
@@ -37,7 +37,7 @@ const operationLinks: OperationLink[] = [
     title: 'User Administration',
     description: 'Manage user accounts, roles, lock states, and admin resets.',
     api: '/api/v1/users, /api/v1/admin/users',
-    icon: UsersRound,
+    icon: UsersThree,
     allowed: ['ADMIN'],
     status: 'ready',
   },
@@ -46,7 +46,7 @@ const operationLinks: OperationLink[] = [
     title: 'Member Profile',
     description: 'Open member details, lifecycle actions, and account snapshots.',
     api: '/api/v1/members/{id}',
-    icon: UserSquare2,
+    icon: UserSquare,
     allowed: ['ADMIN', 'TREASURER', 'MEMBER'],
     status: 'ready',
   },
@@ -64,7 +64,7 @@ const operationLinks: OperationLink[] = [
     title: 'Contribution Operations',
     description: 'Bulk processing, confirmation, and reversals.',
     api: '/api/v1/contributions/*',
-    icon: CircleDollarSign,
+    icon: CurrencyCircleDollar,
     allowed: ['ADMIN', 'TREASURER'],
     status: 'ready',
   },
@@ -73,7 +73,7 @@ const operationLinks: OperationLink[] = [
     title: 'Loan Workflow',
     description: 'Application, approval, disbursement, repayment, and schedules.',
     api: '/api/v1/loans/*',
-    icon: Landmark,
+    icon: Bank,
     allowed: ['ADMIN', 'TREASURER'],
     status: 'ready',
   },
@@ -82,7 +82,7 @@ const operationLinks: OperationLink[] = [
     title: 'Loan Batch',
     description: 'Monthly batch processing, unpaid loans, and reversals.',
     api: '/api/v1/loans/batch/*',
-    icon: Blocks,
+    icon: Stack,
     allowed: ['ADMIN', 'TREASURER'],
     status: 'preview',
     previewNote: 'UI preview only',
@@ -131,7 +131,7 @@ const operationLinks: OperationLink[] = [
     title: 'Export Center',
     description: 'Generate PDF/CSV statement and summary exports.',
     api: '/api/v1/export/*',
-    icon: Download,
+    icon: DownloadSimple,
     allowed: ['ADMIN', 'TREASURER'],
     status: 'preview',
     previewNote: 'UI preview only',
@@ -141,7 +141,7 @@ const operationLinks: OperationLink[] = [
     title: 'Role Dashboards',
     description: 'Member, treasurer, admin views plus analytics endpoints.',
     api: '/api/v1/dashboard/*',
-    icon: LayoutDashboard,
+    icon: SquaresFour,
     allowed: ['ADMIN', 'TREASURER'],
     status: 'preview',
     previewNote: 'UI preview only',
@@ -161,7 +161,7 @@ const operationLinks: OperationLink[] = [
     title: 'Audit Trail',
     description: 'Audit event search, entity history, and CSV export.',
     api: '/api/v1/audit/*',
-    icon: History,
+    icon: ClockCounterClockwise,
     allowed: ['ADMIN'],
     status: 'ready',
   },
@@ -170,7 +170,7 @@ const operationLinks: OperationLink[] = [
     title: 'My Profile',
     description: 'Current authenticated user details and security state.',
     api: '/api/v1/me',
-    icon: UserCog,
+    icon: UserGear,
     allowed: ['ADMIN', 'TREASURER', 'MEMBER'],
     status: 'ready',
   },
@@ -202,7 +202,7 @@ export function Operations() {
                 <div key={item.to} className="report-card ops-link-card ops-link-card--disabled" aria-disabled="true">
                   <div className="report-card-info">
                     <div className="ops-card-title-row">
-                      <Icon size={15} strokeWidth={1.75} className="ops-card-icon" />
+                      <Icon size={15} className="ops-card-icon" />
                       <span className="report-card-title">{item.title}</span>
                       <span className="badge badge--pending">Preview</span>
                     </div>
@@ -218,7 +218,7 @@ export function Operations() {
               <Link key={item.to} to={item.to} className="report-card ops-link-card">
                 <div className="report-card-info">
                   <div className="ops-card-title-row">
-                    <Icon size={15} strokeWidth={1.75} className="ops-card-icon" />
+                    <Icon size={15} className="ops-card-icon" />
                     <span className="report-card-title">{item.title}</span>
                   </div>
                   <span className="report-card-desc">{item.description}</span>

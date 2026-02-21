@@ -1,4 +1,4 @@
-import { FileDown } from 'lucide-react'
+import { FileArrowDown } from '@phosphor-icons/react'
 import './Operations.css'
 
 interface ExportItem {
@@ -30,7 +30,7 @@ export function ExportCenter() {
           <div key={item.endpoint} className="report-card">
             <div className="report-card-info">
               <div className="ops-card-title-row">
-                <FileDown size={15} strokeWidth={1.75} className="ops-card-icon" />
+                <FileArrowDown size={15} className="ops-card-icon" />
                 <span className="report-card-title">{item.name}</span>
               </div>
               <span className="ops-card-api data">{item.endpoint}</span>

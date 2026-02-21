@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowDownToLine, Search } from 'lucide-react'
+import { ArrowLineDown, MagnifyingGlass } from '@phosphor-icons/react'
 import { Spinner } from '../components/Spinner'
 import { DataTable, type ColumnDef } from '../components/DataTable'
 import { NewPayoutModal } from '../components/NewPayoutModal'
@@ -337,7 +337,7 @@ export function Payouts() {
         </div>
         {canCreatePayout && (
           <button className="btn btn--primary" onClick={() => setShowModal(true)}>
-            <ArrowDownToLine size={14} strokeWidth={2} />
+            <ArrowLineDown size={14} weight="bold" />
             New Payout
           </button>
         )}
@@ -373,7 +373,7 @@ export function Payouts() {
 
         <div className="filter-bar">
           <div className="filter-search-wrap">
-            <Search size={14} strokeWidth={1.75} className="filter-search-icon" />
+            <MagnifyingGlass size={16} className="filter-search-icon" />
             <input
               type="text"
               className="filter-search"

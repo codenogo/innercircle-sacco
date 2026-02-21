@@ -17,7 +17,7 @@
   font-size: var(--text-xs);
   color: var(--ink-muted);
   text-transform: uppercase;
-  letter-spacing: var(--tracking-wider);
+  letter-spacing: var(--tracking-wide);
 }
 
 .reports-stat-value {
@@ -131,7 +131,7 @@
 .reports-member-search:focus {
   outline: none;
   border-color: var(--mpesa);
-  box-shadow: 0 0 0 3px var(--mpesa-soft);
+  box-shadow: var(--focus-ring);
 }
 
 .reports-member-list {

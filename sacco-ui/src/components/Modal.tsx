@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { X } from 'lucide-react'
+import { X } from '@phosphor-icons/react'
 import './Modal.css'
 
 interface ModalProps {
@@ -58,7 +58,7 @@ export function Modal({ open, onClose, title, subtitle, children, footer, width 
             {subtitle && <p id="modal-subtitle" className="modal-subtitle">{subtitle}</p>}
           </div>
           <button className="modal-close" onClick={onClose} aria-label="Close">
-            <X size={16} strokeWidth={1.75} />
+            <X size={16} />
           </button>
         </div>
         <hr className="rule" />

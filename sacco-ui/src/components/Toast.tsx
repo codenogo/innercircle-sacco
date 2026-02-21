@@ -1,6 +1,6 @@
 import { useCallback, useState, useRef, useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react'
+import { CheckCircle, XCircle, Warning, Info, X } from '@phosphor-icons/react'
 import { ToastContext, type ToastAPI } from '../context/ToastContext'
 
 /* ─── Types ─── */
@@ -19,10 +19,10 @@ interface ToastItem {
 /* ─── Icons ─── */
 
 const ICONS: Record<ToastVariant, ReactNode> = {
-  success: <CheckCircle2 size={16} strokeWidth={1.75} />,
-  error:   <XCircle size={16} strokeWidth={1.75} />,
-  warning: <AlertTriangle size={16} strokeWidth={1.75} />,
-  info:    <Info size={16} strokeWidth={1.75} />,
+  success: <CheckCircle size={16} />,
+  error:   <XCircle size={16} />,
+  warning: <Warning size={16} />,
+  info:    <Info size={16} />,
 }
 
 /* ─── Single Toast ─── */
@@ -51,7 +51,7 @@ function Toast({ item, onDismiss }: { item: ToastItem; onDismiss: (id: string) =
         {item.message && <div className="toast-message">{item.message}</div>}
       </div>
       <button className="toast-dismiss" onClick={() => onDismiss(item.id)} aria-label="Dismiss">
-        <X size={14} strokeWidth={1.75} />
+        <X size={14} />
       </button>
       <div className="toast-countdown">
         <div className="toast-countdown-fill" style={{ width: `${100 - pct}%` }} />

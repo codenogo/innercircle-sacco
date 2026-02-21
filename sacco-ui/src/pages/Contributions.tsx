@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CircleDollarSign, HandCoins, Plus } from 'lucide-react'
+import { CurrencyCircleDollar, HandCoins, Plus } from '@phosphor-icons/react'
 import { Spinner } from '../components/Spinner'
 import { DataTable } from '../components/DataTable'
 import type { ColumnDef } from '../components/DataTable'
@@ -264,19 +264,19 @@ export function Contributions() {
         <div className="contrib-actions">
           {canUseContributionOps && (
             <Link to="/contribution-ops" className="btn btn--secondary">
-              <CircleDollarSign size={14} strokeWidth={1.75} />
+              <CurrencyCircleDollar size={14} />
               Contribution Ops
             </Link>
           )}
           {canManageCategories && (
             <Link to="/contribution-categories" className="btn btn--secondary">
-              <HandCoins size={14} strokeWidth={1.75} />
+              <HandCoins size={14} />
               Categories
             </Link>
           )}
           {canRecordContribution && (
             <button className="btn btn--primary" onClick={() => setShowModal(true)}>
-              <Plus size={14} strokeWidth={2} />
+              <Plus size={14} weight="bold" />
               Record Contribution
             </button>
           )}

@@ -27,6 +27,7 @@
   --mpesa:         #3a7d44;
   --mpesa-hover:   #2d6435;
   --mpesa-soft:    rgba(58, 125, 68, 0.10);
+  --mpesa-soft-hover: rgba(58, 125, 68, 0.15);
   --mpesa-text:    #2d6435;
 
   /* ─── Semantic ─── */

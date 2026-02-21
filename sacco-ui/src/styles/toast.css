@@ -51,10 +51,10 @@
 .toast--warning::before { background: var(--caution); }
 .toast--info::before    { background: var(--info); }
 
-.toast--success .toast-icon { color: var(--mpesa); }
-.toast--error .toast-icon   { color: var(--deficit); }
-.toast--warning .toast-icon { color: var(--caution); }
-.toast--info .toast-icon    { color: var(--info); }
+.toast--success .toast-icon { color: var(--ink-secondary); }
+.toast--error .toast-icon   { color: var(--ink-secondary); }
+.toast--warning .toast-icon { color: var(--ink-secondary); }
+.toast--info .toast-icon    { color: var(--ink-secondary); }
 
 /* ─── Content ─── */
 
