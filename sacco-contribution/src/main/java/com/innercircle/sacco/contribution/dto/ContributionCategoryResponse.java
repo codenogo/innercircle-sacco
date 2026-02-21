@@ -17,7 +17,7 @@ public class ContributionCategoryResponse {
     private String name;
     private String description;
     private boolean active;
-    private boolean isMandatory;
+    private boolean mandatory;
 
     public static ContributionCategoryResponse fromEntity(ContributionCategory category) {
         return new ContributionCategoryResponse(

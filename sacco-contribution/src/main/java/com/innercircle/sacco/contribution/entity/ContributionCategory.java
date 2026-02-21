@@ -30,6 +30,6 @@ public class ContributionCategory extends BaseEntity {
     @Column(nullable = false)
     private boolean active = true;
 
-    @Column(nullable = false)
-    private boolean isMandatory = false;
+    @Column(name = "is_mandatory", nullable = false)
+    private boolean mandatory = false;
 }
