@@ -32,8 +32,8 @@ public class LoanBatchJobConfig {
     private final EntityManagerFactory entityManagerFactory;
 
     @Bean
-    public Job monthlyLoanProcessingJob(Step loanProcessingStep, LoanBatchJobListener listener) {
-        return new JobBuilder("monthlyLoanProcessingJob", jobRepository)
+    public Job loanProcessingJob(Step loanProcessingStep, LoanBatchJobListener listener) {
+        return new JobBuilder("loanProcessingJob", jobRepository)
                 .listener(listener)
                 .start(loanProcessingStep)
                 .build();

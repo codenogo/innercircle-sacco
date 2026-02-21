@@ -24,5 +24,5 @@ public class BatchProcessingResult {
     private Instant processedAt;
     private String message;
     private List<String> warnings;
-    private String processingMonth;
+    private String processingDate;
 }

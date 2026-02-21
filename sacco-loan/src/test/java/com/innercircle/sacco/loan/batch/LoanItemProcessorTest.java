@@ -82,16 +82,15 @@ class LoanItemProcessorTest {
         loanId = UUID.randomUUID();
         memberId = UUID.randomUUID();
 
-        // Initialize counters and targetMonthStr via beforeStep (reads from job parameters)
+        // Initialize counters and targetDateStr via beforeStep (reads from job parameters)
         JobParameters jobParameters = new JobParametersBuilder()
-                .addString("targetMonth", "2026-03")
+                .addString("targetDate", "2026-03-01")
                 .toJobParameters();
         JobExecution jobExecution = new JobExecution(new JobInstance(1L, "test"), jobParameters);
         stepExecution = new StepExecution("testStep", jobExecution);
         processor.beforeStep(stepExecution);
 
         // Default config mocks
-        setupConfigMock("loan.batch.new_loan_threshold_day", "15");
         setupConfigMock("loan.penalty.grace_period_days", "30");
         setupConfigMock("loan.penalty.default_threshold_days", "90");
     }
@@ -139,9 +138,9 @@ class LoanItemProcessorTest {
     class DisbursementFiltering {
 
         @Test
-        @DisplayName("should skip loan disbursed in target month")
-        void shouldSkipLoanDisbursedInTargetMonth() throws Exception {
-            // Disbursed in March 2026 = target month
+        @DisplayName("should skip loan disbursed after target date")
+        void shouldSkipLoanDisbursedAfterTargetDate() throws Exception {
+            // Disbursed March 10, target=March 1 → skip
             Instant disbursedAt = LocalDate.of(2026, 3, 10)
                     .atStartOfDay(ZoneOffset.UTC).toInstant();
             LoanApplication loan = createLoan(disbursedAt);
@@ -152,10 +151,10 @@ class LoanItemProcessorTest {
         }
 
         @Test
-        @DisplayName("should skip loan disbursed after threshold day of previous month")
-        void shouldSkipLoanDisbursedAfterThresholdDayOfPreviousMonth() throws Exception {
-            // Disbursed on Feb 20, threshold=15 → skip
-            Instant disbursedAt = LocalDate.of(2026, 2, 20)
+        @DisplayName("should skip loan disbursed on target date")
+        void shouldSkipLoanDisbursedOnTargetDate() throws Exception {
+            // Disbursed on March 1 = target date → skip
+            Instant disbursedAt = LocalDate.of(2026, 3, 1)
                     .atStartOfDay(ZoneOffset.UTC).toInstant();
             LoanApplication loan = createLoan(disbursedAt);
 
@@ -165,10 +164,10 @@ class LoanItemProcessorTest {
         }
 
         @Test
-        @DisplayName("should include loan disbursed before threshold day of previous month")
-        void shouldIncludeLoanDisbursedBeforeThresholdDayOfPreviousMonth() throws Exception {
-            // Disbursed on Feb 10, threshold=15 → include
-            Instant disbursedAt = LocalDate.of(2026, 2, 10)
+        @DisplayName("should include loan disbursed before target date")
+        void shouldIncludeLoanDisbursedBeforeTargetDate() throws Exception {
+            // Disbursed Feb 28, target=March 1 → include
+            Instant disbursedAt = LocalDate.of(2026, 2, 28)
                     .atStartOfDay(ZoneOffset.UTC).toInstant();
             LoanApplication loan = createLoan(disbursedAt);
 
@@ -183,9 +182,9 @@ class LoanItemProcessorTest {
         }
 
         @Test
-        @DisplayName("should include loan disbursed well before previous month")
-        void shouldIncludeLoanDisbursedWellBeforePreviousMonth() throws Exception {
-            // Disbursed in Jan 2026, target=March 2026 → include
+        @DisplayName("should include loan disbursed well before target date")
+        void shouldIncludeLoanDisbursedWellBeforeTargetDate() throws Exception {
+            // Disbursed in Jan 2026, target=March 1, 2026 → include
             Instant disbursedAt = LocalDate.of(2026, 1, 5)
                     .atStartOfDay(ZoneOffset.UTC).toInstant();
             LoanApplication loan = createLoan(disbursedAt);
@@ -234,8 +233,8 @@ class LoanItemProcessorTest {
             LoanApplication result = processor.process(loan);
 
             assertThat(result).isNotNull();
-            // 12% annual / 12 months = 1% monthly on 100000 = 1000
-            assertThat(result.getTotalInterestAccrued()).isEqualByComparingTo(new BigDecimal("1000"));
+            // 12% annual / 365 days on 100000 = 32.88
+            assertThat(result.getTotalInterestAccrued()).isEqualByComparingTo(new BigDecimal("32.88"));
             verify(interestHistoryRepository).save(any());
             verify(outboxWriter).write(any(LoanInterestAccrualEvent.class), eq("LoanApplication"), eq(loanId));
         }
@@ -258,8 +257,8 @@ class LoanItemProcessorTest {
             LoanApplication result = processor.process(loan);
 
             assertThat(result).isNotNull();
-            // Flat rate: 12% annual / 12 = 1% monthly on principal 100000 = 1000
-            assertThat(result.getTotalInterestAccrued()).isEqualByComparingTo(new BigDecimal("1000"));
+            // Flat rate: 12% annual / 365 days on principal 100000 = 32.88
+            assertThat(result.getTotalInterestAccrued()).isEqualByComparingTo(new BigDecimal("32.88"));
         }
 
         @Test
@@ -566,7 +565,7 @@ class LoanItemProcessorTest {
             Object rawValue = stepExecution.getExecutionContext().get("totalInterestAccrued");
             assertThat(rawValue).isInstanceOf(String.class);
             BigDecimal storedValue = new BigDecimal((String) rawValue);
-            assertThat(storedValue).isEqualByComparingTo(new BigDecimal("1000"));
+            assertThat(storedValue).isEqualByComparingTo(new BigDecimal("32.88"));
         }
     }
 }

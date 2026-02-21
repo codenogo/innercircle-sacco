@@ -41,8 +41,6 @@ import org.springframework.batch.core.launch.JobLauncher;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.YearMonth;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -94,7 +92,7 @@ class LoanBatchServiceImplTest {
     private JobLauncher jobLauncher;
 
     @Mock
-    private Job monthlyLoanProcessingJob;
+    private Job loanProcessingJob;
 
     @InjectMocks
     private LoanBatchServiceImpl batchService;
@@ -120,11 +118,8 @@ class LoanBatchServiceImplTest {
 
     private void setupDefaultBatchMocks(int writeCount, int penalizedCount, int closedCount,
                                          int interestAccruedCount, String totalInterestAccrued) {
-        SystemConfig processingDayConfig = new SystemConfig();
-        processingDayConfig.setConfigValue("1");
-        when(configService.getSystemConfig("loan.batch.processing_day_of_month")).thenReturn(processingDayConfig);
-        when(configService.getSystemConfig("loan.batch.last_processed_month")).thenThrow(new RuntimeException("Not found"));
-        when(batchLogRepository.existsByProcessingMonth(any())).thenReturn(false);
+        when(configService.getSystemConfig("loan.batch.last_processed_date")).thenThrow(new RuntimeException("Not found"));
+        when(batchLogRepository.existsByProcessingDate(any())).thenReturn(false);
         when(batchLogRepository.save(any())).thenAnswer(inv -> {
             BatchProcessingLog log = inv.getArgument(0);
             if (log.getId() == null) {
@@ -133,9 +128,6 @@ class LoanBatchServiceImplTest {
             return log;
         });
         when(configService.updateSystemConfig(any(), any())).thenReturn(new SystemConfig());
-        SystemConfig thresholdConfig = new SystemConfig();
-        thresholdConfig.setConfigValue("15");
-        when(configService.getSystemConfig("loan.batch.new_loan_threshold_day")).thenReturn(thresholdConfig);
 
         // Mock Spring Batch JobLauncher
         try {
@@ -149,7 +141,7 @@ class LoanBatchServiceImplTest {
 
     private JobExecution createMockJobExecution(int writeCount, int penalizedCount, int closedCount,
                                                  int interestAccruedCount, String totalInterestAccrued) {
-        JobExecution jobExecution = new JobExecution(new JobInstance(1L, "monthlyLoanProcessingJob"), new JobParameters());
+        JobExecution jobExecution = new JobExecution(new JobInstance(1L, "loanProcessingJob"), new JobParameters());
         jobExecution.setStatus(BatchStatus.COMPLETED);
 
         StepExecution stepExecution = new StepExecution("loanProcessingStep", jobExecution);
@@ -466,76 +458,73 @@ class LoanBatchServiceImplTest {
     }
 
     // -------------------------------------------------------------------------
-    // processMonthlyLoans
+    // processDailyLoans
     // -------------------------------------------------------------------------
     @Nested
-    @DisplayName("processMonthlyLoans")
-    class ProcessMonthlyLoans {
+    @DisplayName("processDailyLoans")
+    class ProcessDailyLoans {
 
         @Test
-        @DisplayName("should throw when month already processed (idempotency)")
-        void shouldThrowWhenMonthAlreadyProcessed() {
-            YearMonth targetMonth = YearMonth.of(2026, 2);
-            when(batchLogRepository.existsByProcessingMonth(targetMonth.toString())).thenReturn(true);
+        @DisplayName("should throw when date already processed (idempotency)")
+        void shouldThrowWhenDateAlreadyProcessed() {
+            LocalDate targetDate = LocalDate.of(2026, 2, 1);
+            when(batchLogRepository.existsByProcessingDate(targetDate.toString())).thenReturn(true);
 
-            assertThatThrownBy(() -> batchService.processMonthlyLoans(targetMonth, "SYSTEM"))
+            assertThatThrownBy(() -> batchService.processDailyLoans(targetDate, "SYSTEM"))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Month already processed");
+                    .hasMessageContaining("Date already processed");
         }
 
         @Test
-        @DisplayName("should succeed when processing sequential month after last processed")
-        void shouldSucceedWhenProcessingSequentialMonth() throws Exception {
-            YearMonth targetMonth = YearMonth.of(2026, 2);
+        @DisplayName("should succeed when processing sequential date after last processed")
+        void shouldSucceedWhenProcessingSequentialDate() throws Exception {
+            LocalDate targetDate = LocalDate.of(2026, 2, 1);
             SystemConfig lastProcessedConfig = new SystemConfig();
-            lastProcessedConfig.setConfigValue("2026-01");
-            SystemConfig thresholdConfig = new SystemConfig();
-            thresholdConfig.setConfigValue("15");
+            lastProcessedConfig.setConfigValue("2026-01-31");
 
-            when(batchLogRepository.existsByProcessingMonth(targetMonth.toString())).thenReturn(false);
-            when(configService.getSystemConfig("loan.batch.last_processed_month")).thenReturn(lastProcessedConfig);
-            when(configService.getSystemConfig("loan.batch.new_loan_threshold_day")).thenReturn(thresholdConfig);
+            when(batchLogRepository.existsByProcessingDate(targetDate.toString())).thenReturn(false);
+            when(configService.getSystemConfig("loan.batch.last_processed_date")).thenReturn(lastProcessedConfig);
             when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
             when(batchLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
             when(configService.updateSystemConfig(any(), any())).thenReturn(new SystemConfig());
             when(jobLauncher.run(any(Job.class), any(JobParameters.class)))
                     .thenReturn(createMockJobExecution(0, 0, 0, 0, "0"));
 
-            BatchProcessingResult result = batchService.processMonthlyLoans(targetMonth, "SYSTEM");
+            BatchProcessingResult result = batchService.processDailyLoans(targetDate, "SYSTEM");
 
             assertThat(result).isNotNull();
-            verify(configService).updateSystemConfig("loan.batch.last_processed_month", "2026-02");
+            verify(configService).updateSystemConfig("loan.batch.last_processed_date", "2026-02-01");
         }
 
         @Test
-        @DisplayName("should throw when trying to skip a month (sequential enforcement)")
-        void shouldThrowWhenSkippingMonth() {
-            YearMonth targetMonth = YearMonth.of(2026, 3);
+        @DisplayName("should throw when trying to skip a date (sequential enforcement)")
+        void shouldThrowWhenSkippingDate() {
+            LocalDate targetDate = LocalDate.of(2026, 2, 3);
             SystemConfig lastProcessedConfig = new SystemConfig();
-            lastProcessedConfig.setConfigValue("2026-01");
+            lastProcessedConfig.setConfigValue("2026-02-01");
 
-            when(batchLogRepository.existsByProcessingMonth(targetMonth.toString())).thenReturn(false);
-            when(configService.getSystemConfig("loan.batch.last_processed_month")).thenReturn(lastProcessedConfig);
+            when(batchLogRepository.existsByProcessingDate(targetDate.toString())).thenReturn(false);
+            when(configService.getSystemConfig("loan.batch.last_processed_date")).thenReturn(lastProcessedConfig);
 
-            assertThatThrownBy(() -> batchService.processMonthlyLoans(targetMonth, "SYSTEM"))
+            assertThatThrownBy(() -> batchService.processDailyLoans(targetDate, "SYSTEM"))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("Must process 2026-02 first");
+                    .hasMessageContaining("Must process 2026-02-02 first");
         }
 
         @Test
         @DisplayName("should delegate to Spring Batch and return counters")
         void shouldDelegateToSpringBatchAndReturnCounters() throws Exception {
-            YearMonth targetMonth = YearMonth.of(2026, 2);
+            LocalDate targetDate = LocalDate.of(2026, 2, 1);
 
-            when(batchLogRepository.existsByProcessingMonth(targetMonth.toString())).thenReturn(false);
-            when(configService.getSystemConfig("loan.batch.last_processed_month")).thenThrow(new RuntimeException("Not found"));
+            when(batchLogRepository.existsByProcessingDate(targetDate.toString())).thenReturn(false);
+            when(configService.getSystemConfig("loan.batch.last_processed_date")).thenThrow(new RuntimeException("Not found"));
             when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
             when(batchLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
             when(configService.updateSystemConfig(any(), any())).thenReturn(new SystemConfig());
             when(jobLauncher.run(any(Job.class), any(JobParameters.class)))
                     .thenReturn(createMockJobExecution(0, 0, 0, 0, "0"));
 
-            BatchProcessingResult result = batchService.processMonthlyLoans(targetMonth, "SYSTEM");
+            BatchProcessingResult result = batchService.processDailyLoans(targetDate, "SYSTEM");
 
             assertThat(result.getProcessedLoans()).isEqualTo(0);
             verify(jobLauncher).run(any(Job.class), any(JobParameters.class));
@@ -544,17 +533,17 @@ class LoanBatchServiceImplTest {
         @Test
         @DisplayName("should report interest accrued loans from batch counters")
         void shouldReportInterestAccruedFromBatchCounters() throws Exception {
-            YearMonth targetMonth = YearMonth.of(2026, 2);
+            LocalDate targetDate = LocalDate.of(2026, 2, 1);
 
-            when(batchLogRepository.existsByProcessingMonth(targetMonth.toString())).thenReturn(false);
-            when(configService.getSystemConfig("loan.batch.last_processed_month")).thenThrow(new RuntimeException("Not found"));
+            when(batchLogRepository.existsByProcessingDate(targetDate.toString())).thenReturn(false);
+            when(configService.getSystemConfig("loan.batch.last_processed_date")).thenThrow(new RuntimeException("Not found"));
             when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
             when(batchLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
             when(configService.updateSystemConfig(any(), any())).thenReturn(new SystemConfig());
             when(jobLauncher.run(any(Job.class), any(JobParameters.class)))
                     .thenReturn(createMockJobExecution(3, 0, 0, 3, "3000"));
 
-            BatchProcessingResult result = batchService.processMonthlyLoans(targetMonth, "SYSTEM");
+            BatchProcessingResult result = batchService.processDailyLoans(targetDate, "SYSTEM");
 
             assertThat(result.getProcessedLoans()).isEqualTo(3);
             assertThat(result.getInterestAccruedLoans()).isEqualTo(3);
@@ -562,12 +551,12 @@ class LoanBatchServiceImplTest {
         }
 
         @Test
-        @DisplayName("should pass target month to Spring Batch job parameters")
-        void shouldPassTargetMonthToJobParameters() throws Exception {
-            YearMonth targetMonth = YearMonth.of(2026, 2);
+        @DisplayName("should pass target date to Spring Batch job parameters")
+        void shouldPassTargetDateToJobParameters() throws Exception {
+            LocalDate targetDate = LocalDate.of(2026, 2, 1);
 
-            when(batchLogRepository.existsByProcessingMonth(targetMonth.toString())).thenReturn(false);
-            when(configService.getSystemConfig("loan.batch.last_processed_month")).thenThrow(new RuntimeException("Not found"));
+            when(batchLogRepository.existsByProcessingDate(targetDate.toString())).thenReturn(false);
+            when(configService.getSystemConfig("loan.batch.last_processed_date")).thenThrow(new RuntimeException("Not found"));
             when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
             when(batchLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
             when(configService.updateSystemConfig(any(), any())).thenReturn(new SystemConfig());
@@ -576,15 +565,15 @@ class LoanBatchServiceImplTest {
             when(jobLauncher.run(any(Job.class), paramsCaptor.capture()))
                     .thenReturn(createMockJobExecution(1, 0, 0, 1, "1000"));
 
-            batchService.processMonthlyLoans(targetMonth, "SYSTEM");
+            batchService.processDailyLoans(targetDate, "SYSTEM");
 
-            assertThat(paramsCaptor.getValue().getString("targetMonth")).isEqualTo("2026-02");
+            assertThat(paramsCaptor.getValue().getString("targetDate")).isEqualTo("2026-02-01");
         }
 
         @Test
         @DisplayName("should include warnings for unpaid loans in pre-processing phase")
         void shouldIncludeWarningsForUnpaidLoans() throws Exception {
-            YearMonth targetMonth = YearMonth.of(2026, 2);
+            LocalDate targetDate = LocalDate.of(2026, 2, 1);
             LoanApplication loan = createLoan(LoanStatus.REPAYING);
 
             // Unpaid schedule must be due in the target month (February) for warning detection
@@ -592,8 +581,8 @@ class LoanBatchServiceImplTest {
             unpaidSchedule.setTotalAmount(new BigDecimal("10000"));
             unpaidSchedule.setAmountPaid(new BigDecimal("5000"));
 
-            when(batchLogRepository.existsByProcessingMonth(targetMonth.toString())).thenReturn(false);
-            when(configService.getSystemConfig("loan.batch.last_processed_month")).thenThrow(new RuntimeException("Not found"));
+            when(batchLogRepository.existsByProcessingDate(targetDate.toString())).thenReturn(false);
+            when(configService.getSystemConfig("loan.batch.last_processed_date")).thenThrow(new RuntimeException("Not found"));
             when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of(loan));
             when(scheduleRepository.findByLoanIdAndPaidFalseOrderByDueDate(loan.getId())).thenReturn(List.of(unpaidSchedule));
             when(batchLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -601,7 +590,7 @@ class LoanBatchServiceImplTest {
             when(jobLauncher.run(any(Job.class), any(JobParameters.class)))
                     .thenReturn(createMockJobExecution(1, 0, 0, 1, "1000"));
 
-            BatchProcessingResult result = batchService.processMonthlyLoans(targetMonth, "SYSTEM");
+            BatchProcessingResult result = batchService.processDailyLoans(targetDate, "SYSTEM");
 
             assertThat(result.getWarnings()).isNotEmpty();
         }
@@ -609,17 +598,17 @@ class LoanBatchServiceImplTest {
         @Test
         @DisplayName("should save batch log with STARTED then COMPLETED status")
         void shouldSaveBatchLogLifecycle() throws Exception {
-            YearMonth targetMonth = YearMonth.of(2026, 2);
+            LocalDate targetDate = LocalDate.of(2026, 2, 1);
 
-            when(batchLogRepository.existsByProcessingMonth(targetMonth.toString())).thenReturn(false);
-            when(configService.getSystemConfig("loan.batch.last_processed_month")).thenThrow(new RuntimeException("Not found"));
+            when(batchLogRepository.existsByProcessingDate(targetDate.toString())).thenReturn(false);
+            when(configService.getSystemConfig("loan.batch.last_processed_date")).thenThrow(new RuntimeException("Not found"));
             when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
             when(batchLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
             when(configService.updateSystemConfig(any(), any())).thenReturn(new SystemConfig());
             when(jobLauncher.run(any(Job.class), any(JobParameters.class)))
                     .thenReturn(createMockJobExecution(0, 0, 0, 0, "0"));
 
-            batchService.processMonthlyLoans(targetMonth, "SYSTEM");
+            batchService.processDailyLoans(targetDate, "SYSTEM");
 
             // Verify batch log was saved at least twice (STARTED + COMPLETED)
             verify(batchLogRepository, atLeast(2)).save(batchLogCaptor.capture());
@@ -630,7 +619,7 @@ class LoanBatchServiceImplTest {
             // shows the final COMPLETED status for all captures. Verify the final state.
             BatchProcessingLog finalLog = savedLogs.get(savedLogs.size() - 1);
             assertThat(finalLog.getStatus()).isEqualTo(BatchProcessingStatus.COMPLETED);
-            assertThat(finalLog.getProcessingMonth()).isEqualTo("2026-02");
+            assertThat(finalLog.getProcessingDate()).isEqualTo("2026-02-01");
             assertThat(finalLog.getTriggeredBy()).isEqualTo("SYSTEM");
             assertThat(finalLog.getCompletedAt()).isNotNull();
         }
@@ -638,16 +627,16 @@ class LoanBatchServiceImplTest {
         @Test
         @DisplayName("should update batch log to FAILED when processing throws exception")
         void shouldUpdateBatchLogToFailedOnException() throws Exception {
-            YearMonth targetMonth = YearMonth.of(2026, 2);
+            LocalDate targetDate = LocalDate.of(2026, 2, 1);
 
-            when(batchLogRepository.existsByProcessingMonth(targetMonth.toString())).thenReturn(false);
-            when(configService.getSystemConfig("loan.batch.last_processed_month")).thenThrow(new RuntimeException("Not found"));
+            when(batchLogRepository.existsByProcessingDate(targetDate.toString())).thenReturn(false);
+            when(configService.getSystemConfig("loan.batch.last_processed_date")).thenThrow(new RuntimeException("Not found"));
             when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
             when(batchLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
             when(jobLauncher.run(any(Job.class), any(JobParameters.class)))
                     .thenThrow(new RuntimeException("Job launch failed"));
 
-            assertThatThrownBy(() -> batchService.processMonthlyLoans(targetMonth, "SYSTEM"))
+            assertThatThrownBy(() -> batchService.processDailyLoans(targetDate, "SYSTEM"))
                     .isInstanceOf(RuntimeException.class);
 
             // Verify batch log was saved at least twice (STARTED + FAILED)
@@ -661,21 +650,21 @@ class LoanBatchServiceImplTest {
         }
 
         @Test
-        @DisplayName("should update config with processed month on success")
-        void shouldUpdateConfigWithProcessedMonthOnSuccess() throws Exception {
-            YearMonth targetMonth = YearMonth.of(2026, 2);
+        @DisplayName("should update config with processed date on success")
+        void shouldUpdateConfigWithProcessedDateOnSuccess() throws Exception {
+            LocalDate targetDate = LocalDate.of(2026, 2, 1);
 
-            when(batchLogRepository.existsByProcessingMonth(targetMonth.toString())).thenReturn(false);
-            when(configService.getSystemConfig("loan.batch.last_processed_month")).thenThrow(new RuntimeException("Not found"));
+            when(batchLogRepository.existsByProcessingDate(targetDate.toString())).thenReturn(false);
+            when(configService.getSystemConfig("loan.batch.last_processed_date")).thenThrow(new RuntimeException("Not found"));
             when(loanRepository.findByStatus(LoanStatus.REPAYING)).thenReturn(List.of());
             when(batchLogRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
             when(configService.updateSystemConfig(any(), any())).thenReturn(new SystemConfig());
             when(jobLauncher.run(any(Job.class), any(JobParameters.class)))
                     .thenReturn(createMockJobExecution(0, 0, 0, 0, "0"));
 
-            batchService.processMonthlyLoans(targetMonth, "SYSTEM");
+            batchService.processDailyLoans(targetDate, "SYSTEM");
 
-            verify(configService).updateSystemConfig("loan.batch.last_processed_month", "2026-02");
+            verify(configService).updateSystemConfig("loan.batch.last_processed_date", "2026-02-01");
         }
     }
 

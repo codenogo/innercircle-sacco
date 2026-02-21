@@ -24,7 +24,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
-import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -38,24 +37,24 @@ public class LoanBatchController {
     private final LoanReversalService reversalService;
 
     /**
-     * Trigger batch processing of outstanding loans for a specific month.
-     * If targetMonth is not provided, auto-determines the next month to process.
+     * Trigger batch processing of outstanding loans for a specific date.
+     * If targetDate is not provided, auto-determines the next date to process.
      * Requires ADMIN or TREASURER role.
      */
     @PostMapping("/batch/process")
     @PreAuthorize("hasAnyRole('ADMIN', 'TREASURER')")
     public ApiResponse<BatchProcessingResult> processBatch(
-            @RequestParam(required = false) YearMonth targetMonth) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate targetDate) {
 
         String triggeredBy = getCurrentUsername();
 
-        if (targetMonth == null) {
-            // Auto-determine: delegate to processOutstandingLoans which figures out the month
+        if (targetDate == null) {
+            // Auto-determine: delegate to processOutstandingLoans which figures out the date
             BatchProcessingResult result = batchService.processOutstandingLoans();
             return ApiResponse.ok(result, result.getMessage());
         }
 
-        BatchProcessingResult result = batchService.processMonthlyLoans(targetMonth, triggeredBy);
+        BatchProcessingResult result = batchService.processDailyLoans(targetDate, triggeredBy);
         return ApiResponse.ok(result, result.getMessage());
     }
 

@@ -11,14 +11,14 @@ public class LoanBatchJobListener implements JobExecutionListener {
 
     @Override
     public void beforeJob(JobExecution jobExecution) {
-        String targetMonth = jobExecution.getJobParameters().getString("targetMonth");
-        log.info("Starting monthly loan processing job for month: {}", targetMonth);
+        String targetDate = jobExecution.getJobParameters().getString("targetDate");
+        log.info("Starting loan processing job for date: {}", targetDate);
     }
 
     @Override
     public void afterJob(JobExecution jobExecution) {
-        String targetMonth = jobExecution.getJobParameters().getString("targetMonth");
-        log.info("Monthly loan processing job completed for month: {} with status: {}",
-                targetMonth, jobExecution.getStatus());
+        String targetDate = jobExecution.getJobParameters().getString("targetDate");
+        log.info("Loan processing job completed for date: {} with status: {}",
+                targetDate, jobExecution.getStatus());
     }
 }

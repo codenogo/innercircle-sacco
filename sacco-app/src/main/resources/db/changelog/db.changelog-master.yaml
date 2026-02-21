@@ -91,6 +91,8 @@ databaseChangeLog:
       file: db/changelog/loan/009-add-loan-number.yaml
   - include:
       file: db/changelog/loan/010-spring-batch-schema.yaml
+  - include:
+      file: db/changelog/loan/011-rename-processing-month-to-date.yaml
 
   # Payout module
   - include:

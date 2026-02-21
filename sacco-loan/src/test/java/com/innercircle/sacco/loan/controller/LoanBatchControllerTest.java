@@ -17,7 +17,7 @@ import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.YearMonth;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,7 +44,7 @@ class LoanBatchControllerTest {
     class ProcessBatch {
 
         @Test
-        @DisplayName("should call processOutstandingLoans when targetMonth is null")
+        @DisplayName("should call processOutstandingLoans when targetDate is null")
         void shouldProcessOutstandingLoansWhenNoTargetMonth() {
             // Given
             BatchProcessingResult expectedResult = BatchProcessingResult.builder()
@@ -71,10 +71,10 @@ class LoanBatchControllerTest {
         }
 
         @Test
-        @DisplayName("should call processMonthlyLoans when targetMonth is provided")
-        void shouldProcessMonthlyLoansWhenTargetMonthProvided() {
+        @DisplayName("should call processDailyLoans when targetDate is provided")
+        void shouldProcessDailyLoansWhenTargetDateProvided() {
             // Given
-            YearMonth targetMonth = YearMonth.of(2026, 3);
+            LocalDate targetDate = LocalDate.of(2026, 3, 1);
             BatchProcessingResult expectedResult = BatchProcessingResult.builder()
                     .processedLoans(8)
                     .penalizedLoans(2)
@@ -82,22 +82,22 @@ class LoanBatchControllerTest {
                     .interestAccruedLoans(5)
                     .totalInterestAccrued(new BigDecimal("8500.00"))
                     .processedAt(Instant.now())
-                    .message("Processed 8 loans for 2026-03")
-                    .processingMonth("2026-03")
+                    .message("Processed 8 loans for 2026-03-01")
+                    .processingDate("2026-03-01")
                     .build();
 
-            when(batchService.processMonthlyLoans(eq(targetMonth), any(String.class)))
+            when(batchService.processDailyLoans(eq(targetDate), any(String.class)))
                     .thenReturn(expectedResult);
 
             // When
-            ApiResponse<BatchProcessingResult> response = controller.processBatch(targetMonth);
+            ApiResponse<BatchProcessingResult> response = controller.processBatch(targetDate);
 
             // Then
-            verify(batchService).processMonthlyLoans(eq(targetMonth), any(String.class));
+            verify(batchService).processDailyLoans(eq(targetDate), any(String.class));
             assertThat(response).isNotNull();
             assertThat(response.isSuccess()).isTrue();
             assertThat(response.getData()).isEqualTo(expectedResult);
-            assertThat(response.getMessage()).isEqualTo("Processed 8 loans for 2026-03");
+            assertThat(response.getMessage()).isEqualTo("Processed 8 loans for 2026-03-01");
         }
 
         @Test
@@ -137,32 +137,32 @@ class LoanBatchControllerTest {
         }
 
         @Test
-        @DisplayName("should include processingMonth in response when present")
-        void shouldIncludeProcessingMonthInResponse() {
+        @DisplayName("should include processingDate in response when present")
+        void shouldIncludeProcessingDateInResponse() {
             // Given
-            YearMonth targetMonth = YearMonth.of(2026, 3);
-            BatchProcessingResult resultWithMonth = BatchProcessingResult.builder()
+            LocalDate targetDate = LocalDate.of(2026, 3, 1);
+            BatchProcessingResult resultWithDate = BatchProcessingResult.builder()
                     .processedLoans(5)
                     .penalizedLoans(1)
                     .closedLoans(0)
                     .interestAccruedLoans(4)
                     .totalInterestAccrued(new BigDecimal("5000.00"))
                     .processedAt(Instant.now())
-                    .message("Processed 5 loans for March 2026")
-                    .processingMonth("2026-03")
+                    .message("Processed 5 loans for 2026-03-01")
+                    .processingDate("2026-03-01")
                     .build();
 
-            when(batchService.processMonthlyLoans(eq(targetMonth), any(String.class)))
-                    .thenReturn(resultWithMonth);
+            when(batchService.processDailyLoans(eq(targetDate), any(String.class)))
+                    .thenReturn(resultWithDate);
 
             // When
-            ApiResponse<BatchProcessingResult> response = controller.processBatch(targetMonth);
+            ApiResponse<BatchProcessingResult> response = controller.processBatch(targetDate);
 
             // Then
             assertThat(response).isNotNull();
             assertThat(response.isSuccess()).isTrue();
-            assertThat(response.getData().getProcessingMonth()).isNotNull();
-            assertThat(response.getData().getProcessingMonth()).isEqualTo("2026-03");
+            assertThat(response.getData().getProcessingDate()).isNotNull();
+            assertThat(response.getData().getProcessingDate()).isEqualTo("2026-03-01");
         }
 
         @Test
@@ -200,7 +200,7 @@ class LoanBatchControllerTest {
         @DisplayName("should return 409 CONFLICT with error message")
         void shouldReturn409ConflictWithErrorMessage() {
             // Given
-            IllegalStateException exception = new IllegalStateException("Month already processed: 2026-01");
+            IllegalStateException exception = new IllegalStateException("Date already processed: 2026-01-01");
 
             // When
             ResponseEntity<ApiResponse<Void>> response = controller.handleIllegalState(exception);
@@ -210,7 +210,7 @@ class LoanBatchControllerTest {
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
             assertThat(response.getBody()).isNotNull();
             assertThat(response.getBody().isSuccess()).isFalse();
-            assertThat(response.getBody().getMessage()).isEqualTo("Month already processed: 2026-01");
+            assertThat(response.getBody().getMessage()).isEqualTo("Date already processed: 2026-01-01");
             assertThat(response.getBody().getData()).isNull();
         }
 
@@ -255,7 +255,7 @@ class LoanBatchControllerTest {
         @DisplayName("should handle comprehensive batch result with all fields populated")
         void shouldHandleComprehensiveBatchResult() {
             // Given
-            YearMonth targetMonth = YearMonth.of(2026, 3);
+            LocalDate targetDate = LocalDate.of(2026, 3, 1);
             BatchProcessingResult comprehensiveResult = BatchProcessingResult.builder()
                     .processedLoans(15)
                     .penalizedLoans(3)
@@ -263,19 +263,19 @@ class LoanBatchControllerTest {
                     .interestAccruedLoans(10)
                     .totalInterestAccrued(new BigDecimal("15750.50"))
                     .processedAt(Instant.now())
-                    .message("Successfully processed March 2026 batch")
+                    .message("Successfully processed 2026-03-01 batch")
                     .warnings(List.of(
                             "3 loans penalized for late payment",
                             "2 loans fully paid and closed"
                     ))
-                    .processingMonth("2026-03")
+                    .processingDate("2026-03-01")
                     .build();
 
-            when(batchService.processMonthlyLoans(eq(targetMonth), any(String.class)))
+            when(batchService.processDailyLoans(eq(targetDate), any(String.class)))
                     .thenReturn(comprehensiveResult);
 
             // When
-            ApiResponse<BatchProcessingResult> response = controller.processBatch(targetMonth);
+            ApiResponse<BatchProcessingResult> response = controller.processBatch(targetDate);
 
             // Then
             assertThat(response).isNotNull();
@@ -288,17 +288,16 @@ class LoanBatchControllerTest {
             assertThat(result.getInterestAccruedLoans()).isEqualTo(10);
             assertThat(result.getTotalInterestAccrued()).isEqualByComparingTo("15750.50");
             assertThat(result.getProcessedAt()).isNotNull();
-            assertThat(result.getMessage()).isEqualTo("Successfully processed March 2026 batch");
+            assertThat(result.getMessage()).isEqualTo("Successfully processed 2026-03-01 batch");
             assertThat(result.getWarnings()).hasSize(2);
-            assertThat(result.getProcessingMonth()).isEqualTo("2026-03");
+            assertThat(result.getProcessingDate()).isEqualTo("2026-03-01");
         }
 
         @Test
-        @DisplayName("should handle different target months correctly")
-        void shouldHandleDifferentTargetMonths() {
+        @DisplayName("should handle different target dates correctly")
+        void shouldHandleDifferentTargetDates() {
             // Given
-            YearMonth januaryMonth = YearMonth.of(2026, 1);
-            YearMonth decemberMonth = YearMonth.of(2025, 12);
+            LocalDate januaryDate = LocalDate.of(2026, 1, 1);
 
             BatchProcessingResult januaryResult = BatchProcessingResult.builder()
                     .processedLoans(10)
@@ -307,19 +306,19 @@ class LoanBatchControllerTest {
                     .interestAccruedLoans(9)
                     .totalInterestAccrued(new BigDecimal("10000.00"))
                     .processedAt(Instant.now())
-                    .message("Processed January 2026")
-                    .processingMonth("2026-01")
+                    .message("Processed 2026-01-01")
+                    .processingDate("2026-01-01")
                     .build();
 
-            when(batchService.processMonthlyLoans(eq(januaryMonth), any(String.class)))
+            when(batchService.processDailyLoans(eq(januaryDate), any(String.class)))
                     .thenReturn(januaryResult);
 
             // When
-            ApiResponse<BatchProcessingResult> response = controller.processBatch(januaryMonth);
+            ApiResponse<BatchProcessingResult> response = controller.processBatch(januaryDate);
 
             // Then
-            verify(batchService).processMonthlyLoans(eq(januaryMonth), any(String.class));
-            assertThat(response.getData().getProcessingMonth()).isEqualTo("2026-01");
+            verify(batchService).processDailyLoans(eq(januaryDate), any(String.class));
+            assertThat(response.getData().getProcessingDate()).isEqualTo("2026-01-01");
         }
     }
 }

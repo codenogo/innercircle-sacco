@@ -24,7 +24,6 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
@@ -43,14 +42,14 @@ public class LoanItemProcessor implements ItemProcessor<LoanApplication, LoanApp
     private final LoanPenaltyService loanPenaltyService;
     private final LoanPenaltyRepository loanPenaltyRepository;
 
-    private String targetMonthStr;
+    private String targetDateStr;
 
     private org.springframework.batch.core.StepExecution stepExecution;
 
     @org.springframework.batch.core.annotation.BeforeStep
     public void beforeStep(org.springframework.batch.core.StepExecution stepExecution) {
         this.stepExecution = stepExecution;
-        this.targetMonthStr = stepExecution.getJobExecution().getJobParameters().getString("targetMonth");
+        this.targetDateStr = stepExecution.getJobExecution().getJobParameters().getString("targetDate");
         stepExecution.getExecutionContext().putInt("penalizedCount", 0);
         stepExecution.getExecutionContext().putInt("closedCount", 0);
         stepExecution.getExecutionContext().putInt("interestAccruedCount", 0);
@@ -74,33 +73,21 @@ public class LoanItemProcessor implements ItemProcessor<LoanApplication, LoanApp
 
     @Override
     public LoanApplication process(LoanApplication loan) {
-        YearMonth targetMonth = YearMonth.parse(targetMonthStr);
+        LocalDate targetDate = LocalDate.parse(targetDateStr);
 
-        // Filter out loans disbursed in the same month as the processing month
+        // Filter out loans disbursed on the same day as the processing date
         if (loan.getDisbursedAt() != null) {
-            YearMonth disbursedMonth = YearMonth.from(loan.getDisbursedAt().atZone(ZoneId.of("UTC")));
-            if (disbursedMonth.equals(targetMonth)) {
-                log.info("Skipping loan {} - disbursed in target month {}", loan.getId(), targetMonth);
+            LocalDate disbursedDate = loan.getDisbursedAt().atZone(ZoneId.of("UTC")).toLocalDate();
+            if (!disbursedDate.isBefore(targetDate)) {
+                log.info("Skipping loan {} - disbursed on or after target date {}", loan.getId(), targetDate);
                 return null; // Skip
-            }
-
-            int thresholdDay = getConfigInt("loan.batch.new_loan_threshold_day", 15);
-            YearMonth previousMonth = targetMonth.minusMonths(1);
-            if (disbursedMonth.equals(previousMonth)) {
-                int disbursedDay = loan.getDisbursedAt().atZone(ZoneId.of("UTC")).getDayOfMonth();
-                if (disbursedDay >= thresholdDay) {
-                    log.info("Skipping loan {} - disbursed on day {} of {}, after threshold day {}",
-                            loan.getId(), disbursedDay, previousMonth, thresholdDay);
-                    return null; // Skip
-                }
             }
         } else {
             // Un-disbursed loans stuck in REPAYING? Shouldn't happen but defensive
             return null;
         }
 
-        LocalDate accrualDate = targetMonth.atDay(1);
-        accrueMonthlyInterest(loan, accrualDate);
+        accrueDailyInterest(loan, targetDate);
 
         LocalDate today = LocalDate.now();
         int gracePeriodDays = getConfigInt("loan.penalty.grace_period_days", 30);
@@ -188,47 +175,47 @@ public class LoanItemProcessor implements ItemProcessor<LoanApplication, LoanApp
         }
     }
 
-    private void accrueMonthlyInterest(LoanApplication loan, LocalDate accrualDate) {
+    private void accrueDailyInterest(LoanApplication loan, LocalDate accrualDate) {
         BigDecimal outstandingBalance = loan.getOutstandingBalance();
         if (outstandingBalance.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
 
         BigDecimal annualRate = loan.getInterestRate();
-        BigDecimal monthlyRate = annualRate.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP)
-                .divide(BigDecimal.valueOf(12), 6, RoundingMode.HALF_UP);
+        BigDecimal dailyRate = annualRate.divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP)
+                .divide(BigDecimal.valueOf(365), 10, RoundingMode.HALF_UP);
 
-        BigDecimal monthlyInterest;
+        BigDecimal dailyInterest;
         if (loan.getInterestMethod() == InterestMethod.REDUCING_BALANCE) {
-            monthlyInterest = outstandingBalance.multiply(monthlyRate).setScale(2, RoundingMode.HALF_UP);
+            dailyInterest = outstandingBalance.multiply(dailyRate).setScale(2, RoundingMode.HALF_UP);
         } else {
-            monthlyInterest = loan.getPrincipalAmount().multiply(monthlyRate).setScale(2, RoundingMode.HALF_UP);
+            dailyInterest = loan.getPrincipalAmount().multiply(dailyRate).setScale(2, RoundingMode.HALF_UP);
         }
 
-        if (monthlyInterest.compareTo(BigDecimal.ZERO) <= 0) {
+        if (dailyInterest.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
 
-        BigDecimal newTotalAccrued = loan.getTotalInterestAccrued().add(monthlyInterest);
+        BigDecimal newTotalAccrued = loan.getTotalInterestAccrued().add(dailyInterest);
         loan.setTotalInterestAccrued(newTotalAccrued);
 
         LoanInterestHistory history = new LoanInterestHistory();
         history.setLoanId(loan.getId());
         history.setMemberId(loan.getMemberId());
         history.setAccrualDate(accrualDate);
-        history.setInterestAmount(monthlyInterest);
+        history.setInterestAmount(dailyInterest);
         history.setOutstandingBalanceSnapshot(outstandingBalance);
         history.setCumulativeInterestAccrued(newTotalAccrued);
         history.setInterestRate(annualRate);
-        history.setEventType(InterestEventType.MONTHLY_ACCRUAL);
-        history.setDescription(String.format("Monthly interest accrual: %s on balance %s at %s%% p.a.",
-                monthlyInterest, outstandingBalance, annualRate));
+        history.setEventType(InterestEventType.DAILY_ACCRUAL);
+        history.setDescription(String.format("Daily interest accrual: %s on balance %s at %s%% p.a.",
+                dailyInterest, outstandingBalance, annualRate));
         interestHistoryRepository.save(history);
 
         outboxWriter.write(new LoanInterestAccrualEvent(
                 loan.getId(),
                 loan.getMemberId(),
-                monthlyInterest,
+                dailyInterest,
                 outstandingBalance,
                 accrualDate,
                 UUID.randomUUID(),
@@ -236,10 +223,10 @@ public class LoanItemProcessor implements ItemProcessor<LoanApplication, LoanApp
         ), "LoanApplication", loan.getId());
 
         incrementCounter("interestAccruedCount");
-        addAmount("totalInterestAccrued", monthlyInterest);
+        addAmount("totalInterestAccrued", dailyInterest);
 
-        log.info("Accrued interest {} for loan {} (balance: {}, method: {})",
-                monthlyInterest, loan.getId(), outstandingBalance, loan.getInterestMethod());
+        log.info("Accrued daily interest {} for loan {} (balance: {}, method: {})",
+                dailyInterest, loan.getId(), outstandingBalance, loan.getInterestMethod());
     }
 
     private int getConfigInt(String key, int defaultValue) {

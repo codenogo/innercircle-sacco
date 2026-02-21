@@ -35,8 +35,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.YearMonth;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -59,59 +57,47 @@ public class LoanBatchServiceImpl implements LoanBatchService {
     private final LoanPenaltyService loanPenaltyService;
     private final LoanPenaltyRepository loanPenaltyRepository;
     private final JobLauncher jobLauncher;
-    private final Job monthlyLoanProcessingJob;
+    private final Job loanProcessingJob;
 
     @Override
-    @Scheduled(cron = "${sacco.batch.loan-processing-cron:0 0 1 1 * *}")
+    @Scheduled(cron = "${sacco.batch.loan-processing-cron:0 0 1 * * *}")
     public BatchProcessingResult processOutstandingLoans() {
-        log.info("Scheduled batch processing triggered");
+        log.info("Scheduled daily batch processing triggered");
 
-        // 7.2: Check configurable day-of-month
-        int processingDay = getConfigInt("loan.batch.processing_day_of_month", 1);
-        int todayDay = LocalDate.now().getDayOfMonth();
-        if (todayDay < processingDay) {
-            log.info("Today ({}) is before configured processing day ({}), skipping", todayDay, processingDay);
-            return BatchProcessingResult.builder()
-                    .processedLoans(0)
-                    .processedAt(Instant.now())
-                    .message("Skipped: today is before configured processing day " + processingDay)
-                    .build();
+        // Auto-determine target date
+        LocalDate targetDate = determineNextDate();
+        if (targetDate == null) {
+            // First run ever - process today
+            targetDate = LocalDate.now();
         }
 
-        // Auto-determine target month
-        YearMonth targetMonth = determineNextMonth();
-        if (targetMonth == null) {
-            // First run ever - process current month
-            targetMonth = YearMonth.now();
-        }
-
-        return processMonthlyLoans(targetMonth, "SYSTEM");
+        return processDailyLoans(targetDate, "SYSTEM");
     }
 
     @Override
-    public BatchProcessingResult processMonthlyLoans(YearMonth targetMonth, String triggeredBy) {
-        log.info("Processing monthly loans for {} triggered by {}", targetMonth, triggeredBy);
-        String monthKey = targetMonth.toString();
+    public BatchProcessingResult processDailyLoans(LocalDate targetDate, String triggeredBy) {
+        log.info("Processing daily loans for {} triggered by {}", targetDate, triggeredBy);
+        String dateKey = targetDate.toString();
 
-        // 7.4: Idempotency - prevent same-month double-processing
-        if (batchLogRepository.existsByProcessingMonth(monthKey)) {
-            throw new IllegalStateException("Month already processed: " + targetMonth);
+        // Idempotency - prevent same-date double-processing
+        if (batchLogRepository.existsByProcessingDate(dateKey)) {
+            throw new IllegalStateException("Date already processed: " + targetDate);
         }
 
-        // 7.5: Sequential enforcement - must process months in order
-        String lastProcessedStr = getConfigValue("loan.batch.last_processed_month");
+        // Sequential enforcement - must process dates in order
+        String lastProcessedStr = getConfigValue("loan.batch.last_processed_date");
         if (lastProcessedStr != null && !lastProcessedStr.isBlank()) {
-            YearMonth lastProcessed = YearMonth.parse(lastProcessedStr);
-            YearMonth expectedNext = lastProcessed.plusMonths(1);
-            if (!targetMonth.equals(expectedNext)) {
+            LocalDate lastProcessed = LocalDate.parse(lastProcessedStr);
+            LocalDate expectedNext = lastProcessed.plusDays(1);
+            if (!targetDate.equals(expectedNext)) {
                 throw new IllegalStateException(
-                        "Must process " + expectedNext + " first. Cannot skip to " + targetMonth);
+                        "Must process " + expectedNext + " first. Cannot skip to " + targetDate);
             }
         }
 
-        // 7.8: Create batch log with STARTED status
+        // Create batch log with STARTED status
         BatchProcessingLog batchLog = BatchProcessingLog.builder()
-                .processingMonth(monthKey)
+                .processingDate(dateKey)
                 .status(BatchProcessingStatus.STARTED)
                 .startedAt(Instant.now())
                 .triggeredBy(triggeredBy)
@@ -119,7 +105,7 @@ public class LoanBatchServiceImpl implements LoanBatchService {
         batchLogRepository.save(batchLog);
 
         try {
-            BatchProcessingResult result = executeProcessing(targetMonth, batchLog);
+            BatchProcessingResult result = executeProcessing(targetDate, batchLog);
 
             // Update batch log to COMPLETED
             batchLog.setStatus(BatchProcessingStatus.COMPLETED);
@@ -130,8 +116,8 @@ public class LoanBatchServiceImpl implements LoanBatchService {
             batchLog.setCompletedAt(Instant.now());
             batchLogRepository.save(batchLog);
 
-            // 7.8: Update last processed month in config
-            configService.updateSystemConfig("loan.batch.last_processed_month", monthKey);
+            // Update last processed date in config
+            configService.updateSystemConfig("loan.batch.last_processed_date", dateKey);
 
             // Publish event
             outboxWriter.write(new LoanBatchProcessedEvent(
@@ -143,7 +129,7 @@ public class LoanBatchServiceImpl implements LoanBatchService {
                     triggeredBy
             ), "LoanApplication", batchLog.getId());
 
-            log.info("Batch processing completed for {}: {}", targetMonth, result.getMessage());
+            log.info("Batch processing completed for {}: {}", targetDate, result.getMessage());
             return result;
 
         } catch (Exception e) {
@@ -152,20 +138,19 @@ public class LoanBatchServiceImpl implements LoanBatchService {
             batchLog.setCompletedAt(Instant.now());
             batchLog.setWarningsSummary("Processing failed: " + e.getMessage());
             batchLogRepository.save(batchLog);
-            log.error("Batch processing failed for {}: {}", targetMonth, e.getMessage(), e);
+            log.error("Batch processing failed for {}: {}", targetDate, e.getMessage(), e);
             throw e;
         }
     }
 
-    private BatchProcessingResult executeProcessing(YearMonth targetMonth, BatchProcessingLog batchLog) {
+    private BatchProcessingResult executeProcessing(LocalDate targetDate, BatchProcessingLog batchLog) {
         List<String> warnings = new ArrayList<>();
 
-        // 7.7: Pre-processing warnings for unpaid loans
-        LocalDate targetDate = targetMonth.atDay(1);
+        // Pre-processing warnings for unpaid loans
         List<Map<String, Object>> unpaidLoans = detectUnpaidLoans(targetDate);
         if (!unpaidLoans.isEmpty()) {
             String warning = String.format("%d unpaid loan installment(s) detected for %s - penalties may apply",
-                    unpaidLoans.size(), targetMonth);
+                    unpaidLoans.size(), targetDate);
             warnings.add(warning);
             log.warn(warning);
         }
@@ -177,9 +162,9 @@ public class LoanBatchServiceImpl implements LoanBatchService {
         BigDecimal totalInterestAccrued = BigDecimal.ZERO;
 
         try {
-            JobExecution jobExecution = jobLauncher.run(monthlyLoanProcessingJob,
+            JobExecution jobExecution = jobLauncher.run(loanProcessingJob,
                     new JobParametersBuilder()
-                            .addString("targetMonth", targetMonth.toString())
+                            .addString("targetDate", targetDate.toString())
                             .addLong("time", System.currentTimeMillis())
                             .toJobParameters());
 
@@ -219,7 +204,7 @@ public class LoanBatchServiceImpl implements LoanBatchService {
                 .message(String.format("Processed %d loans, penalized %d, closed %d, interest accrued on %d loans (total: %s)",
                         processedCount, penalizedCount, closedCount, interestAccruedCount, totalInterestAccrued))
                 .warnings(warnings)
-                .processingMonth(targetMonth.toString())
+                .processingDate(targetDate.toString())
                 .build();
     }
 
@@ -376,12 +361,12 @@ public class LoanBatchServiceImpl implements LoanBatchService {
 
 
 
-    private YearMonth determineNextMonth() {
-        String lastProcessedStr = getConfigValue("loan.batch.last_processed_month");
+    private LocalDate determineNextDate() {
+        String lastProcessedStr = getConfigValue("loan.batch.last_processed_date");
         if (lastProcessedStr == null || lastProcessedStr.isBlank()) {
             return null;
         }
-        return YearMonth.parse(lastProcessedStr).plusMonths(1);
+        return LocalDate.parse(lastProcessedStr).plusDays(1);
     }
 
     private String getConfigValue(String key) {
