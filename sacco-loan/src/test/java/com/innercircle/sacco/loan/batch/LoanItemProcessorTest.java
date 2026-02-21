@@ -27,9 +27,9 @@ import org.mockito.quality.Strictness;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobInstance;
 import org.springframework.batch.core.JobParameters;
+import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.StepExecution;
 
-import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -82,11 +82,11 @@ class LoanItemProcessorTest {
         loanId = UUID.randomUUID();
         memberId = UUID.randomUUID();
 
-        // Set targetMonthStr via reflection (normally set by @Value)
-        setField(processor, "targetMonthStr", "2026-03");
-
-        // Initialize counters via beforeStep
-        JobExecution jobExecution = new JobExecution(new JobInstance(1L, "test"), new JobParameters());
+        // Initialize counters and targetMonthStr via beforeStep (reads from job parameters)
+        JobParameters jobParameters = new JobParametersBuilder()
+                .addString("targetMonth", "2026-03")
+                .toJobParameters();
+        JobExecution jobExecution = new JobExecution(new JobInstance(1L, "test"), jobParameters);
         stepExecution = new StepExecution("testStep", jobExecution);
         processor.beforeStep(stepExecution);
 
@@ -94,12 +94,6 @@ class LoanItemProcessorTest {
         setupConfigMock("loan.batch.new_loan_threshold_day", "15");
         setupConfigMock("loan.penalty.grace_period_days", "30");
         setupConfigMock("loan.penalty.default_threshold_days", "90");
-    }
-
-    private void setField(Object target, String fieldName, Object value) throws Exception {
-        Field field = target.getClass().getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(target, value);
     }
 
     private void setupConfigMock(String key, String value) {

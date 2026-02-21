@@ -19,7 +19,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -44,7 +43,6 @@ public class LoanItemProcessor implements ItemProcessor<LoanApplication, LoanApp
     private final LoanPenaltyService loanPenaltyService;
     private final LoanPenaltyRepository loanPenaltyRepository;
 
-    @Value("#{jobParameters['targetMonth']}")
     private String targetMonthStr;
 
     private org.springframework.batch.core.StepExecution stepExecution;
@@ -52,6 +50,7 @@ public class LoanItemProcessor implements ItemProcessor<LoanApplication, LoanApp
     @org.springframework.batch.core.annotation.BeforeStep
     public void beforeStep(org.springframework.batch.core.StepExecution stepExecution) {
         this.stepExecution = stepExecution;
+        this.targetMonthStr = stepExecution.getJobExecution().getJobParameters().getString("targetMonth");
         stepExecution.getExecutionContext().putInt("penalizedCount", 0);
         stepExecution.getExecutionContext().putInt("closedCount", 0);
         stepExecution.getExecutionContext().putInt("interestAccruedCount", 0);
