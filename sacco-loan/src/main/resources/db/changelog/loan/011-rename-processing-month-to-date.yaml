@@ -15,7 +15,7 @@ databaseChangeLog:
             newDataType: varchar(10)
 
         - update:
-            tableName: system_config
+            tableName: system_configs
             columns:
               - column:
                   name: config_key

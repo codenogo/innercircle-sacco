@@ -5,6 +5,7 @@ import com.innercircle.sacco.config.entity.InterestMethod;
 import com.innercircle.sacco.config.entity.PenaltyRule;
 import com.innercircle.sacco.config.entity.SystemConfig;
 import com.innercircle.sacco.config.service.ConfigService;
+import com.innercircle.sacco.config.service.PolicyConfigResolver;
 import com.innercircle.sacco.loan.dto.BatchProcessingResult;
 import com.innercircle.sacco.loan.entity.BatchProcessingLog;
 import com.innercircle.sacco.loan.entity.BatchProcessingStatus;
@@ -83,6 +84,9 @@ class LoanBatchServiceImplTest {
     private ConfigService configService;
 
     @Mock
+    private PolicyConfigResolver policyConfigResolver;
+
+    @Mock
     private LoanPenaltyService loanPenaltyService;
 
     @Mock
@@ -110,6 +114,11 @@ class LoanBatchServiceImplTest {
     void setUp() {
         loanId = UUID.randomUUID();
         memberId = UUID.randomUUID();
+
+        when(policyConfigResolver.requireIntAtLeast("loan.penalty.grace_period_days", 0))
+                .thenReturn(30);
+        when(policyConfigResolver.requireIntAtLeast("loan.penalty.default_threshold_days", 0))
+                .thenReturn(90);
     }
 
     private void setupDefaultBatchMocks() {

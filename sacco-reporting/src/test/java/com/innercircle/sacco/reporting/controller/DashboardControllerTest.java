@@ -87,8 +87,14 @@ class DashboardControllerTest {
     void treasurerDashboard_shouldReturnDashboard() {
         TreasurerDashboardResponse dashboard = new TreasurerDashboardResponse(
                 new BigDecimal("250000.00"),
+                new BigDecimal("230000.00"),
+                new BigDecimal("20000.00"),
+                new BigDecimal("3000.00"),
+                new BigDecimal("1500.00"),
+                new BigDecimal("1200.00"),
                 new BigDecimal("100000.00"),
-                5, 3,
+                5,
+                3,
                 new BigDecimal("150000.00"),
                 42L,
                 new BigDecimal("500000.00"));
@@ -285,6 +291,12 @@ class DashboardControllerTest {
                 new BigDecimal("500000.00"),
                 new BigDecimal("300000.00"),
                 new BigDecimal("600000.00"),
+                new BigDecimal("550000.00"),
+                new BigDecimal("50000.00"),
+                new BigDecimal("3000.00"),
+                new BigDecimal("2500.00"),
+                new BigDecimal("4000.00"),
+                new BigDecimal("1200.00"),
                 new BigDecimal("50000.00"),
                 new BigDecimal("85.50"),
                 new BigDecimal("12.30"));
@@ -307,6 +319,8 @@ class DashboardControllerTest {
         SaccoStateResponse state = new SaccoStateResponse(
                 0, 0,
                 BigDecimal.ZERO, BigDecimal.ZERO,
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
                 BigDecimal.ZERO, BigDecimal.ZERO,
                 BigDecimal.ZERO, BigDecimal.ZERO);
         when(financialReportService.getSaccoState()).thenReturn(state);

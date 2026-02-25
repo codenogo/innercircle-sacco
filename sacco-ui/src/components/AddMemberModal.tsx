@@ -14,7 +14,6 @@ interface AddMemberModalProps {
 }
 
 interface AddMemberFormState {
-  memberNumber: string
   firstName: string
   lastName: string
   email: string
@@ -67,9 +66,16 @@ function toE164Phone(phone: string, regionCode: string): string | null {
   }
 }
 
+function generateMemberNumber(): string {
+  const now = new Date()
+  const yy = String(now.getFullYear()).slice(-2)
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const seq = String(Math.floor(Math.random() * 9000) + 1000)
+  return `MBR-${yy}${mm}${seq}`
+}
+
 function defaultFormState(): AddMemberFormState {
   return {
-    memberNumber: '',
     firstName: '',
     lastName: '',
     email: '',
@@ -81,9 +87,31 @@ function defaultFormState(): AddMemberFormState {
   }
 }
 
+type FieldErrors = Partial<Record<keyof AddMemberFormState, string>>
+
+function validateEmail(email: string): string | undefined {
+  if (!email) return undefined
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Enter a valid email address.'
+  return undefined
+}
+
+function validatePhone(phone: string, regionCode: string): string | undefined {
+  if (!phone) return undefined
+  const e164 = toE164Phone(phone, regionCode)
+  if (!e164) return 'Enter a valid phone number for the selected country.'
+  return undefined
+}
+
+function validateDateOfBirth(dob: string): string | undefined {
+  if (!dob) return undefined
+  if (dob > localISODate()) return 'Date of birth cannot be in the future.'
+  return undefined
+}
+
 export function AddMemberModal({ open, onClose, onSubmit, isSubmitting }: AddMemberModalProps) {
   const [form, setForm] = useState<AddMemberFormState>(defaultFormState)
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const phoneCountryOptions = PHONE_COUNTRIES.map(option => ({
     value: option.regionCode,
     label: `${countryFlag(option.regionCode)} ${option.name} (${option.dialCode})`,
@@ -92,32 +120,45 @@ export function AddMemberModal({ open, onClose, onSubmit, isSubmitting }: AddMem
 
   function updateField<K extends keyof AddMemberFormState>(field: K, value: AddMemberFormState[K]) {
     setForm(prev => ({ ...prev, [field]: value }))
+    if (fieldErrors[field]) setFieldErrors(prev => ({ ...prev, [field]: undefined }))
+  }
+
+  function blurField<K extends keyof AddMemberFormState>(field: K) {
+    let err: string | undefined
+    if (field === 'email') err = validateEmail(form.email)
+    else if (field === 'phone') err = validatePhone(form.phone, form.phoneCountry)
+    else if (field === 'dateOfBirth') err = validateDateOfBirth(form.dateOfBirth)
+    if (err) setFieldErrors(prev => ({ ...prev, [field]: err }))
   }
 
   function reset() {
     setForm(defaultFormState())
     setError('')
+    setFieldErrors({})
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
 
-    const dateToday = localISODate()
-    if (form.dateOfBirth > dateToday) {
-      setError('Date of birth cannot be in the future.')
+    const errors: FieldErrors = {}
+    const emailErr = validateEmail(form.email)
+    if (emailErr) errors.email = emailErr
+    const phoneErr = validatePhone(form.phone, form.phoneCountry)
+    if (phoneErr) errors.phone = phoneErr
+    const dobErr = validateDateOfBirth(form.dateOfBirth)
+    if (dobErr) errors.dateOfBirth = dobErr
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
       return
     }
 
-    const e164Phone = toE164Phone(form.phone, form.phoneCountry)
-    if (!e164Phone) {
-      setError('Enter a valid phone number for the selected country.')
-      return
-    }
+    const e164Phone = toE164Phone(form.phone, form.phoneCountry)!
 
     try {
       await onSubmit({
-        memberNumber: form.memberNumber.trim(),
+        memberNumber: generateMemberNumber(),
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         email: form.email.trim(),
@@ -170,38 +211,7 @@ export function AddMemberModal({ open, onClose, onSubmit, isSubmitting }: AddMem
 
         <div className="field-row">
           <div className="field">
-            <label className="field-label" htmlFor="member-number">Member Number</label>
-            <input
-              id="member-number"
-              className="field-input"
-              type="text"
-              maxLength={50}
-              required
-              disabled={isSubmitting}
-              value={form.memberNumber}
-              onChange={event => updateField('memberNumber', event.target.value)}
-              placeholder="MBR-0001"
-            />
-          </div>
-          <div className="field">
-            <label className="field-label" htmlFor="national-id">National ID</label>
-            <input
-              id="national-id"
-              className="field-input"
-              type="text"
-              maxLength={50}
-              required
-              disabled={isSubmitting}
-              value={form.nationalId}
-              onChange={event => updateField('nationalId', event.target.value)}
-              placeholder="ID number"
-            />
-          </div>
-        </div>
-
-        <div className="field-row">
-          <div className="field">
-            <label className="field-label" htmlFor="first-name">First Name</label>
+            <label className="field-label field-label--required" htmlFor="first-name">First Name</label>
             <input
               id="first-name"
               className="field-input"
@@ -214,7 +224,7 @@ export function AddMemberModal({ open, onClose, onSubmit, isSubmitting }: AddMem
             />
           </div>
           <div className="field">
-            <label className="field-label" htmlFor="last-name">Last Name</label>
+            <label className="field-label field-label--required" htmlFor="last-name">Last Name</label>
             <input
               id="last-name"
               className="field-input"
@@ -229,21 +239,40 @@ export function AddMemberModal({ open, onClose, onSubmit, isSubmitting }: AddMem
         </div>
 
         <div className="field">
-          <label className="field-label" htmlFor="email">Email</label>
+          <label className="field-label field-label--required" htmlFor="national-id">National ID</label>
+          <input
+            id="national-id"
+            className="field-input"
+            type="text"
+            maxLength={50}
+            required
+            disabled={isSubmitting}
+            value={form.nationalId}
+            onChange={event => updateField('nationalId', event.target.value)}
+            placeholder="ID number"
+          />
+        </div>
+
+        <div className="field">
+          <label className="field-label field-label--required" htmlFor="email">Email</label>
           <input
             id="email"
-            className="field-input"
+            className={`field-input${fieldErrors.email ? ' field-input--error' : ''}`}
             type="email"
             required
             disabled={isSubmitting}
             value={form.email}
             onChange={event => updateField('email', event.target.value)}
+            onBlur={() => blurField('email')}
             placeholder="jane@example.com"
+            aria-invalid={!!fieldErrors.email}
+            aria-describedby={fieldErrors.email ? 'email-error' : undefined}
           />
+          {fieldErrors.email && <span id="email-error" className="field-error">{fieldErrors.email}</span>}
         </div>
 
         <div className="field">
-          <label className="field-label" htmlFor="phone-local">Phone</label>
+          <label className="field-label field-label--required" htmlFor="phone-local">Phone</label>
           <div className="phone-input-wrap">
             <div className="phone-country-picker">
               <Select
@@ -256,28 +285,32 @@ export function AddMemberModal({ open, onClose, onSubmit, isSubmitting }: AddMem
             </div>
             <input
               id="phone-local"
-              className="field-input phone-local-input"
+              className={`field-input phone-local-input${fieldErrors.phone ? ' field-input--error' : ''}`}
               type="tel"
               required
               disabled={isSubmitting}
               value={form.phone}
               onChange={event => updateField('phone', event.target.value)}
+              onBlur={() => blurField('phone')}
               placeholder="712345678"
               autoComplete="tel-national"
+              aria-invalid={!!fieldErrors.phone}
+              aria-describedby={fieldErrors.phone ? 'phone-error' : undefined}
             />
           </div>
-          <span className="field-hint">
-            {selectedPhoneCountry.dialCode} prefix selected. Enter the number in national format.
-          </span>
+          {fieldErrors.phone
+            ? <span id="phone-error" className="field-error">{fieldErrors.phone}</span>
+            : <span className="field-hint">{selectedPhoneCountry.dialCode} prefix selected. Enter the number in national format.</span>}
         </div>
 
         <div className="field-row">
           <div className="field">
-            <label className="field-label">Date of Birth</label>
+            <label className="field-label field-label--required">Date of Birth</label>
             <DatePicker value={form.dateOfBirth} onChange={value => updateField('dateOfBirth', value)} required />
+            {fieldErrors.dateOfBirth && <span className="field-error">{fieldErrors.dateOfBirth}</span>}
           </div>
           <div className="field">
-            <label className="field-label">Join Date</label>
+            <label className="field-label field-label--required">Join Date</label>
             <DatePicker value={form.joinDate} onChange={value => updateField('joinDate', value)} required />
           </div>
         </div>

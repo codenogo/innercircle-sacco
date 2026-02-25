@@ -24,4 +24,6 @@ public class ContributionCategoryRequest {
     private boolean active = true;
 
     private boolean mandatory = false;
+
+    private boolean welfareEligible = false;
 }

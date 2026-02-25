@@ -1,0 +1,337 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-welfare-beneficiaries-table
+      author: codex
+      changes:
+        - createTable:
+            tableName: welfare_beneficiaries
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: member_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: full_name
+                  type: varchar(200)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: relationship
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: date_of_birth
+                  type: date
+              - column:
+                  name: phone
+                  type: varchar(30)
+              - column:
+                  name: active
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: notes
+                  type: varchar(500)
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: welfare_beneficiaries
+            baseColumnNames: member_id
+            referencedTableName: members
+            referencedColumnNames: id
+            constraintName: fk_welfare_beneficiaries_member
+            onDelete: RESTRICT
+        - createIndex:
+            tableName: welfare_beneficiaries
+            indexName: idx_welfare_beneficiaries_member
+            columns:
+              - column:
+                  name: member_id
+              - column:
+                  name: active
+
+  - changeSet:
+      id: 003-create-welfare-benefit-catalog-table
+      author: codex
+      changes:
+        - createTable:
+            tableName: welfare_benefit_catalog
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: event_code
+                  type: varchar(80)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: event_name
+                  type: varchar(200)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: default_amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: max_claims_per_year
+                  type: integer
+              - column:
+                  name: active
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - insert:
+            tableName: welfare_benefit_catalog
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: event_code
+                  value: "BEREAVEMENT_MEMBER"
+              - column:
+                  name: event_name
+                  value: "Bereavement - Member"
+              - column:
+                  name: default_amount
+                  value: "50000.00"
+              - column:
+                  name: max_claims_per_year
+                  valueNumeric: 1
+              - column:
+                  name: active
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+        - insert:
+            tableName: welfare_benefit_catalog
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: event_code
+                  value: "BEREAVEMENT_DEPENDANT"
+              - column:
+                  name: event_name
+                  value: "Bereavement - Dependant"
+              - column:
+                  name: default_amount
+                  value: "30000.00"
+              - column:
+                  name: max_claims_per_year
+                  valueNumeric: 2
+              - column:
+                  name: active
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+        - insert:
+            tableName: welfare_benefit_catalog
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: event_code
+                  value: "HOSPITALIZATION"
+              - column:
+                  name: event_name
+                  value: "Hospitalization Support"
+              - column:
+                  name: default_amount
+                  value: "10000.00"
+              - column:
+                  name: max_claims_per_year
+                  valueNumeric: 2
+              - column:
+                  name: active
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+
+  - changeSet:
+      id: 003-create-welfare-claims-table
+      author: codex
+      changes:
+        - createTable:
+            tableName: welfare_claims
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: member_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: beneficiary_id
+                  type: uuid
+              - column:
+                  name: benefit_catalog_id
+                  type: uuid
+              - column:
+                  name: event_code
+                  type: varchar(80)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: event_date
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: requested_amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: approved_amount
+                  type: decimal(19,2)
+              - column:
+                  name: status
+                  type: varchar(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: decision_source
+                  type: varchar(80)
+              - column:
+                  name: meeting_reference
+                  type: varchar(120)
+              - column:
+                  name: decision_date
+                  type: date
+              - column:
+                  name: decision_notes
+                  type: varchar(1000)
+              - column:
+                  name: reviewed_by
+                  type: varchar(255)
+              - column:
+                  name: processed_payout_id
+                  type: uuid
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: welfare_claims
+            baseColumnNames: member_id
+            referencedTableName: members
+            referencedColumnNames: id
+            constraintName: fk_welfare_claims_member
+            onDelete: RESTRICT
+        - addForeignKeyConstraint:
+            baseTableName: welfare_claims
+            baseColumnNames: beneficiary_id
+            referencedTableName: welfare_beneficiaries
+            referencedColumnNames: id
+            constraintName: fk_welfare_claims_beneficiary
+            onDelete: SET NULL
+        - addForeignKeyConstraint:
+            baseTableName: welfare_claims
+            baseColumnNames: benefit_catalog_id
+            referencedTableName: welfare_benefit_catalog
+            referencedColumnNames: id
+            constraintName: fk_welfare_claims_catalog
+            onDelete: SET NULL
+        - createIndex:
+            tableName: welfare_claims
+            indexName: idx_welfare_claims_member_status
+            columns:
+              - column:
+                  name: member_id
+              - column:
+                  name: status
+        - createIndex:
+            tableName: welfare_claims
+            indexName: idx_welfare_claims_event_date
+            columns:
+              - column:
+                  name: event_date

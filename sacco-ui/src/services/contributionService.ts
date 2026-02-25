@@ -7,6 +7,7 @@ import type {
   BulkContributionRequest,
   ContributionCategoryResponse,
   ContributionCategoryRequest,
+  ContributionWelfarePolicyResponse,
 } from '../types/contributions'
 
 export type AuthenticatedRequest = <T>(path: string, options?: RequestInit) => Promise<T>
@@ -22,6 +23,16 @@ function callApi<T>(
 ): Promise<T> {
   if (request) return request<T>(path, options)
   return apiRequest<T>(path, options)
+}
+
+function normalizeCategory(category: ContributionCategoryResponse): ContributionCategoryResponse {
+  const mandatory = category.isMandatory ?? category.mandatory ?? false
+  return {
+    ...category,
+    mandatory,
+    isMandatory: mandatory,
+    welfareEligible: Boolean(category.welfareEligible),
+  }
 }
 
 export async function getContributions(
@@ -101,17 +112,23 @@ export async function getCategories(
   request?: AuthenticatedRequest,
 ): Promise<ContributionCategoryResponse[]> {
   const params = new URLSearchParams({ activeOnly: String(activeOnly) })
-  return callApi<ContributionCategoryResponse[]>(`/api/v1/contribution-categories?${params}`, undefined, request)
+  const categories = await callApi<ContributionCategoryResponse[]>(`/api/v1/contribution-categories?${params}`, undefined, request)
+  return categories.map(normalizeCategory)
 }
 
 export async function createCategory(
   payload: ContributionCategoryRequest,
   request?: AuthenticatedRequest,
 ): Promise<ContributionCategoryResponse> {
-  return callApi<ContributionCategoryResponse>('/api/v1/contribution-categories', {
+  const body = {
+    ...payload,
+    mandatory: payload.mandatory ?? payload.isMandatory ?? false,
+  }
+  const created = await callApi<ContributionCategoryResponse>('/api/v1/contribution-categories', {
     method: 'POST',
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   }, request)
+  return normalizeCategory(created)
 }
 
 export async function updateCategory(
@@ -119,14 +136,23 @@ export async function updateCategory(
   payload: ContributionCategoryRequest,
   request?: AuthenticatedRequest,
 ): Promise<ContributionCategoryResponse> {
-  return callApi<ContributionCategoryResponse>(`/api/v1/contribution-categories/${id}`, {
+  const body = {
+    ...payload,
+    mandatory: payload.mandatory ?? payload.isMandatory ?? false,
+  }
+  const updated = await callApi<ContributionCategoryResponse>(`/api/v1/contribution-categories/${id}`, {
     method: 'PUT',
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   }, request)
+  return normalizeCategory(updated)
 }
 
 export async function deleteCategory(id: string, request?: AuthenticatedRequest): Promise<void> {
   return callApi<void>(`/api/v1/contribution-categories/${id}`, {
     method: 'DELETE',
   }, request)
+}
+
+export async function getWelfarePolicy(request?: AuthenticatedRequest): Promise<ContributionWelfarePolicyResponse> {
+  return callApi<ContributionWelfarePolicyResponse>('/api/v1/contributions/welfare-policy', undefined, request)
 }

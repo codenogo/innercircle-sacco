@@ -47,7 +47,39 @@ public class LoanProductConfig extends BaseEntity {
     @Column(nullable = false, precision = 15, scale = 2)
     @NotNull
     @DecimalMin(value = "0.0", inclusive = false)
+    private BigDecimal minAmount;
+
+    @Column(nullable = false, precision = 15, scale = 2)
+    @NotNull
+    @DecimalMin(value = "0.0", inclusive = false)
     private BigDecimal maxAmount;
+
+    @Column(nullable = false)
+    @NotNull
+    @Min(1)
+    private Integer minTermMonths;
+
+    @Column(precision = 5, scale = 2)
+    @DecimalMin(value = "0.0", inclusive = true)
+    private BigDecimal contributionCapPercent;
+
+    @Column(precision = 15, scale = 2)
+    @DecimalMin(value = "0.0", inclusive = true)
+    private BigDecimal poolCapAmount;
+
+    @Column(nullable = false)
+    private boolean rolloverEnabled;
+
+    @Column
+    @Min(0)
+    private Integer maxRolloverMonths;
+
+    @Column(precision = 5, scale = 2)
+    @DecimalMin(value = "0.0", inclusive = true)
+    private BigDecimal rolloverSurchargeRate;
+
+    @Column(nullable = false)
+    private boolean interestAccrualEnabled;
 
     @Column(nullable = false)
     private boolean requiresGuarantor;

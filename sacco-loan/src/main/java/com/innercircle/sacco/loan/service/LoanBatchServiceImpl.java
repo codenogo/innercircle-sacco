@@ -7,6 +7,7 @@ import com.innercircle.sacco.config.entity.InterestMethod;
 import com.innercircle.sacco.config.entity.PenaltyRule;
 import com.innercircle.sacco.config.entity.SystemConfig;
 import com.innercircle.sacco.config.service.ConfigService;
+import com.innercircle.sacco.config.service.PolicyConfigResolver;
 import com.innercircle.sacco.loan.dto.BatchProcessingResult;
 import com.innercircle.sacco.loan.entity.BatchProcessingLog;
 import com.innercircle.sacco.loan.entity.BatchProcessingStatus;
@@ -54,6 +55,7 @@ public class LoanBatchServiceImpl implements LoanBatchService {
     private final EventOutboxWriter outboxWriter;
     private final BatchProcessingLogRepository batchLogRepository;
     private final ConfigService configService;
+    private final PolicyConfigResolver policyConfigResolver;
     private final LoanPenaltyService loanPenaltyService;
     private final LoanPenaltyRepository loanPenaltyRepository;
     private final JobLauncher jobLauncher;
@@ -263,8 +265,8 @@ public class LoanBatchServiceImpl implements LoanBatchService {
         }
 
         LocalDate today = LocalDate.now();
-        int gracePeriod = getConfigInt("loan.penalty.grace_period_days", 30);
-        int defaultThreshold = getConfigInt("loan.penalty.default_threshold_days", 90);
+        int gracePeriod = getConfigInt("loan.penalty.grace_period_days");
+        int defaultThreshold = getConfigInt("loan.penalty.default_threshold_days");
         Optional<PenaltyRule> ruleOpt = configService.getActivePenaltyRuleByType(
                 PenaltyRule.PenaltyType.LOAN_DEFAULT);
 
@@ -379,16 +381,7 @@ public class LoanBatchServiceImpl implements LoanBatchService {
         }
     }
 
-    private int getConfigInt(String key, int defaultValue) {
-        String value = getConfigValue(key);
-        if (value == null || value.isBlank()) {
-            return defaultValue;
-        }
-        try {
-            return Integer.parseInt(value);
-        } catch (NumberFormatException e) {
-            log.warn("Invalid integer for config key '{}': {}, using default {}", key, value, defaultValue);
-            return defaultValue;
-        }
+    private int getConfigInt(String key) {
+        return policyConfigResolver.requireIntAtLeast(key, 0);
     }
 }

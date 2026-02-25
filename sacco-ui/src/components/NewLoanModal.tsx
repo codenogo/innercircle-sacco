@@ -13,55 +13,99 @@ interface NewLoanModalProps {
   isSubmitting: boolean
 }
 
-const FALLBACK_PRODUCTS: LoanProductConfigResponse[] = [
-  { id: 'standard', name: 'Standard Loan', interestMethod: 'REDUCING_BALANCE', annualInterestRate: 12, maxTermMonths: 24, maxAmount: 500000, requiresGuarantor: true, active: true, createdAt: '', updatedAt: '' },
-  { id: 'emergency', name: 'Emergency Loan', interestMethod: 'FLAT_RATE', annualInterestRate: 10, maxTermMonths: 12, maxAmount: 200000, requiresGuarantor: true, active: true, createdAt: '', updatedAt: '' },
-]
-
-const PERIODS = [3, 6, 9, 12]
-
 function fmt(n: number) { return n.toLocaleString('en-KE') }
+
+interface LoanFieldErrors {
+  principal?: string
+  purpose?: string
+  memberId?: string
+}
 
 export function NewLoanModal({ open, onClose, members, onSubmit, isSubmitting }: NewLoanModalProps) {
   const { request } = useAuthenticatedApi()
 
-  const [products, setProducts] = useState<LoanProductConfigResponse[]>(FALLBACK_PRODUCTS)
+  const [products, setProducts] = useState<LoanProductConfigResponse[]>([])
+  const [loadingProducts, setLoadingProducts] = useState(false)
+  const [productsError, setProductsError] = useState<string | null>(null)
   const [memberId, setMemberId] = useState('')
   const [productId, setProductId] = useState('')
   const [principal, setPrincipal] = useState('')
-  const [period, setPeriod] = useState('12')
+  const [period, setPeriod] = useState('')
   const [purpose, setPurpose] = useState('')
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<LoanFieldErrors>({})
 
   useEffect(() => {
     if (!open) return
     let cancelled = false
     async function fetchProducts() {
+      setLoadingProducts(true)
+      setProductsError(null)
       try {
         const data = await request<LoanProductConfigResponse[]>(
           '/api/v1/config/loan-products?activeOnly=true',
         )
-        if (!cancelled && data.length > 0) {
+        if (!cancelled) {
           setProducts(data)
+          if (data.length === 0) {
+            setProductsError('No active loan products are configured. Add one in Settings before submitting a loan.')
+          }
         }
-      } catch {
-        // fall back to hardcoded products
+      } catch (fetchError) {
+        if (!cancelled) {
+          setProducts([])
+          if (fetchError instanceof Error) {
+            setProductsError(fetchError.message)
+          } else {
+            setProductsError('Unable to load loan products right now.')
+          }
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingProducts(false)
+        }
       }
     }
     void fetchProducts()
     return () => { cancelled = true }
   }, [open, request])
 
+  useEffect(() => {
+    if (products.length === 0) {
+      setProductId('')
+      return
+    }
+    if (!productId || !products.some(product => product.id === productId)) {
+      setProductId(products[0].id)
+    }
+  }, [products, productId])
+
   const selectedProduct = products.find(p => p.id === productId) ?? products[0]
+
+  const periodOptions = useMemo(() => {
+    if (!selectedProduct) return []
+    const minTerm = Math.max(1, selectedProduct.minTermMonths)
+    const maxTerm = Math.max(minTerm, selectedProduct.maxTermMonths)
+    return Array.from({ length: maxTerm - minTerm + 1 }, (_, index) => {
+      const term = minTerm + index
+      return { value: String(term), label: `${term} month${term === 1 ? '' : 's'}` }
+    })
+  }, [selectedProduct])
+
+  useEffect(() => {
+    if (!selectedProduct || periodOptions.length === 0) {
+      setPeriod('')
+      return
+    }
+    if (!period || !periodOptions.some(option => option.value === period)) {
+      setPeriod(periodOptions[0].value)
+    }
+  }, [selectedProduct, periodOptions, period])
 
   const memberOptions = members.map(m => ({ value: m.id, label: m.name }))
   const productOptions = products.map(p => ({
     value: p.id,
     label: `${p.name} — ${p.annualInterestRate}% p.a.`,
-  }))
-  const periodOptions = PERIODS.filter(p => p <= (selectedProduct?.maxTermMonths ?? 12)).map(p => ({
-    value: String(p),
-    label: `${p} months`,
   }))
 
   const monthlyRepayment = useMemo(() => {
@@ -73,21 +117,57 @@ export function NewLoanModal({ open, onClose, members, onSubmit, isSubmitting }:
     return (p * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -months))
   }, [principal, period, selectedProduct])
 
+  function validatePrincipal(value: string): string | undefined {
+    const n = Number(value)
+    if (!value || Number.isNaN(n) || n <= 0) return 'Enter a positive amount.'
+    if (selectedProduct?.minAmount && n < selectedProduct.minAmount) {
+      return `Minimum amount is KES ${fmt(selectedProduct.minAmount)}.`
+    }
+    if (selectedProduct?.maxAmount && n > selectedProduct.maxAmount) {
+      return `Maximum amount is KES ${fmt(selectedProduct.maxAmount)}.`
+    }
+    return undefined
+  }
+
+  function blurPrincipal() {
+    const err = validatePrincipal(principal)
+    setFieldErrors(prev => ({ ...prev, principal: err }))
+  }
+
   function reset() {
     setMemberId('')
     setProductId('')
     setPrincipal('')
-    setPeriod('12')
+    setPeriod('')
     setPurpose('')
     setError('')
+    setFieldErrors({})
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
 
+    const errors: LoanFieldErrors = {}
+    if (!memberId) {
+      errors.memberId = 'Member is required.'
+    }
+    const principalErr = validatePrincipal(principal)
+    if (principalErr) errors.principal = principalErr
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      return
+    }
+
     const resolvedProductId = productId || products[0]?.id
-    if (!resolvedProductId) return
+    if (!resolvedProductId) {
+      setError('No active loan product is available for submission.')
+      return
+    }
+    if (!period) {
+      setError('Repayment period is required.')
+      return
+    }
 
     try {
       await onSubmit({
@@ -123,7 +203,7 @@ export function NewLoanModal({ open, onClose, members, onSubmit, isSubmitting }:
       footer={
         <>
           <button className="btn btn--secondary" type="button" onClick={handleClose} disabled={isSubmitting}>Cancel</button>
-          <button className="btn btn--primary" type="submit" form="new-loan-form" disabled={isSubmitting}>
+          <button className="btn btn--primary" type="submit" form="new-loan-form" disabled={isSubmitting || loadingProducts || !selectedProduct}>
             {isSubmitting ? 'Submitting...' : 'Submit Application'}
           </button>
         </>
@@ -137,13 +217,21 @@ export function NewLoanModal({ open, onClose, members, onSubmit, isSubmitting }:
         )}
 
         <div className="field">
-          <label className="field-label">Member</label>
+          <label className="field-label field-label--required">Member</label>
           <Select options={memberOptions} value={memberId} onChange={setMemberId} placeholder="Select member" required searchable />
+          {fieldErrors.memberId && <span className="field-error">{fieldErrors.memberId}</span>}
         </div>
 
         <div className="field">
-          <label className="field-label">Loan Product</label>
-          <Select options={productOptions} value={productId || products[0]?.id || ''} onChange={setProductId} />
+          <label className="field-label field-label--required">Loan Product</label>
+          <Select
+            options={productOptions}
+            value={productId || products[0]?.id || ''}
+            onChange={setProductId}
+            placeholder={loadingProducts ? 'Loading products...' : 'Select loan product'}
+            disabled={loadingProducts || productOptions.length === 0}
+          />
+          {productsError && <span className="field-error">{productsError}</span>}
           {selectedProduct && (
             <span className="field-hint">
               Interest: {selectedProduct.annualInterestRate}% p.a. ({selectedProduct.interestMethod.replace('_', ' ').toLowerCase()})
@@ -153,28 +241,39 @@ export function NewLoanModal({ open, onClose, members, onSubmit, isSubmitting }:
 
         <div className="field-row">
           <div className="field">
-            <label className="field-label">Principal Amount</label>
+            <label className="field-label field-label--required">Principal Amount</label>
             <input
-              className="field-input"
+              className={`field-input${fieldErrors.principal ? ' field-input--error' : ''}`}
               type="number"
               min={0}
               max={selectedProduct?.maxAmount}
               required
               disabled={isSubmitting}
               value={principal}
-              onChange={e => setPrincipal(e.target.value)}
+              onChange={e => { setPrincipal(e.target.value); if (fieldErrors.principal) setFieldErrors(prev => ({ ...prev, principal: undefined })) }}
+              onBlur={blurPrincipal}
               placeholder="0"
+              aria-invalid={!!fieldErrors.principal}
+              aria-describedby={fieldErrors.principal ? 'principal-error' : undefined}
             />
-            <span className="field-hint">KES{selectedProduct?.maxAmount ? ` (max ${fmt(selectedProduct.maxAmount)})` : ''}</span>
+            {fieldErrors.principal
+              ? <span id="principal-error" className="field-error">{fieldErrors.principal}</span>
+              : (
+                <span className="field-hint">
+                  KES
+                  {selectedProduct?.minAmount ? ` (min ${fmt(selectedProduct.minAmount)})` : ''}
+                  {selectedProduct?.maxAmount ? ` (max ${fmt(selectedProduct.maxAmount)})` : ''}
+                </span>
+              )}
           </div>
           <div className="field">
-            <label className="field-label">Repayment Period</label>
-            <Select options={periodOptions} value={period} onChange={setPeriod} />
+            <label className="field-label field-label--required">Repayment Period</label>
+            <Select options={periodOptions} value={period} onChange={setPeriod} disabled={periodOptions.length === 0} />
           </div>
         </div>
 
         <div className="field">
-          <label className="field-label">Purpose</label>
+          <label className="field-label field-label--required">Purpose</label>
           <textarea className="field-input" required disabled={isSubmitting} value={purpose} onChange={e => setPurpose(e.target.value)} placeholder="Reason for the loan..." />
         </div>
 

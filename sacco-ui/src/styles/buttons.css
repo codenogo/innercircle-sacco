@@ -1,0 +1,119 @@
+/* ─── Buttons ─── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  transition: background var(--ease-fast), color var(--ease-fast), border-color var(--ease-fast);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.btn--primary {
+  background: var(--mpesa);
+  color: var(--text-on-accent);
+  border: none;
+}
+
+.btn--primary:hover {
+  background: var(--mpesa-hover);
+}
+
+.btn--secondary {
+  background: transparent;
+  color: var(--ink-secondary);
+  border: 1px solid var(--rule);
+}
+
+.btn--secondary:hover {
+  border-color: var(--rule-strong);
+  color: var(--ink);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--ink-muted);
+  border: none;
+  padding: var(--space-1) var(--space-2);
+}
+
+.btn--ghost:hover {
+  color: var(--ink);
+  background: var(--rule-subtle);
+}
+
+.btn--small {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.btn:active:not(:disabled) {
+  opacity: 0.85;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--mpesa);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn--danger-text {
+  color: var(--deficit);
+}
+
+.btn--danger-text:hover {
+  color: var(--deficit);
+  background: var(--deficit-soft);
+}
+
+/* ─── Status Badges ─── */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  border-radius: var(--radius-sm);
+}
+
+.badge--active,
+.badge--paid,
+.badge--disbursed,
+.badge--completed,
+.badge--approved {
+  color: var(--mpesa-text);
+  background: var(--mpesa-soft);
+}
+
+.badge--pending,
+.badge--partial,
+.badge--processing {
+  color: var(--caution);
+  background: var(--caution-soft);
+}
+
+.badge--overdue,
+.badge--suspended,
+.badge--rejected,
+.badge--defaulted {
+  color: var(--deficit);
+  background: var(--deficit-soft);
+}
+
+.badge--inactive {
+  color: var(--ink-muted);
+  background: var(--paper-inset);
+}
+

@@ -282,6 +282,12 @@ class FinancialReportServiceImplTest {
                 .thenReturn(new BigDecimal("500000"))   // totalShareCapital
                 .thenReturn(new BigDecimal("200000"))   // totalOutstandingLoans
                 .thenReturn(new BigDecimal("1000000"))  // totalContributions
+                .thenReturn(new BigDecimal("950000"))   // totalNetContributions
+                .thenReturn(new BigDecimal("50000"))    // totalWelfareContributions
+                .thenReturn(new BigDecimal("7000"))     // totalMeetingFines
+                .thenReturn(new BigDecimal("4000"))     // totalWelfareBenefitsPaid
+                .thenReturn(new BigDecimal("3000"))     // totalExitSettlements
+                .thenReturn(new BigDecimal("1200"))     // totalExitFees
                 .thenReturn(new BigDecimal("250000"))   // payoutDisbursements
                 .thenReturn(new BigDecimal("50000"))    // pettyCashDisbursements
                 .thenReturn(new BigDecimal("150000"))   // totalRepaid
@@ -307,6 +313,12 @@ class FinancialReportServiceImplTest {
                 .thenReturn(BigDecimal.ZERO)    // totalShareCapital
                 .thenReturn(BigDecimal.ZERO)    // totalOutstandingLoans
                 .thenReturn(BigDecimal.ZERO)    // totalContributions
+                .thenReturn(BigDecimal.ZERO)    // totalNetContributions
+                .thenReturn(BigDecimal.ZERO)    // totalWelfareContributions
+                .thenReturn(BigDecimal.ZERO)    // totalMeetingFines
+                .thenReturn(BigDecimal.ZERO)    // totalWelfareBenefitsPaid
+                .thenReturn(BigDecimal.ZERO)    // totalExitSettlements
+                .thenReturn(BigDecimal.ZERO)    // totalExitFees
                 .thenReturn(BigDecimal.ZERO)    // payoutDisbursements
                 .thenReturn(BigDecimal.ZERO)    // pettyCashDisbursements
                 .thenReturn(BigDecimal.ZERO)    // totalRepaid
@@ -325,6 +337,12 @@ class FinancialReportServiceImplTest {
                 .thenReturn(0L);    // membersOneYearAgo (zero => growth rate = 0)
 
         when(jdbc.queryForObject(anyString(), eq(BigDecimal.class), any(Object[].class)))
+                .thenReturn(BigDecimal.ZERO)
+                .thenReturn(BigDecimal.ZERO)
+                .thenReturn(BigDecimal.ZERO)
+                .thenReturn(BigDecimal.ZERO)
+                .thenReturn(BigDecimal.ZERO)
+                .thenReturn(BigDecimal.ZERO)
                 .thenReturn(BigDecimal.ZERO)
                 .thenReturn(BigDecimal.ZERO)
                 .thenReturn(BigDecimal.ZERO)
@@ -349,6 +367,12 @@ class FinancialReportServiceImplTest {
                 .thenReturn(new BigDecimal("100000"))   // totalShareCapital
                 .thenReturn(new BigDecimal("50000"))    // totalOutstandingLoans
                 .thenReturn(new BigDecimal("200000"))   // totalContributions
+                .thenReturn(new BigDecimal("180000"))   // totalNetContributions
+                .thenReturn(new BigDecimal("20000"))    // totalWelfareContributions
+                .thenReturn(new BigDecimal("5000"))     // totalMeetingFines
+                .thenReturn(new BigDecimal("4000"))     // totalWelfareBenefitsPaid
+                .thenReturn(new BigDecimal("3000"))     // totalExitSettlements
+                .thenReturn(new BigDecimal("2000"))     // totalExitFees
                 .thenReturn(new BigDecimal("40000"))    // payoutDisbursements
                 .thenReturn(new BigDecimal("10000"))    // pettyCashDisbursements
                 .thenReturn(new BigDecimal("75000"))    // totalRepaid

@@ -5,10 +5,12 @@ import com.innercircle.sacco.common.exception.ResourceNotFoundException;
 import com.innercircle.sacco.config.dto.ContributionScheduleRequest;
 import com.innercircle.sacco.config.dto.LoanProductRequest;
 import com.innercircle.sacco.config.dto.PenaltyRuleRequest;
+import com.innercircle.sacco.config.dto.PenaltyTierRequest;
 import com.innercircle.sacco.config.entity.ContributionScheduleConfig;
 import com.innercircle.sacco.config.entity.InterestMethod;
 import com.innercircle.sacco.config.entity.LoanProductConfig;
 import com.innercircle.sacco.config.entity.PenaltyRule;
+import com.innercircle.sacco.config.entity.PenaltyRuleTier;
 import com.innercircle.sacco.config.entity.SystemConfig;
 import com.innercircle.sacco.config.repository.ContributionScheduleConfigRepository;
 import com.innercircle.sacco.config.repository.LoanProductConfigRepository;
@@ -219,8 +221,16 @@ class ConfigServiceImplTest {
                 .name("Personal Loan")
                 .interestMethod(InterestMethod.REDUCING_BALANCE)
                 .annualInterestRate(new BigDecimal("12.00"))
+                .minTermMonths(6)
                 .maxTermMonths(24)
+                .minAmount(new BigDecimal("10000.00"))
                 .maxAmount(new BigDecimal("500000.00"))
+                .contributionCapPercent(new BigDecimal("75.00"))
+                .poolCapAmount(new BigDecimal("300000.00"))
+                .rolloverEnabled(true)
+                .maxRolloverMonths(2)
+                .rolloverSurchargeRate(new BigDecimal("10.00"))
+                .interestAccrualEnabled(false)
                 .requiresGuarantor(true)
                 .active(true)
                 .build();
@@ -232,8 +242,16 @@ class ConfigServiceImplTest {
         assertThat(result.getName()).isEqualTo("Personal Loan");
         assertThat(result.getInterestMethod()).isEqualTo(InterestMethod.REDUCING_BALANCE);
         assertThat(result.getAnnualInterestRate()).isEqualByComparingTo("12.00");
+        assertThat(result.getMinTermMonths()).isEqualTo(6);
         assertThat(result.getMaxTermMonths()).isEqualTo(24);
+        assertThat(result.getMinAmount()).isEqualByComparingTo("10000.00");
         assertThat(result.getMaxAmount()).isEqualByComparingTo("500000.00");
+        assertThat(result.getContributionCapPercent()).isEqualByComparingTo("75.00");
+        assertThat(result.getPoolCapAmount()).isEqualByComparingTo("300000.00");
+        assertThat(result.isRolloverEnabled()).isTrue();
+        assertThat(result.getMaxRolloverMonths()).isEqualTo(2);
+        assertThat(result.getRolloverSurchargeRate()).isEqualByComparingTo("10.00");
+        assertThat(result.isInterestAccrualEnabled()).isFalse();
         assertThat(result.isRequiresGuarantor()).isTrue();
         assertThat(result.isActive()).isTrue();
     }
@@ -244,8 +262,12 @@ class ConfigServiceImplTest {
                 .name("Flat Rate Loan")
                 .interestMethod(InterestMethod.FLAT_RATE)
                 .annualInterestRate(new BigDecimal("10.00"))
+                .minTermMonths(3)
                 .maxTermMonths(12)
+                .minAmount(new BigDecimal("5000.00"))
                 .maxAmount(new BigDecimal("100000.00"))
+                .rolloverEnabled(false)
+                .interestAccrualEnabled(false)
                 .requiresGuarantor(false)
                 .active(true)
                 .build();
@@ -265,8 +287,14 @@ class ConfigServiceImplTest {
         existing.setName("Old Name");
         existing.setInterestMethod(InterestMethod.FLAT_RATE);
         existing.setAnnualInterestRate(new BigDecimal("10.00"));
+        existing.setMinTermMonths(3);
         existing.setMaxTermMonths(12);
+        existing.setMinAmount(new BigDecimal("10000.00"));
         existing.setMaxAmount(new BigDecimal("100000.00"));
+        existing.setContributionCapPercent(new BigDecimal("70.00"));
+        existing.setPoolCapAmount(new BigDecimal("250000.00"));
+        existing.setRolloverEnabled(false);
+        existing.setInterestAccrualEnabled(false);
         existing.setRequiresGuarantor(false);
         existing.setActive(true);
 
@@ -274,8 +302,16 @@ class ConfigServiceImplTest {
                 .name("Updated Name")
                 .interestMethod(InterestMethod.REDUCING_BALANCE)
                 .annualInterestRate(new BigDecimal("15.00"))
+                .minTermMonths(6)
                 .maxTermMonths(36)
+                .minAmount(new BigDecimal("20000.00"))
                 .maxAmount(new BigDecimal("1000000.00"))
+                .contributionCapPercent(new BigDecimal("80.00"))
+                .poolCapAmount(new BigDecimal("500000.00"))
+                .rolloverEnabled(true)
+                .maxRolloverMonths(3)
+                .rolloverSurchargeRate(new BigDecimal("12.50"))
+                .interestAccrualEnabled(true)
                 .requiresGuarantor(true)
                 .active(false)
                 .build();
@@ -288,8 +324,16 @@ class ConfigServiceImplTest {
         assertThat(result.getName()).isEqualTo("Updated Name");
         assertThat(result.getInterestMethod()).isEqualTo(InterestMethod.REDUCING_BALANCE);
         assertThat(result.getAnnualInterestRate()).isEqualByComparingTo("15.00");
+        assertThat(result.getMinTermMonths()).isEqualTo(6);
         assertThat(result.getMaxTermMonths()).isEqualTo(36);
+        assertThat(result.getMinAmount()).isEqualByComparingTo("20000.00");
         assertThat(result.getMaxAmount()).isEqualByComparingTo("1000000.00");
+        assertThat(result.getContributionCapPercent()).isEqualByComparingTo("80.00");
+        assertThat(result.getPoolCapAmount()).isEqualByComparingTo("500000.00");
+        assertThat(result.isRolloverEnabled()).isTrue();
+        assertThat(result.getMaxRolloverMonths()).isEqualTo(3);
+        assertThat(result.getRolloverSurchargeRate()).isEqualByComparingTo("12.50");
+        assertThat(result.isInterestAccrualEnabled()).isTrue();
         assertThat(result.isRequiresGuarantor()).isTrue();
         assertThat(result.isActive()).isFalse();
     }
@@ -388,6 +432,10 @@ class ConfigServiceImplTest {
                 .name("Monthly Savings")
                 .frequency(ContributionScheduleConfig.Frequency.MONTHLY)
                 .amount(new BigDecimal("5000.00"))
+                .dueDayOfMonth(10)
+                .gracePeriodDays(3)
+                .mandatory(true)
+                .expectedGrossAmount(new BigDecimal("11000.00"))
                 .penaltyEnabled(true)
                 .active(true)
                 .build();
@@ -400,6 +448,10 @@ class ConfigServiceImplTest {
         assertThat(result.getName()).isEqualTo("Monthly Savings");
         assertThat(result.getFrequency()).isEqualTo(ContributionScheduleConfig.Frequency.MONTHLY);
         assertThat(result.getAmount()).isEqualByComparingTo("5000.00");
+        assertThat(result.getDueDayOfMonth()).isEqualTo(10);
+        assertThat(result.getGracePeriodDays()).isEqualTo(3);
+        assertThat(result.isMandatory()).isTrue();
+        assertThat(result.getExpectedGrossAmount()).isEqualByComparingTo("11000.00");
         assertThat(result.isPenaltyEnabled()).isTrue();
         assertThat(result.isActive()).isTrue();
     }
@@ -410,6 +462,10 @@ class ConfigServiceImplTest {
                 .name("Weekly Dues")
                 .frequency(ContributionScheduleConfig.Frequency.WEEKLY)
                 .amount(new BigDecimal("1000.00"))
+                .dueDayOfMonth(5)
+                .gracePeriodDays(0)
+                .mandatory(false)
+                .expectedGrossAmount(new BigDecimal("1000.00"))
                 .penaltyEnabled(false)
                 .active(true)
                 .build();
@@ -433,6 +489,10 @@ class ConfigServiceImplTest {
                 .name("Updated Schedule")
                 .frequency(ContributionScheduleConfig.Frequency.MONTHLY)
                 .amount(new BigDecimal("10000.00"))
+                .dueDayOfMonth(12)
+                .gracePeriodDays(5)
+                .mandatory(true)
+                .expectedGrossAmount(new BigDecimal("12000.00"))
                 .penaltyEnabled(true)
                 .active(false)
                 .build();
@@ -445,6 +505,10 @@ class ConfigServiceImplTest {
 
         assertThat(result.getName()).isEqualTo("Updated Schedule");
         assertThat(result.getAmount()).isEqualByComparingTo("10000.00");
+        assertThat(result.getDueDayOfMonth()).isEqualTo(12);
+        assertThat(result.getGracePeriodDays()).isEqualTo(5);
+        assertThat(result.isMandatory()).isTrue();
+        assertThat(result.getExpectedGrossAmount()).isEqualByComparingTo("12000.00");
         assertThat(result.isActive()).isFalse();
     }
 
@@ -543,6 +607,11 @@ class ConfigServiceImplTest {
                 .penaltyType(PenaltyRule.PenaltyType.LATE_CONTRIBUTION)
                 .rate(new BigDecimal("5.00"))
                 .calculationMethod(PenaltyRule.CalculationMethod.PERCENTAGE)
+                .tiers(List.of(
+                        defaultTier(1, 1, 60, PenaltyRuleTier.PenaltyFrequency.MONTHLY,
+                                PenaltyRule.CalculationMethod.PERCENTAGE, "10.00", null, true),
+                        defaultTier(2, 61, 120, PenaltyRuleTier.PenaltyFrequency.DAILY,
+                                PenaltyRule.CalculationMethod.FLAT, "100.00", null, true)))
                 .active(true)
                 .build();
 
@@ -552,8 +621,9 @@ class ConfigServiceImplTest {
 
         assertThat(result.getName()).isEqualTo("Late Contribution Penalty");
         assertThat(result.getPenaltyType()).isEqualTo(PenaltyRule.PenaltyType.LATE_CONTRIBUTION);
-        assertThat(result.getRate()).isEqualByComparingTo("5.00");
+        assertThat(result.getRate()).isEqualByComparingTo("10.00");
         assertThat(result.getCalculationMethod()).isEqualTo(PenaltyRule.CalculationMethod.PERCENTAGE);
+        assertThat(result.getTiers()).hasSize(2);
         assertThat(result.isActive()).isTrue();
     }
 
@@ -564,6 +634,8 @@ class ConfigServiceImplTest {
                 .penaltyType(PenaltyRule.PenaltyType.LOAN_DEFAULT)
                 .rate(new BigDecimal("500.00"))
                 .calculationMethod(PenaltyRule.CalculationMethod.FLAT)
+                .tiers(List.of(defaultTier(1, 1, 90, PenaltyRuleTier.PenaltyFrequency.MONTHLY,
+                        PenaltyRule.CalculationMethod.FLAT, "500.00", 1, true)))
                 .active(true)
                 .build();
 
@@ -587,6 +659,8 @@ class ConfigServiceImplTest {
                 .penaltyType(PenaltyRule.PenaltyType.LOAN_DEFAULT)
                 .rate(new BigDecimal("10.00"))
                 .calculationMethod(PenaltyRule.CalculationMethod.PERCENTAGE)
+                .tiers(List.of(defaultTier(1, 1, null, PenaltyRuleTier.PenaltyFrequency.ONCE,
+                        PenaltyRule.CalculationMethod.PERCENTAGE, "10.00", 1, true)))
                 .active(false)
                 .build();
 
@@ -630,5 +704,27 @@ class ConfigServiceImplTest {
                 .hasMessageContaining("Penalty rule");
 
         verify(penaltyRuleRepository, never()).deleteById(any());
+    }
+
+    private PenaltyTierRequest defaultTier(
+            int sequence,
+            int startOverdueDay,
+            Integer endOverdueDay,
+            PenaltyRuleTier.PenaltyFrequency frequency,
+            PenaltyRule.CalculationMethod calculationMethod,
+            String rate,
+            Integer maxApplications,
+            boolean active
+    ) {
+        return PenaltyTierRequest.builder()
+                .sequence(sequence)
+                .startOverdueDay(startOverdueDay)
+                .endOverdueDay(endOverdueDay)
+                .frequency(frequency)
+                .calculationMethod(calculationMethod)
+                .rate(new BigDecimal(rate))
+                .maxApplications(maxApplications)
+                .active(active)
+                .build();
     }
 }

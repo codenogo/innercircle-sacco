@@ -97,6 +97,16 @@ input[type="number"].field-input {
   color: var(--deficit);
 }
 
+.field-input--error,
+.field-input--error:hover {
+  border-color: var(--deficit);
+}
+
+.field-label--required::after {
+  content: ' *';
+  color: var(--deficit);
+}
+
 /* ─── Checkbox field ─── */
 
 .field-checkbox {

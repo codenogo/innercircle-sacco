@@ -82,6 +82,13 @@ public class MemberAccessHelper {
         }
         return authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .anyMatch(authority -> "ROLE_ADMIN".equals(authority) || "ROLE_TREASURER".equals(authority));
+                .anyMatch(authority ->
+                        "ROLE_ADMIN".equals(authority)
+                                || "ROLE_TREASURER".equals(authority)
+                                || "ROLE_SECRETARY".equals(authority)
+                                || "ROLE_CHAIRPERSON".equals(authority)
+                                || "ROLE_VICE_CHAIRPERSON".equals(authority)
+                                || "ROLE_VICE_TREASURER".equals(authority)
+                );
     }
 }

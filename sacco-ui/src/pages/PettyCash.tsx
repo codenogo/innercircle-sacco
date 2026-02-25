@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Plus, MagnifyingGlass } from '@phosphor-icons/react'
 import { Spinner } from '../components/Spinner'
+import { ActionMenu, type ActionMenuItem } from '../components/ActionMenu'
+import { StatCardGrid } from '../components/StatCard'
 import { DataTable, type ColumnDef } from '../components/DataTable'
 import { MonthPicker } from '../components/MonthPicker'
 import { DatePicker } from '../components/DatePicker'
@@ -19,6 +21,7 @@ import {
 } from '../services/pettyCashService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { useAuthorization } from '../hooks/useAuthorization'
+import { useToast } from '../hooks/useToast'
 import { isMakerCheckerViolation } from '../types/makerChecker'
 import type {
   PettyCashExpenseType,
@@ -31,12 +34,6 @@ import './PettyCash.css'
 const PAGE_SIZE = 50
 
 type StatusFilter = 'ALL' | PettyCashVoucherStatus
-type FeedbackType = 'success' | 'error'
-
-interface Feedback {
-  type: FeedbackType
-  text: string
-}
 
 const statusClass: Record<PettyCashVoucherStatus, string> = {
   SUBMITTED: 'badge--pending',
@@ -90,14 +87,11 @@ function fmtDate(value: string | null): string {
   })
 }
 
-function normalizeErrorMessage(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1)
-}
-
 export function PettyCash() {
   const { request } = useAuthenticatedApi()
   const { canAccess } = useAuthorization()
   const isAdmin = canAccess(['ADMIN'])
+  const toast = useToast()
 
   const [vouchers, setVouchers] = useState<PettyCashVoucherResponse[]>([])
   const [summary, setSummary] = useState<PettyCashSummaryResponse | null>(null)
@@ -106,7 +100,6 @@ export function PettyCash() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(false)
-  const [feedback, setFeedback] = useState<Feedback | null>(null)
 
   const [search, setSearch] = useState('')
   const [month, setMonth] = useState(currentMonth)
@@ -163,15 +156,12 @@ export function PettyCash() {
       setNextCursor(page.nextCursor)
       setHasMore(page.hasMore)
     } catch (error) {
-      setFeedback({
-        type: 'error',
-        text: toErrorMessage(error, 'Unable to load petty cash vouchers.'),
-      })
+      toast.error('Load failed', toErrorMessage(error, 'Unable to load petty cash vouchers.'))
     } finally {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [effectiveStatus, month, request])
+  }, [effectiveStatus, month, request, toast])
 
   const loadSummary = useCallback(async () => {
     try {
@@ -179,12 +169,9 @@ export function PettyCash() {
       setSummary(result)
     } catch (error) {
       setSummary(null)
-      setFeedback({
-        type: 'error',
-        text: toErrorMessage(error, 'Unable to load petty cash summary.'),
-      })
+      toast.error('Load failed', toErrorMessage(error, 'Unable to load petty cash summary.'))
     }
-  }, [effectiveStatus, month, request])
+  }, [effectiveStatus, month, request, toast])
 
   const refreshData = useCallback(async () => {
     await Promise.all([
@@ -196,6 +183,36 @@ export function PettyCash() {
   useEffect(() => {
     void refreshData()
   }, [refreshData])
+
+  const handleApprove = useCallback(async (voucherId: string) => {
+    setActionLoading(voucherId)
+    try {
+      await approvePettyCashVoucher(voucherId, undefined, request)
+      toast.success('Voucher approved', 'Voucher approved successfully.')
+      await refreshData()
+    } catch (error) {
+      if (isMakerCheckerViolation(error)) {
+        setOverrideTarget(voucherId)
+      } else {
+        toast.error('Approve failed', toErrorMessage(error, 'Unable to approve voucher.'))
+      }
+    } finally {
+      setActionLoading(null)
+    }
+  }, [refreshData, request, toast])
+
+  const handleDisburse = useCallback(async (voucherId: string) => {
+    setActionLoading(voucherId)
+    try {
+      await disbursePettyCashVoucher(voucherId, request)
+      toast.success('Voucher disbursed', 'Voucher disbursed successfully.')
+      await refreshData()
+    } catch (error) {
+      toast.error('Disburse failed', toErrorMessage(error, 'Unable to disburse voucher.'))
+    } finally {
+      setActionLoading(null)
+    }
+  }, [refreshData, request, toast])
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -255,66 +272,42 @@ export function PettyCash() {
     },
     {
       key: 'actions',
-      header: 'Actions',
-      render: v => (
-        <div className="petty-cash-actions">
-          {v.status === 'SUBMITTED' && (
-            <>
-              <button
-                type="button"
-                className="btn btn--secondary btn--small"
-                onClick={() => void handleApprove(v.id)}
-                disabled={actionLoading === v.id}
-              >
-                {actionLoading === v.id ? 'Approving...' : 'Approve'}
-              </button>
-              <button
-                type="button"
-                className="btn btn--secondary btn--small"
-                onClick={() => setRejectTarget(v)}
-                disabled={actionLoading === v.id}
-              >
-                Reject
-              </button>
-            </>
-          )}
-          {v.status === 'APPROVED' && (
-            <button
-              type="button"
-              className="btn btn--secondary btn--small"
-              onClick={() => void handleDisburse(v.id)}
-              disabled={actionLoading === v.id}
-            >
-              {actionLoading === v.id ? 'Disbursing...' : 'Disburse'}
-            </button>
-          )}
-          {v.status === 'DISBURSED' && (
-            <button
-              type="button"
-              className="btn btn--secondary btn--small"
-              onClick={() => setSettleTarget(v)}
-            >
-              Settle
-            </button>
-          )}
-        </div>
-      ),
+      header: '',
+      width: '52px',
+      headerClassName: 'datatable-col-actions',
+      className: 'datatable-col-actions',
+      render: v => {
+        const busy = actionLoading === v.id
+        const items: ActionMenuItem[] = []
+        if (v.status === 'SUBMITTED') {
+          items.push(
+            { label: 'Approve', onClick: () => void handleApprove(v.id), disabled: busy },
+            { label: 'Reject', onClick: () => setRejectTarget(v), variant: 'danger', disabled: busy },
+          )
+        }
+        if (v.status === 'APPROVED') {
+          items.push({ label: 'Disburse', onClick: () => void handleDisburse(v.id), disabled: busy })
+        }
+        if (v.status === 'DISBURSED') {
+          items.push({ label: 'Settle', onClick: () => setSettleTarget(v) })
+        }
+        return <ActionMenu actions={items} />
+      },
     },
-  ], [actionLoading])
+  ], [actionLoading, handleApprove, handleDisburse])
 
   async function handleCreateVoucher() {
     const amount = Number(createAmount)
     if (!Number.isFinite(amount) || amount <= 0) {
-      setFeedback({ type: 'error', text: 'Enter a valid amount greater than zero.' })
+      toast.error('Validation', 'Enter a valid amount greater than zero.')
       return
     }
     if (!createPurpose.trim()) {
-      setFeedback({ type: 'error', text: 'Purpose is required.' })
+      toast.error('Validation', 'Purpose is required.')
       return
     }
 
     setCreateSubmitting(true)
-    setFeedback(null)
     try {
       await createPettyCashVoucher({
         amount,
@@ -330,70 +323,25 @@ export function PettyCash() {
       setCreateRequestDate(todayIsoDate())
       setCreateNotes('')
       setShowCreateModal(false)
-      setFeedback({ type: 'success', text: 'Petty cash voucher created successfully.' })
+      toast.success('Voucher created', 'Petty cash voucher created successfully.')
       await refreshData()
     } catch (error) {
-      setFeedback({
-        type: 'error',
-        text: toErrorMessage(error, 'Unable to create petty cash voucher.'),
-      })
+      toast.error('Create failed', toErrorMessage(error, 'Unable to create petty cash voucher.'))
     } finally {
       setCreateSubmitting(false)
-    }
-  }
-
-  async function handleApprove(voucherId: string) {
-    setActionLoading(voucherId)
-    setFeedback(null)
-    try {
-      await approvePettyCashVoucher(voucherId, undefined, request)
-      setFeedback({ type: 'success', text: 'Voucher approved successfully.' })
-      await refreshData()
-    } catch (error) {
-      if (isMakerCheckerViolation(error)) {
-        setOverrideTarget(voucherId)
-      } else {
-        setFeedback({
-          type: 'error',
-          text: toErrorMessage(error, 'Unable to approve voucher.'),
-        })
-      }
-    } finally {
-      setActionLoading(null)
     }
   }
 
   async function handleApproveOverride(reason: string) {
     if (!overrideTarget) return
     setActionLoading(overrideTarget)
-    setFeedback(null)
     try {
       await approvePettyCashVoucher(overrideTarget, { overrideReason: reason }, request)
-      setFeedback({ type: 'success', text: 'Voucher approved with admin override.' })
+      toast.success('Override approved', 'Voucher approved with admin override.')
       setOverrideTarget(null)
       await refreshData()
     } catch (error) {
-      setFeedback({
-        type: 'error',
-        text: toErrorMessage(error, 'Unable to approve with override.'),
-      })
-    } finally {
-      setActionLoading(null)
-    }
-  }
-
-  async function handleDisburse(voucherId: string) {
-    setActionLoading(voucherId)
-    setFeedback(null)
-    try {
-      await disbursePettyCashVoucher(voucherId, request)
-      setFeedback({ type: 'success', text: 'Voucher disbursed successfully.' })
-      await refreshData()
-    } catch (error) {
-      setFeedback({
-        type: 'error',
-        text: toErrorMessage(error, 'Unable to disburse voucher.'),
-      })
+      toast.error('Override failed', toErrorMessage(error, 'Unable to approve with override.'))
     } finally {
       setActionLoading(null)
     }
@@ -402,27 +350,23 @@ export function PettyCash() {
   async function handleSettleVoucher() {
     if (!settleTarget) return
     if (!settleReceiptNumber.trim()) {
-      setFeedback({ type: 'error', text: 'Receipt number is required to settle this voucher.' })
+      toast.error('Validation', 'Receipt number is required to settle this voucher.')
       return
     }
 
     setSettleSubmitting(true)
-    setFeedback(null)
     try {
       await settlePettyCashVoucher(settleTarget.id, {
         receiptNumber: settleReceiptNumber.trim(),
         notes: settleNotes.trim() || undefined,
       }, request)
-      setFeedback({ type: 'success', text: 'Voucher settled successfully.' })
+      toast.success('Voucher settled', 'Voucher settled successfully.')
       setSettleTarget(null)
       setSettleReceiptNumber('')
       setSettleNotes('')
       await refreshData()
     } catch (error) {
-      setFeedback({
-        type: 'error',
-        text: toErrorMessage(error, 'Unable to settle voucher.'),
-      })
+      toast.error('Settle failed', toErrorMessage(error, 'Unable to settle voucher.'))
     } finally {
       setSettleSubmitting(false)
     }
@@ -431,23 +375,19 @@ export function PettyCash() {
   async function handleRejectVoucher() {
     if (!rejectTarget) return
     if (!rejectReason.trim()) {
-      setFeedback({ type: 'error', text: 'A rejection reason is required.' })
+      toast.error('Validation', 'A rejection reason is required.')
       return
     }
 
     setRejectSubmitting(true)
-    setFeedback(null)
     try {
       await rejectPettyCashVoucher(rejectTarget.id, { reason: rejectReason.trim() }, request)
-      setFeedback({ type: 'success', text: 'Voucher rejected successfully.' })
+      toast.success('Voucher rejected', 'Voucher rejected successfully.')
       setRejectTarget(null)
       setRejectReason('')
       await refreshData()
     } catch (error) {
-      setFeedback({
-        type: 'error',
-        text: toErrorMessage(error, 'Unable to reject voucher.'),
-      })
+      toast.error('Reject failed', toErrorMessage(error, 'Unable to reject voucher.'))
     } finally {
       setRejectSubmitting(false)
     }
@@ -468,34 +408,31 @@ export function PettyCash() {
 
       <hr className="rule rule--strong" />
 
-      <div className="page-summary petty-cash-summary">
-        <span>Total: <strong>{summary?.totalCount ?? 0}</strong></span>
-        <span className="page-summary-divider">|</span>
-        <span>Submitted: <strong>{summary?.submittedCount ?? 0}</strong></span>
-        <span className="page-summary-divider">|</span>
-        <span>Approved: <strong>{summary?.approvedCount ?? 0}</strong></span>
-        <span className="page-summary-divider">|</span>
-        <span>Disbursed: <strong>{summary?.disbursedCount ?? 0}</strong></span>
-        <span className="page-summary-divider">|</span>
-        <span>Settled: <strong>{summary?.settledCount ?? 0}</strong></span>
-        <span className="page-summary-divider">|</span>
-        <span>Rejected: <strong>{summary?.rejectedCount ?? 0}</strong></span>
-      </div>
-      <div className="page-summary petty-cash-summary">
-        <span>Disbursed Amount: <strong>KES {fmtCurrency(summary?.disbursedAmount ?? 0)}</strong></span>
-        <span className="page-summary-divider">|</span>
-        <span>Settled Amount: <strong>KES {fmtCurrency(summary?.settledAmount ?? 0)}</strong></span>
-        <span className="page-summary-divider">|</span>
-        <span>Outstanding Float: <strong>KES {fmtCurrency(summary?.outstandingAmount ?? 0)}</strong></span>
-      </div>
-
-      <hr className="rule" />
-
-      {feedback && (
-        <div className={`petty-cash-feedback petty-cash-feedback--${feedback.type}`} role="status">
-          {normalizeErrorMessage(feedback.text)}
-        </div>
-      )}
+      <section className="page-section">
+        <span className="page-section-title">Summary</span>
+        <hr className="rule" />
+        <StatCardGrid
+          items={[
+            { label: 'Total Vouchers', value: `${summary?.totalCount ?? 0}` },
+            { label: 'Submitted', value: `${summary?.submittedCount ?? 0}` },
+            { label: 'Approved', value: `${summary?.approvedCount ?? 0}` },
+            { label: 'Disbursed', value: `${summary?.disbursedCount ?? 0}` },
+            { label: 'Settled', value: `${summary?.settledCount ?? 0}` },
+            { label: 'Rejected', value: `${summary?.rejectedCount ?? 0}` },
+          ]}
+          columns={3}
+        />
+        <hr className="rule" />
+        <StatCardGrid
+          items={[
+            { label: 'Disbursed Amount', value: `KES ${fmtCurrency(summary?.disbursedAmount ?? 0)}` },
+            { label: 'Settled Amount', value: `KES ${fmtCurrency(summary?.settledAmount ?? 0)}`, valueClassName: 'amount--positive' },
+            { label: 'Outstanding Float', value: `KES ${fmtCurrency(summary?.outstandingAmount ?? 0)}` },
+          ]}
+          columns={3}
+        />
+        <hr className="rule" />
+      </section>
 
       <section className="page-section">
         <div className="filter-bar">
@@ -532,7 +469,14 @@ export function PettyCash() {
         data={filtered}
         getRowKey={v => v.id}
         loading={loading}
-        emptyMessage="No petty cash vouchers found."
+        emptyMessage={
+          vouchers.length === 0
+            ? <div className="empty-state empty-state--illustrated">
+                <h3 className="empty-state-heading">No petty cash vouchers</h3>
+                <p className="empty-state-text">Create your first voucher to track petty cash expenses.</p>
+              </div>
+            : 'No vouchers match your search.'
+        }
         getRowClassName={(_, i) => i % 2 === 1 ? 'datatable-row--alt' : ''}
       />
 
@@ -560,61 +504,76 @@ export function PettyCash() {
             <button type="button" className="btn btn--secondary" onClick={() => setShowCreateModal(false)} disabled={createSubmitting}>
               Cancel
             </button>
-            <button type="button" className="btn btn--primary" onClick={() => void handleCreateVoucher()} disabled={createSubmitting}>
+            <button type="submit" className="btn btn--primary" form="petty-cash-create-form" disabled={createSubmitting}>
               {createSubmitting ? 'Creating...' : 'Create Voucher'}
             </button>
           </>
         )}
       >
-        <div className="petty-cash-form-grid">
-          <label className="field-label" htmlFor="petty-cash-amount">Amount (KES)</label>
-          <input
-            id="petty-cash-amount"
-            className="field-input"
-            type="number"
-            min={1}
-            value={createAmount}
-            onChange={event => setCreateAmount(event.target.value)}
-            placeholder="0"
-          />
+        <form id="petty-cash-create-form" className="modal-form" onSubmit={event => { event.preventDefault(); void handleCreateVoucher() }}>
+          <div className="field-row">
+            <div className="field">
+              <label className="field-label field-label--required" htmlFor="petty-cash-amount">Amount (KES)</label>
+              <input
+                id="petty-cash-amount"
+                className="field-input"
+                type="number"
+                min={1}
+                required
+                disabled={createSubmitting}
+                value={createAmount}
+                onChange={event => setCreateAmount(event.target.value)}
+                placeholder="0"
+              />
+            </div>
+            <div className="field">
+              <label className="field-label field-label--required" htmlFor="petty-cash-expense-type">Expense Type</label>
+              <Select
+                value={createExpenseType}
+                onChange={value => setCreateExpenseType(value as PettyCashExpenseType)}
+                options={(Object.keys(expenseTypeLabel) as PettyCashExpenseType[]).map(type => ({
+                  value: type,
+                  label: expenseTypeLabel[type],
+                }))}
+                required
+              />
+            </div>
+          </div>
 
-          <label className="field-label" htmlFor="petty-cash-purpose">Purpose</label>
-          <textarea
-            id="petty-cash-purpose"
-            className="field-input"
-            rows={3}
-            maxLength={500}
-            value={createPurpose}
-            onChange={event => setCreatePurpose(event.target.value)}
-            placeholder="Describe what this petty cash will be used for"
-          />
+          <div className="field">
+            <label className="field-label field-label--required" htmlFor="petty-cash-purpose">Purpose</label>
+            <textarea
+              id="petty-cash-purpose"
+              className="field-input"
+              rows={3}
+              maxLength={500}
+              required
+              disabled={createSubmitting}
+              value={createPurpose}
+              onChange={event => setCreatePurpose(event.target.value)}
+              placeholder="Describe what this petty cash will be used for"
+            />
+          </div>
 
-          <label className="field-label" htmlFor="petty-cash-expense-type">Expense Type</label>
-          <select
-            id="petty-cash-expense-type"
-            className="filter-select"
-            value={createExpenseType}
-            onChange={event => setCreateExpenseType(event.target.value as PettyCashExpenseType)}
-          >
-            {(Object.keys(expenseTypeLabel) as PettyCashExpenseType[]).map(type => (
-              <option key={type} value={type}>{expenseTypeLabel[type]}</option>
-            ))}
-          </select>
+          <div className="field">
+            <label className="field-label field-label--required">Request Date</label>
+            <DatePicker value={createRequestDate} onChange={setCreateRequestDate} required />
+          </div>
 
-          <label className="field-label">Request Date</label>
-          <DatePicker value={createRequestDate} onChange={setCreateRequestDate} required />
-
-          <label className="field-label" htmlFor="petty-cash-notes">Notes</label>
-          <textarea
-            id="petty-cash-notes"
-            className="field-input"
-            rows={3}
-            maxLength={500}
-            value={createNotes}
-            onChange={event => setCreateNotes(event.target.value)}
-            placeholder="Optional notes"
-          />
-        </div>
+          <div className="field">
+            <label className="field-label" htmlFor="petty-cash-notes">Notes</label>
+            <textarea
+              id="petty-cash-notes"
+              className="field-input"
+              rows={2}
+              maxLength={500}
+              disabled={createSubmitting}
+              value={createNotes}
+              onChange={event => setCreateNotes(event.target.value)}
+              placeholder="Optional notes"
+            />
+          </div>
+        </form>
       </Modal>
 
       <Modal
@@ -641,35 +600,42 @@ export function PettyCash() {
             >
               Cancel
             </button>
-            <button type="button" className="btn btn--primary" onClick={() => void handleSettleVoucher()} disabled={settleSubmitting}>
+            <button type="submit" className="btn btn--primary" form="petty-cash-settle-form" disabled={settleSubmitting}>
               {settleSubmitting ? 'Settling...' : 'Settle'}
             </button>
           </>
         )}
       >
-        <div className="petty-cash-form-grid">
-          <label className="field-label" htmlFor="settle-receipt-number">Receipt Number</label>
-          <input
-            id="settle-receipt-number"
-            className="field-input"
-            type="text"
-            maxLength={100}
-            value={settleReceiptNumber}
-            onChange={event => setSettleReceiptNumber(event.target.value)}
-            placeholder="e.g. RCT-0001"
-          />
+        <form id="petty-cash-settle-form" className="modal-form" onSubmit={event => { event.preventDefault(); void handleSettleVoucher() }}>
+          <div className="field">
+            <label className="field-label field-label--required" htmlFor="settle-receipt-number">Receipt Number</label>
+            <input
+              id="settle-receipt-number"
+              className="field-input"
+              type="text"
+              maxLength={100}
+              required
+              disabled={settleSubmitting}
+              value={settleReceiptNumber}
+              onChange={event => setSettleReceiptNumber(event.target.value)}
+              placeholder="e.g. RCT-0001"
+            />
+          </div>
 
-          <label className="field-label" htmlFor="settle-notes">Notes</label>
-          <textarea
-            id="settle-notes"
-            className="field-input"
-            rows={3}
-            maxLength={500}
-            value={settleNotes}
-            onChange={event => setSettleNotes(event.target.value)}
-            placeholder="Optional settlement notes"
-          />
-        </div>
+          <div className="field">
+            <label className="field-label" htmlFor="settle-notes">Notes</label>
+            <textarea
+              id="settle-notes"
+              className="field-input"
+              rows={3}
+              maxLength={500}
+              disabled={settleSubmitting}
+              value={settleNotes}
+              onChange={event => setSettleNotes(event.target.value)}
+              placeholder="Optional settlement notes"
+            />
+          </div>
+        </form>
       </Modal>
 
       <Modal
@@ -694,24 +660,28 @@ export function PettyCash() {
             >
               Cancel
             </button>
-            <button type="button" className="btn btn--primary" onClick={() => void handleRejectVoucher()} disabled={rejectSubmitting}>
+            <button type="submit" className="btn btn--primary" form="petty-cash-reject-form" disabled={rejectSubmitting}>
               {rejectSubmitting ? 'Rejecting...' : 'Reject'}
             </button>
           </>
         )}
       >
-        <div className="petty-cash-form-grid">
-          <label className="field-label" htmlFor="reject-reason">Rejection Reason</label>
-          <textarea
-            id="reject-reason"
-            className="field-input"
-            rows={4}
-            maxLength={500}
-            value={rejectReason}
-            onChange={event => setRejectReason(event.target.value)}
-            placeholder="Explain why this voucher is being rejected"
-          />
-        </div>
+        <form id="petty-cash-reject-form" className="modal-form" onSubmit={event => { event.preventDefault(); void handleRejectVoucher() }}>
+          <div className="field">
+            <label className="field-label field-label--required" htmlFor="reject-reason">Rejection Reason</label>
+            <textarea
+              id="reject-reason"
+              className="field-input"
+              rows={4}
+              maxLength={500}
+              required
+              disabled={rejectSubmitting}
+              value={rejectReason}
+              onChange={event => setRejectReason(event.target.value)}
+              placeholder="Explain why this voucher is being rejected"
+            />
+          </div>
+        </form>
       </Modal>
 
       <MakerCheckerWarning

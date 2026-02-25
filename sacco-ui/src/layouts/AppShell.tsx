@@ -1,11 +1,21 @@
-import { useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Outlet, useLocation } from 'react-router-dom'
 import { Sidebar } from '../components/Sidebar'
 import { List } from '@phosphor-icons/react'
 import './AppShell.css'
 
 export function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const mainRef = useRef<HTMLElement>(null)
+  const location = useLocation()
+
+  useEffect(() => {
+    const heading = mainRef.current?.querySelector<HTMLElement>('.page-title')
+    if (heading) {
+      if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1')
+      heading.focus({ preventScroll: false })
+    }
+  }, [location.pathname])
 
   return (
     <div className="app-shell">
@@ -19,7 +29,7 @@ export function AppShell() {
         </div>
       </div>
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <main className="app-main">
+      <main className="app-main" ref={mainRef}>
         <Outlet />
       </main>
     </div>

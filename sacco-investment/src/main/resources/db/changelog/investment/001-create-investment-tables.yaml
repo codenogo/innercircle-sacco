@@ -1,0 +1,275 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-investments-table
+      author: codex
+      changes:
+        - createTable:
+            tableName: investments
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: reference_number
+                  type: varchar(40)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: investment_type
+                  type: varchar(40)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: institution
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: face_value
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: purchase_price
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: current_value
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: interest_rate
+                  type: decimal(9,4)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: purchase_date
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: maturity_date
+                  type: date
+              - column:
+                  name: units
+                  type: decimal(19,4)
+              - column:
+                  name: nav_per_unit
+                  type: decimal(19,4)
+              - column:
+                  name: notes
+                  type: varchar(2000)
+              - column:
+                  name: approved_by
+                  type: varchar(100)
+              - column:
+                  name: approved_at
+                  type: timestamp with time zone
+              - column:
+                  name: rejected_by
+                  type: varchar(100)
+              - column:
+                  name: rejected_at
+                  type: timestamp with time zone
+              - column:
+                  name: rejection_reason
+                  type: varchar(500)
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+              - column:
+                  name: version
+                  type: bigint
+
+        - createIndex:
+            tableName: investments
+            indexName: idx_investments_status
+            columns:
+              - column:
+                  name: status
+
+        - createIndex:
+            tableName: investments
+            indexName: idx_investments_type
+            columns:
+              - column:
+                  name: investment_type
+
+  - changeSet:
+      id: 002-create-investment-income-table
+      author: codex
+      changes:
+        - createTable:
+            tableName: investment_income
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: investment_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: income_type
+                  type: varchar(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: income_date
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reference_number
+                  type: varchar(100)
+              - column:
+                  name: notes
+                  type: varchar(1000)
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+              - column:
+                  name: version
+                  type: bigint
+
+        - addForeignKeyConstraint:
+            baseTableName: investment_income
+            baseColumnNames: investment_id
+            referencedTableName: investments
+            referencedColumnNames: id
+            constraintName: fk_investment_income_investment
+            onDelete: CASCADE
+
+        - createIndex:
+            tableName: investment_income
+            indexName: idx_investment_income_investment_id
+            columns:
+              - column:
+                  name: investment_id
+
+        - createIndex:
+            tableName: investment_income
+            indexName: idx_investment_income_income_date
+            columns:
+              - column:
+                  name: income_date
+
+  - changeSet:
+      id: 003-create-investment-valuations-table
+      author: codex
+      changes:
+        - createTable:
+            tableName: investment_valuations
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: investment_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: market_value
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: nav_per_unit
+                  type: decimal(19,4)
+              - column:
+                  name: valuation_date
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: source
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+              - column:
+                  name: version
+                  type: bigint
+
+        - addForeignKeyConstraint:
+            baseTableName: investment_valuations
+            baseColumnNames: investment_id
+            referencedTableName: investments
+            referencedColumnNames: id
+            constraintName: fk_investment_valuations_investment
+            onDelete: CASCADE
+
+        - createIndex:
+            tableName: investment_valuations
+            indexName: idx_investment_valuations_investment_id
+            columns:
+              - column:
+                  name: investment_id
+
+        - createIndex:
+            tableName: investment_valuations
+            indexName: idx_investment_valuations_valuation_date
+            columns:
+              - column:
+                  name: valuation_date

@@ -1,0 +1,144 @@
+/* ─── Settings sections ─── */
+
+.settings-group {
+  margin-top: var(--space-6);
+}
+
+.settings-group:first-child {
+  margin-top: 0;
+}
+
+.settings-group-title {
+  font-family: var(--font-heading);
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: var(--space-2);
+}
+
+.settings-row {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--rule-subtle);
+}
+
+.settings-row:last-child {
+  border-bottom: none;
+}
+
+.settings-row-label {
+  display: block;
+  font-size: var(--text-base);
+  color: var(--ink);
+  font-weight: 450;
+  line-height: var(--leading-tight);
+}
+
+.settings-row-desc {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+  margin-top: 2px;
+  line-height: 1.35;
+}
+
+.settings-row-value {
+  font-family: var(--font-data);
+  font-size: var(--text-base);
+  color: var(--ink-secondary);
+  text-align: right;
+}
+
+/* ─── Report cards ─── */
+
+.report-card {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  padding: var(--space-4);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--ease-fast);
+  cursor: pointer;
+}
+
+.report-card:hover {
+  border-color: var(--rule-strong);
+}
+
+.report-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.report-card-title {
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.report-card-desc {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.report-card-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* ─── Inline feedback ─── */
+
+.ops-feedback {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--rule);
+  font-size: var(--text-sm);
+}
+
+.ops-feedback--success {
+  color: var(--mpesa-text);
+  background: var(--mpesa-soft);
+  border-color: transparent;
+}
+
+.ops-feedback--error {
+  color: var(--deficit);
+  background: var(--deficit-soft);
+  border-color: transparent;
+}
+
+/* ─── Pagination ─── */
+
+.ops-pager {
+  margin-top: var(--space-4);
+  display: flex;
+  justify-content: center;
+}
+
+/* ─── Responsive ─── */
+
+@media (max-width: 768px) {
+  .report-card {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .report-card-actions {
+    align-self: flex-start;
+  }
+
+  .settings-row {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .settings-row-value {
+    text-align: left;
+  }
+}
+

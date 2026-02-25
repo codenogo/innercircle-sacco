@@ -3,6 +3,7 @@ package com.innercircle.sacco.contribution.service;
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.contribution.dto.BulkContributionRequest;
 import com.innercircle.sacco.contribution.dto.ContributionSummaryResponse;
+import com.innercircle.sacco.contribution.dto.ContributionWelfarePolicyResponse;
 import com.innercircle.sacco.contribution.dto.RecordContributionRequest;
 import com.innercircle.sacco.contribution.entity.Contribution;
 import com.innercircle.sacco.contribution.entity.ContributionStatus;
@@ -62,4 +63,9 @@ public interface ContributionService {
      * Get contribution summary for a member.
      */
     ContributionSummaryResponse getMemberSummary(UUID memberId);
+
+    /**
+     * Get active welfare split policy for contributions.
+     */
+    ContributionWelfarePolicyResponse getWelfarePolicy();
 }

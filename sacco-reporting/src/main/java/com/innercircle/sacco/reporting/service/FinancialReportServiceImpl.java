@@ -126,6 +126,21 @@ public class FinancialReportServiceImpl implements FinancialReportService {
         BigDecimal totalCollections = querySum(
                 "SELECT COALESCE(SUM(amount), 0) FROM contributions WHERE status = 'CONFIRMED' AND contribution_date BETWEEN ? AND ?",
                 startOfMonth, endOfMonth);
+        BigDecimal totalNetContributions = querySum(
+                "SELECT COALESCE(SUM(contribution_amount), 0) FROM contributions WHERE status = 'CONFIRMED' AND contribution_date BETWEEN ? AND ?",
+                startOfMonth, endOfMonth);
+        BigDecimal totalWelfare = querySum(
+                "SELECT COALESCE(SUM(welfare_amount), 0) FROM contributions WHERE status = 'CONFIRMED' AND contribution_date BETWEEN ? AND ?",
+                startOfMonth, endOfMonth);
+        BigDecimal totalMeetingFines = querySum(
+                "SELECT COALESCE(SUM(amount), 0) FROM meeting_fines WHERE settled = true AND settled_at BETWEEN ? AND ?",
+                startOfMonth.atStartOfDay(), endOfMonth.plusDays(1).atStartOfDay());
+        BigDecimal totalWelfareClaims = querySum(
+                "SELECT COALESCE(SUM(amount), 0) FROM payouts WHERE type = 'WELFARE_BENEFIT' AND status = 'PROCESSED' AND processed_at BETWEEN ? AND ?",
+                startOfMonth.atStartOfDay(), endOfMonth.plusDays(1).atStartOfDay());
+        BigDecimal totalExitSettlements = querySum(
+                "SELECT COALESCE(SUM(amount), 0) FROM payouts WHERE type = 'EXIT_SETTLEMENT' AND status = 'PROCESSED' AND processed_at BETWEEN ? AND ?",
+                startOfMonth.atStartOfDay(), endOfMonth.plusDays(1).atStartOfDay());
 
         BigDecimal payoutDisbursements = querySum(
                 "SELECT COALESCE(SUM(amount), 0) FROM payouts WHERE status = 'PROCESSED' AND processed_at BETWEEN ? AND ?",
@@ -153,7 +168,9 @@ public class FinancialReportServiceImpl implements FinancialReportService {
         BigDecimal totalShareCapital = querySum(SUM_MEMBER_SHARE_CAPITAL_SQL);
 
         return new TreasurerDashboardResponse(
-                totalCollections, totalDisbursements, pendingApprovals,
+                totalCollections, totalNetContributions, totalWelfare,
+                totalMeetingFines, totalWelfareClaims, totalExitSettlements,
+                totalDisbursements, pendingApprovals,
                 overdueLoans, cashPosition, activeMemberCount, totalShareCapital);
     }
 
@@ -215,6 +232,22 @@ public class FinancialReportServiceImpl implements FinancialReportService {
 
         BigDecimal totalContributions = querySum(
                 "SELECT COALESCE(SUM(amount), 0) FROM contributions WHERE status = 'CONFIRMED'");
+        BigDecimal totalNetContributions = querySum(
+                "SELECT COALESCE(SUM(contribution_amount), 0) FROM contributions WHERE status = 'CONFIRMED'");
+        BigDecimal totalWelfareContributions = querySum(
+                "SELECT COALESCE(SUM(welfare_amount), 0) FROM contributions WHERE status = 'CONFIRMED'");
+        BigDecimal totalMeetingFines = querySum(
+                "SELECT COALESCE(SUM(amount), 0) FROM meeting_fines WHERE settled = true");
+        BigDecimal totalWelfareBenefitsPaid = querySum(
+                "SELECT COALESCE(SUM(amount), 0) FROM payouts WHERE type = 'WELFARE_BENEFIT' AND status = 'PROCESSED'");
+        BigDecimal totalExitSettlements = querySum(
+                "SELECT COALESCE(SUM(amount), 0) FROM payouts WHERE type = 'EXIT_SETTLEMENT' AND status = 'PROCESSED'");
+        BigDecimal totalExitFees = querySum(
+                "SELECT COALESCE(SUM(jl.credit_amount), 0) " +
+                        "FROM journal_lines jl " +
+                        "JOIN journal_entries je ON jl.journal_entry_id = je.id " +
+                        "JOIN accounts a ON jl.account_id = a.id " +
+                        "WHERE a.account_code = '4005' AND je.posted = true");
 
         BigDecimal payoutDisbursements = querySum(
                 "SELECT COALESCE(SUM(amount), 0) FROM payouts WHERE status = 'PROCESSED'");
@@ -245,7 +278,8 @@ public class FinancialReportServiceImpl implements FinancialReportService {
 
         return new SaccoStateResponse(
                 totalMembers, activeMembers, totalShareCapital,
-                totalOutstandingLoans, totalContributions, totalPayouts,
+                totalOutstandingLoans, totalContributions, totalNetContributions, totalWelfareContributions,
+                totalMeetingFines, totalWelfareBenefitsPaid, totalExitSettlements, totalExitFees, totalPayouts,
                 loanRecoveryRate, memberGrowthRate
         );
     }

@@ -34,9 +34,33 @@ public class LoanProductRequest {
     @Min(value = 1, message = "Max term must be at least 1 month")
     private Integer maxTermMonths;
 
+    @NotNull(message = "Min term months is required")
+    @Min(value = 1, message = "Min term must be at least 1 month")
+    private Integer minTermMonths;
+
+    @NotNull(message = "Min amount is required")
+    @DecimalMin(value = "0.0", inclusive = false, message = "Min amount must be greater than 0")
+    private BigDecimal minAmount;
+
     @NotNull(message = "Max amount is required")
     @DecimalMin(value = "0.0", inclusive = false, message = "Max amount must be greater than 0")
     private BigDecimal maxAmount;
+
+    @DecimalMin(value = "0.0", inclusive = true, message = "Contribution cap percent must be non-negative")
+    private BigDecimal contributionCapPercent;
+
+    @DecimalMin(value = "0.0", inclusive = true, message = "Pool cap amount must be non-negative")
+    private BigDecimal poolCapAmount;
+
+    private boolean rolloverEnabled;
+
+    @Min(value = 0, message = "Max rollover months must be non-negative")
+    private Integer maxRolloverMonths;
+
+    @DecimalMin(value = "0.0", inclusive = true, message = "Rollover surcharge rate must be non-negative")
+    private BigDecimal rolloverSurchargeRate;
+
+    private boolean interestAccrualEnabled;
 
     private boolean requiresGuarantor;
 

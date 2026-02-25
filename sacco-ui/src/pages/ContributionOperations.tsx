@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { DataTable, type ColumnDef } from '../components/DataTable'
+import { ActionMenu, type ActionMenuItem } from '../components/ActionMenu'
+import { Breadcrumb } from '../components/Breadcrumb'
 import { MonthPicker } from '../components/MonthPicker'
 import { Spinner } from '../components/Spinner'
 import { Select } from '../components/Select'
@@ -51,7 +53,7 @@ const statusClass: Record<ContributionStatus, string> = {
 
 const PAYMENT_MODE_OPTIONS = [
   { value: 'MPESA', label: 'M-Pesa' },
-  { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+  { value: 'BANK', label: 'Bank Transfer' },
   { value: 'CASH', label: 'Cash' },
   { value: 'CHECK', label: 'Check' },
 ]
@@ -170,45 +172,8 @@ export function ContributionOperations() {
     }
   }, [showBulkForm, categories.length, fetchCategories])
 
-  // --- Columns ---
-  const contribColumns = useMemo((): ColumnDef<ContributionResponse>[] => [
-    { key: 'ref', header: 'Ref', render: c => <span className="data">{c.id.slice(0, 8)}</span> },
-    { key: 'member', header: 'Member', render: c => memberMap.get(c.memberId) ?? c.memberId.slice(0, 8) },
-    { key: 'category', header: 'Category', render: c => <span className="data">{c.category.name}</span> },
-    { key: 'status', header: 'Status', render: c => <span className={`badge ${statusClass[c.status]}`}>{c.status}</span> },
-    { key: 'date', header: 'Date', render: c => <span className="data">{fmtDate(c.contributionDate)}</span> },
-    { key: 'amount', header: 'Amount (KES)', headerClassName: 'ledger-table-amount', className: 'amount ledger-table-amount', render: c => fmt(c.amount) },
-    {
-      key: 'actions',
-      header: 'Actions',
-      render: c => (
-        <div className="ops-inline-actions">
-          {c.status === 'PENDING' && (
-            <button type="button" className="btn btn--secondary btn--small" disabled={actionInProgress === c.id} onClick={() => void handleConfirm(c.id)}>
-              Confirm
-            </button>
-          )}
-          {(c.status === 'PENDING' || c.status === 'CONFIRMED') && (
-            <button type="button" className="btn btn--secondary btn--small" disabled={actionInProgress === c.id} onClick={() => void handleReverse(c.id)}>
-              Reverse
-            </button>
-          )}
-        </div>
-      ),
-    },
-  ], [memberMap, actionInProgress])
-
-  // --- Filtered contributions ---
-  const filtered = useMemo(() => {
-    return contributions.filter(c => {
-      if (c.contributionMonth.slice(0, 7) !== month) return false
-      if (statusFilter !== 'ALL' && c.status !== statusFilter) return false
-      return true
-    })
-  }, [contributions, month, statusFilter])
-
   // --- Confirm action ---
-  async function handleConfirm(id: string) {
+  const handleConfirm = useCallback(async (id: string) => {
     setActionInProgress(id)
     setFeedback(null)
     try {
@@ -220,10 +185,10 @@ export function ContributionOperations() {
     } finally {
       setActionInProgress(null)
     }
-  }
+  }, [request])
 
   // --- Reverse action ---
-  async function handleReverse(id: string) {
+  const handleReverse = useCallback(async (id: string) => {
     if (!window.confirm('Are you sure you want to reverse this contribution?')) return
     setActionInProgress(id)
     setFeedback(null)
@@ -236,7 +201,58 @@ export function ContributionOperations() {
     } finally {
       setActionInProgress(null)
     }
-  }
+  }, [request])
+
+  // --- Columns ---
+  const contribColumns = useMemo((): ColumnDef<ContributionResponse>[] => [
+    { key: 'ref', header: 'Ref', render: c => <span className="data">{c.id.slice(0, 8)}</span> },
+    { key: 'member', header: 'Member', render: c => memberMap.get(c.memberId) ?? c.memberId.slice(0, 8) },
+    { key: 'category', header: 'Category', render: c => <span className="data">{c.category.name}</span> },
+    { key: 'status', header: 'Status', render: c => <span className={`badge ${statusClass[c.status]}`}>{c.status}</span> },
+    { key: 'date', header: 'Date', render: c => <span className="data">{fmtDate(c.contributionDate)}</span> },
+    { key: 'amount', header: 'Gross (KES)', headerClassName: 'ledger-table-amount', className: 'amount ledger-table-amount', render: c => fmt(c.amount) },
+    {
+      key: 'contributionAmount',
+      header: 'Net (KES)',
+      headerClassName: 'ledger-table-amount',
+      className: 'amount ledger-table-amount',
+      render: c => fmt(c.contributionAmount ?? c.amount),
+    },
+    {
+      key: 'welfareAmount',
+      header: 'Welfare (KES)',
+      headerClassName: 'ledger-table-amount',
+      className: 'amount ledger-table-amount',
+      render: c => fmt(c.welfareAmount ?? 0),
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: '52px',
+      headerClassName: 'datatable-col-actions',
+      className: 'datatable-col-actions',
+      render: c => {
+        const busy = actionInProgress === c.id
+        const items: ActionMenuItem[] = []
+        if (c.status === 'PENDING') {
+          items.push({ label: 'Confirm', onClick: () => void handleConfirm(c.id), disabled: busy })
+        }
+        if (c.status === 'PENDING' || c.status === 'CONFIRMED') {
+          items.push({ label: 'Reverse', onClick: () => void handleReverse(c.id), variant: 'danger', disabled: busy })
+        }
+        return <ActionMenu actions={items} />
+      },
+    },
+  ], [memberMap, actionInProgress, handleConfirm, handleReverse])
+
+  // --- Filtered contributions ---
+  const filtered = useMemo(() => {
+    return contributions.filter(c => {
+      if (c.contributionMonth.slice(0, 7) !== month) return false
+      if (statusFilter !== 'ALL' && c.status !== statusFilter) return false
+      return true
+    })
+  }, [contributions, month, statusFilter])
 
   // --- Bulk form handlers ---
   function updateBulkRow(index: number, field: keyof BulkRow, value: string) {
@@ -284,6 +300,10 @@ export function ContributionOperations() {
 
   return (
     <div className="ops-page">
+      <Breadcrumb items={[
+        { label: 'Operations', to: '/operations' },
+        { label: 'Contribution Operations' },
+      ]} />
       <div className="page-header">
         <div>
           <h1 className="page-title">Contribution Operations</h1>

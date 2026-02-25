@@ -31,6 +31,7 @@ Commands:
     session-status      Show active worktree session status
     session-merge       Merge active worktree session branches
     session-cleanup     Cleanup active worktree session
+    session-reconcile   Fix orphaned issues after compaction
 
 No external dependencies. Python 3.9+ required.
 """
@@ -59,6 +60,7 @@ from scripts.memory import (  # noqa: E402
     dep_add,
     dep_remove,
     export_jsonl,
+    get_cost_summary,
     import_jsonl,
     init,
     is_initialized,
@@ -69,13 +71,17 @@ from scripts.memory import (  # noqa: E402
     merge_session,
     prime,
     ready,
+    reconcile_session,
+    record_cost_event,
     reopen,
+    report_done,
     show,
     show_graph,
     stats,
     set_phase,
     sync,
     update,
+    verify_and_close,
 )
 
 
@@ -225,6 +231,35 @@ def cmd_close(args: argparse.Namespace) -> int:
             actor=args.actor, root=root,
         )
         print(f"Closed: {issue.id} ({issue.close_reason})")
+        return 0
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+
+
+def cmd_report_done(args: argparse.Namespace) -> int:
+    root = _root()
+    try:
+        outputs = None
+        if args.outputs:
+            outputs = json.loads(args.outputs)
+        issue = report_done(
+            args.id, actor=args.actor, outputs=outputs, root=root,
+        )
+        print(f"Reported done: {issue.id} (state={issue.state})")
+        return 0
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+
+
+def cmd_verify_close(args: argparse.Namespace) -> int:
+    root = _root()
+    try:
+        issue = verify_and_close(
+            args.id, reason=args.reason, actor=args.actor, root=root,
+        )
+        print(f"Verified and closed: {issue.id} (state={issue.state})")
         return 0
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
@@ -467,7 +502,7 @@ def cmd_session_merge(args: argparse.Namespace) -> int:
         "merged": result.merged_indices,
         "conflictIndex": result.conflict_index,
         "conflictFiles": result.conflict_files,
-        "error": result.error_message,
+        "error": "",
     }
     if args.json:
         _print_json(payload)
@@ -489,6 +524,76 @@ def cmd_session_cleanup(args: argparse.Namespace) -> int:
     print("Worktrees cleaned")
     return 0
 
+
+def cmd_session_reconcile(args: argparse.Namespace) -> int:
+    from scripts.memory.reconcile import reconcile_session
+    root = _root()
+    result = reconcile_session(root)
+    if getattr(args, 'json', False):
+        _print_json(result)
+    else:
+        for entry in result.get("reconciled", []):
+            print(f"Closed: {entry['id']} ({entry.get('status', '')})")
+        for entry in result.get("skipped", []):
+            print(f"Skipped: {entry['id']} ({entry.get('reason', '')})")
+        for entry in result.get("errors", []):
+            print(f"Error: {entry['id']}: {entry.get('error', '')}")
+        total = len(result.get("reconciled", [])) + len(result.get("skipped", [])) + len(result.get("errors", []))
+        if total == 0:
+            print("No orphaned issues found")
+        else:
+            print(f"\nTotal: {len(result.get('reconciled', []))} closed, {len(result.get('skipped', []))} skipped, {len(result.get('errors', []))} errors")
+    return 0
+
+
+def cmd_costs(args: argparse.Namespace) -> int:
+    if args.project_slug:
+        from scripts.memory.costs import summarize_project_costs
+        summary = summarize_project_costs(args.project_slug)
+        print(f"Project: {summary['project']}")
+        print(f"  Input tokens:         {summary['total_input_tokens']:,}")
+        print(f"  Output tokens:        {summary['total_output_tokens']:,}")
+        print(f"  Cache read tokens:    {summary['total_cache_read_tokens']:,}")
+        print(f"  Cache creation tokens:{summary['total_cache_creation_tokens']:,}")
+        print(f"  Estimated cost (USD): ${summary['total_estimated_cost_usd']:.4f}")
+        if summary["sessions"]:
+            print(f"  Sessions ({len(summary['sessions'])}):")
+            for s in summary["sessions"]:
+                print(f"    {s['path']}  model={s['model']}  tokens={s['tokens']:,}  cost=${s['cost_usd']:.4f}")
+    elif args.feature:
+        root = _root()
+        summary = get_cost_summary(args.feature, root=root)
+        print(f"Feature: {summary['feature_slug']}")
+        print(f"  Total tokens:     {summary['total_tokens']:,}")
+        print(f"  Total cost (USD): ${summary['total_cost_usd']:.4f}")
+        print(f"  Events recorded:  {summary['event_count']}")
+    else:
+        print("Specify --feature or --project-slug")
+        return 1
+    return 0
+
+
+def cmd_cost_record(args: argparse.Namespace) -> int:
+    from scripts.memory.costs import parse_transcript, estimate_cost
+    session_path = Path(args.session_path)
+    if not session_path.exists():
+        print(f"Error: {session_path} not found", file=sys.stderr)
+        return 1
+    usage = parse_transcript(session_path)
+    cost = estimate_cost(usage)
+    record_cost_event(
+        args.issue_id,
+        input_tokens=usage.input_tokens,
+        output_tokens=usage.output_tokens,
+        cache_tokens=usage.cache_read_tokens + usage.cache_creation_tokens,
+        model=usage.model,
+        cost_usd=cost,
+        root=_root(),
+    )
+    print(f"Recorded cost event for {args.issue_id}: "
+          f"tokens={usage.input_tokens + usage.output_tokens:,}  "
+          f"cost=${cost:.4f}  model={usage.model}")
+    return 0
 
 
 def main() -> int:
@@ -542,6 +647,18 @@ def main() -> int:
     p.add_argument("--reason", default="completed",
                    choices=["completed", "shipped", "superseded", "wontfix", "cancelled"])
     p.add_argument("--comment", help="Closing comment")
+    p.add_argument("--actor", default="claude")
+
+    # report-done
+    p = sub.add_parser("report-done", help="Worker reports task done")
+    p.add_argument("id", help="Issue ID")
+    p.add_argument("--actor", required=True, help="Actor name")
+    p.add_argument("--outputs", help="Optional JSON outputs string")
+
+    # verify-close
+    p = sub.add_parser("verify-close", help="Leader verifies and closes a task")
+    p.add_argument("id", help="Issue ID")
+    p.add_argument("--reason", default="completed")
     p.add_argument("--actor", default="claude")
 
     # reopen
@@ -643,6 +760,20 @@ def main() -> int:
     # session-cleanup
     sub.add_parser("session-cleanup", help="Cleanup active worktree session worktrees")
 
+    # session-reconcile
+    p = sub.add_parser("session-reconcile", help="Fix orphaned issues after compaction")
+    p.add_argument("--json", action="store_true")
+
+    # costs
+    p = sub.add_parser("costs", help="Show cost tracking summary")
+    p.add_argument("--feature", help="Feature slug to query recorded cost events")
+    p.add_argument("--project-slug", help="Claude Code project slug to parse transcripts")
+
+    # cost-record
+    p = sub.add_parser("cost-record", help="Parse transcript and record cost event")
+    p.add_argument("issue_id", help="Issue ID to attach cost event to")
+    p.add_argument("session_path", help="Path to Claude Code session JSONL transcript")
+
     args = parser.parse_args()
 
     if not args.command:
@@ -650,7 +781,9 @@ def main() -> int:
         return 1
 
     # Check initialization for non-init commands
-    if args.command != "init" and not is_initialized(_root()):
+    # 'costs --project-slug' reads transcripts only, no DB needed
+    _needs_db = not (args.command == "costs" and getattr(args, "project_slug", None))
+    if args.command != "init" and _needs_db and not is_initialized(_root()):
         print(
             "Memory engine not initialized. Run: "
             "python3 scripts/workflow_memory.py init",
@@ -665,6 +798,8 @@ def main() -> int:
         "update": cmd_update,
         "claim": cmd_claim,
         "close": cmd_close,
+        "report-done": cmd_report_done,
+        "verify-close": cmd_verify_close,
         "reopen": cmd_reopen,
         "ready": cmd_ready,
         "list": cmd_list,
@@ -685,6 +820,9 @@ def main() -> int:
         "session-status": cmd_session_status,
         "session-merge": cmd_session_merge,
         "session-cleanup": cmd_session_cleanup,
+        "session-reconcile": cmd_session_reconcile,
+        "costs": cmd_costs,
+        "cost-record": cmd_cost_record,
     }
 
     handler = dispatch.get(args.command)

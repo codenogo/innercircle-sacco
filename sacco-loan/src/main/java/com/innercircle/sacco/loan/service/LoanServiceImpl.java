@@ -23,6 +23,7 @@ import com.innercircle.sacco.loan.repository.LoanInterestHistoryRepository;
 import com.innercircle.sacco.loan.repository.LoanRepaymentRepository;
 import com.innercircle.sacco.loan.repository.RepaymentScheduleRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +40,12 @@ import java.util.UUID;
 public class LoanServiceImpl implements LoanService {
 
     private static final int MAX_GENERATION_ATTEMPTS = 5;
+    private static final List<LoanStatus> POOL_CAP_ACTIVE_STATUSES = List.of(
+            LoanStatus.APPROVED,
+            LoanStatus.DISBURSED,
+            LoanStatus.REPAYING,
+            LoanStatus.DEFAULTED
+    );
 
     private final LoanApplicationRepository loanRepository;
     private final RepaymentScheduleRepository scheduleRepository;
@@ -49,6 +56,7 @@ public class LoanServiceImpl implements LoanService {
     private final EventOutboxWriter outboxWriter;
     private final ConfigService configService;
     private final LoanPenaltyService loanPenaltyService;
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     @Transactional
@@ -75,10 +83,23 @@ public class LoanServiceImpl implements LoanService {
                     "Principal amount exceeds maximum allowed: " + product.getMaxAmount());
         }
 
+        if (principalAmount.compareTo(product.getMinAmount()) < 0) {
+            throw new IllegalArgumentException(
+                    "Principal amount is below minimum allowed: " + product.getMinAmount());
+        }
+
         if (termMonths > product.getMaxTermMonths()) {
             throw new IllegalArgumentException(
                     "Term exceeds maximum allowed: " + product.getMaxTermMonths() + " months");
         }
+
+        if (termMonths < product.getMinTermMonths()) {
+            throw new IllegalArgumentException(
+                    "Term is below minimum allowed: " + product.getMinTermMonths() + " months");
+        }
+
+        enforceContributionCap(memberId, principalAmount, product);
+        enforcePoolCap(loanProductId, principalAmount, product);
 
         LoanApplication loan = new LoanApplication();
         loan.setMemberId(memberId);
@@ -93,6 +114,7 @@ public class LoanServiceImpl implements LoanService {
         loan.setOutstandingBalance(BigDecimal.ZERO);
         loan.setTotalInterestAccrued(BigDecimal.ZERO);
         loan.setTotalInterestPaid(BigDecimal.ZERO);
+        loan.setInterestAccrualEnabled(product.isInterestAccrualEnabled());
         loan.setCreatedBy(actor);
         loan.setLoanNumber(generateUniqueLoanNumber());
 
@@ -387,6 +409,50 @@ public class LoanServiceImpl implements LoanService {
     @Transactional(readOnly = true)
     public List<LoanApplication> getMemberLoans(UUID memberId) {
         return loanRepository.findByMemberId(memberId);
+    }
+
+    private void enforceContributionCap(UUID memberId, BigDecimal principalAmount, LoanProductConfig product) {
+        if (product.getContributionCapPercent() == null) {
+            return;
+        }
+
+        BigDecimal confirmedContributions = jdbcTemplate.queryForObject(
+                "SELECT COALESCE(SUM(contribution_amount), 0) FROM contributions " +
+                        "WHERE member_id = ? AND status = 'CONFIRMED'",
+                BigDecimal.class,
+                memberId
+        );
+        if (confirmedContributions == null) {
+            confirmedContributions = BigDecimal.ZERO;
+        }
+
+        BigDecimal capAmount = confirmedContributions.multiply(product.getContributionCapPercent())
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        if (principalAmount.compareTo(capAmount) > 0) {
+            throw new IllegalArgumentException(
+                    "Requested amount exceeds contribution cap. Maximum allowed: " + capAmount);
+        }
+    }
+
+    private void enforcePoolCap(UUID loanProductId, BigDecimal principalAmount, LoanProductConfig product) {
+        if (product.getPoolCapAmount() == null || product.getPoolCapAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        BigDecimal activePool = loanRepository.sumOutstandingBalanceByLoanProductIdAndStatusIn(
+                loanProductId,
+                POOL_CAP_ACTIVE_STATUSES
+        );
+        if (activePool == null) {
+            activePool = BigDecimal.ZERO;
+        }
+
+        BigDecimal projected = activePool.add(principalAmount);
+        if (projected.compareTo(product.getPoolCapAmount()) > 0) {
+            throw new IllegalArgumentException(
+                    "Loan pool cap exceeded for product. Available pool balance: " +
+                            product.getPoolCapAmount().subtract(activePool).max(BigDecimal.ZERO));
+        }
     }
 
     private String generateUniqueLoanNumber() {

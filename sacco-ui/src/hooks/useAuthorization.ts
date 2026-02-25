@@ -26,7 +26,10 @@ export function useAuthorization() {
   )
 
   const isMemberOnly = useMemo(
-    () => hasAnyRole(roles, ['MEMBER']) && !hasAnyRole(roles, ['ADMIN', 'TREASURER']),
+    () => hasAnyRole(roles, ['MEMBER']) && !hasAnyRole(
+      roles,
+      ['ADMIN', 'TREASURER', 'SECRETARY', 'CHAIRPERSON', 'VICE_CHAIRPERSON', 'VICE_TREASURER'],
+    ),
     [roles],
   )
 
@@ -37,4 +40,3 @@ export function useAuthorization() {
     isMemberOnly,
   }
 }
-

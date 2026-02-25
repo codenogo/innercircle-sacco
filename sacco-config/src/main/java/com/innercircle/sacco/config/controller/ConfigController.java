@@ -1,6 +1,7 @@
 package com.innercircle.sacco.config.controller;
 
 import com.innercircle.sacco.common.dto.ApiResponse;
+import com.innercircle.sacco.config.dto.ConfigHealthResponse;
 import com.innercircle.sacco.config.dto.ContributionScheduleRequest;
 import com.innercircle.sacco.config.dto.LoanProductRequest;
 import com.innercircle.sacco.config.dto.PenaltyRuleRequest;
@@ -31,25 +32,36 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/config")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
 public class ConfigController {
+
+    private static final String READ_CONFIG_ROLES =
+            "hasAnyRole('ADMIN','TREASURER','MEMBER','SECRETARY','CHAIRPERSON','VICE_CHAIRPERSON','VICE_TREASURER')";
 
     private final ConfigService configService;
 
     // System Config Endpoints
 
     @GetMapping("/system")
+    @PreAuthorize(READ_CONFIG_ROLES)
     public ApiResponse<List<SystemConfig>> getAllSystemConfigs() {
         return ApiResponse.ok(configService.getAllSystemConfigs());
     }
 
     @GetMapping("/system/{configKey}")
+    @PreAuthorize(READ_CONFIG_ROLES)
     public ApiResponse<SystemConfig> getSystemConfig(@PathVariable String configKey) {
         return ApiResponse.ok(configService.getSystemConfig(configKey));
     }
 
+    @GetMapping("/system/health")
+    @PreAuthorize(READ_CONFIG_ROLES)
+    public ApiResponse<ConfigHealthResponse> getSystemConfigHealth() {
+        return ApiResponse.ok(configService.getSystemConfigHealth());
+    }
+
     @PostMapping("/system")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<SystemConfig> createSystemConfig(
             @RequestParam String configKey,
             @RequestParam String configValue,
@@ -61,6 +73,7 @@ public class ConfigController {
     }
 
     @PutMapping("/system/{configKey}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<SystemConfig> updateSystemConfig(
             @PathVariable String configKey,
             @RequestBody Map<String, String> body) {
@@ -74,6 +87,7 @@ public class ConfigController {
     // Loan Product Config Endpoints
 
     @GetMapping("/loan-products")
+    @PreAuthorize(READ_CONFIG_ROLES)
     public ApiResponse<List<LoanProductConfig>> getAllLoanProducts(@RequestParam(required = false) Boolean activeOnly) {
         List<LoanProductConfig> products = Boolean.TRUE.equals(activeOnly)
                 ? configService.getActiveLoanProducts()
@@ -82,12 +96,14 @@ public class ConfigController {
     }
 
     @GetMapping("/loan-products/{id}")
+    @PreAuthorize(READ_CONFIG_ROLES)
     public ApiResponse<LoanProductConfig> getLoanProduct(@PathVariable UUID id) {
         return ApiResponse.ok(configService.getLoanProduct(id));
     }
 
     @PostMapping("/loan-products")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<LoanProductConfig> createLoanProduct(@Valid @RequestBody LoanProductRequest request) {
         return ApiResponse.ok(
                 configService.createLoanProduct(request),
@@ -96,6 +112,7 @@ public class ConfigController {
     }
 
     @PutMapping("/loan-products/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<LoanProductConfig> updateLoanProduct(
             @PathVariable UUID id,
             @Valid @RequestBody LoanProductRequest request) {
@@ -107,6 +124,7 @@ public class ConfigController {
 
     @DeleteMapping("/loan-products/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('ADMIN')")
     public void deleteLoanProduct(@PathVariable UUID id) {
         configService.deleteLoanProduct(id);
     }
@@ -114,6 +132,7 @@ public class ConfigController {
     // Contribution Schedule Config Endpoints
 
     @GetMapping("/contribution-schedules")
+    @PreAuthorize(READ_CONFIG_ROLES)
     public ApiResponse<List<ContributionScheduleConfig>> getAllContributionSchedules(
             @RequestParam(required = false) Boolean activeOnly) {
         List<ContributionScheduleConfig> schedules = Boolean.TRUE.equals(activeOnly)
@@ -123,12 +142,14 @@ public class ConfigController {
     }
 
     @GetMapping("/contribution-schedules/{id}")
+    @PreAuthorize(READ_CONFIG_ROLES)
     public ApiResponse<ContributionScheduleConfig> getContributionSchedule(@PathVariable UUID id) {
         return ApiResponse.ok(configService.getContributionSchedule(id));
     }
 
     @PostMapping("/contribution-schedules")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<ContributionScheduleConfig> createContributionSchedule(
             @Valid @RequestBody ContributionScheduleRequest request) {
         return ApiResponse.ok(
@@ -138,6 +159,7 @@ public class ConfigController {
     }
 
     @PutMapping("/contribution-schedules/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<ContributionScheduleConfig> updateContributionSchedule(
             @PathVariable UUID id,
             @Valid @RequestBody ContributionScheduleRequest request) {
@@ -149,6 +171,7 @@ public class ConfigController {
 
     @DeleteMapping("/contribution-schedules/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('ADMIN')")
     public void deleteContributionSchedule(@PathVariable UUID id) {
         configService.deleteContributionSchedule(id);
     }
@@ -156,6 +179,7 @@ public class ConfigController {
     // Penalty Rule Endpoints
 
     @GetMapping("/penalty-rules")
+    @PreAuthorize(READ_CONFIG_ROLES)
     public ApiResponse<List<PenaltyRule>> getAllPenaltyRules(@RequestParam(required = false) Boolean activeOnly) {
         List<PenaltyRule> rules = Boolean.TRUE.equals(activeOnly)
                 ? configService.getActivePenaltyRules()
@@ -164,12 +188,14 @@ public class ConfigController {
     }
 
     @GetMapping("/penalty-rules/{id}")
+    @PreAuthorize(READ_CONFIG_ROLES)
     public ApiResponse<PenaltyRule> getPenaltyRule(@PathVariable UUID id) {
         return ApiResponse.ok(configService.getPenaltyRule(id));
     }
 
     @PostMapping("/penalty-rules")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<PenaltyRule> createPenaltyRule(@Valid @RequestBody PenaltyRuleRequest request) {
         return ApiResponse.ok(
                 configService.createPenaltyRule(request),
@@ -178,6 +204,7 @@ public class ConfigController {
     }
 
     @PutMapping("/penalty-rules/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<PenaltyRule> updatePenaltyRule(
             @PathVariable UUID id,
             @Valid @RequestBody PenaltyRuleRequest request) {
@@ -189,6 +216,7 @@ public class ConfigController {
 
     @DeleteMapping("/penalty-rules/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('ADMIN')")
     public void deletePenaltyRule(@PathVariable UUID id) {
         configService.deletePenaltyRule(id);
     }

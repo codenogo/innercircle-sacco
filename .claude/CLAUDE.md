@@ -4,7 +4,7 @@ Workflow engine documentation. Claude reads this automatically alongside your pr
 
 ## Operating Principles
 
-Apply these on every non-trivial task. Inspired by [forrestchang/andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills).
+Apply these on every non-trivial task.
 
 1. **Think Before Coding** — surface confusion and tradeoffs; ask when ambiguous
 2. **Simplicity First** — minimum code that solves the problem; no speculative abstractions
@@ -26,6 +26,7 @@ python3 scripts/workflow_memory.py prime           # Token-efficient context sum
 python3 scripts/workflow_memory.py stats           # Aggregate statistics
 python3 scripts/workflow_memory.py create "title"  # Create an issue
 python3 scripts/workflow_memory.py show <id>       # Show issue details
+python3 scripts/workflow_memory.py session-reconcile  # Fix orphaned issues after compaction
 python3 scripts/workflow_checks.py discover --since-days 30  # Missed token-savings report
 ```
 

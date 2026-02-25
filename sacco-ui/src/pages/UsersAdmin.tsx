@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { MagnifyingGlass, UserPlus } from '@phosphor-icons/react'
 import { DataTable, type ColumnDef } from '../components/DataTable'
+import { ActionMenu, type ActionMenuItem } from '../components/ActionMenu'
 import { Spinner } from '../components/Spinner'
 import { Modal } from '../components/Modal'
 import { ApiError } from '../services/apiClient'
@@ -26,7 +27,15 @@ interface CreateUserState {
 }
 
 const PAGE_SIZE = 20
-const ROLE_OPTIONS = ['ADMIN', 'TREASURER', 'SECRETARY', 'MEMBER']
+const ROLE_OPTIONS = [
+  'ADMIN',
+  'TREASURER',
+  'VICE_TREASURER',
+  'SECRETARY',
+  'CHAIRPERSON',
+  'VICE_CHAIRPERSON',
+  'MEMBER',
+]
 
 function deriveStatus(user: UserResponse): UserStatus {
   if (!user.enabled) return 'INACTIVE'
@@ -42,7 +51,13 @@ function statusClass(status: UserStatus): string {
 
 function roleBadgeClass(role: string): string {
   if (role === 'ADMIN') return 'badge--active'
-  if (role === 'TREASURER' || role === 'SECRETARY') return 'badge--completed'
+  if (
+    role === 'TREASURER'
+    || role === 'VICE_TREASURER'
+    || role === 'SECRETARY'
+    || role === 'CHAIRPERSON'
+    || role === 'VICE_CHAIRPERSON'
+  ) return 'badge--completed'
   return 'badge--pending'
 }
 
@@ -169,7 +184,7 @@ export function UsersAdmin() {
     else setter(source.filter(item => item !== role))
   }
 
-  async function updateUserInList(path: string, method: 'PATCH' | 'PUT', successMessage: string) {
+  const updateUserInList = useCallback(async (path: string, method: 'PATCH' | 'PUT', successMessage: string) => {
     setBusyAction(path)
     setFeedback(null)
     try {
@@ -181,9 +196,9 @@ export function UsersAdmin() {
     } finally {
       setBusyAction(null)
     }
-  }
+  }, [request])
 
-  async function handlePasswordReset(userId: string) {
+  const handlePasswordReset = useCallback(async (userId: string) => {
     const actionKey = `reset:${userId}`
     setBusyAction(actionKey)
     setFeedback(null)
@@ -195,9 +210,9 @@ export function UsersAdmin() {
     } finally {
       setBusyAction(null)
     }
-  }
+  }, [request])
 
-  async function handleDeleteUser(userId: string, username: string) {
+  const handleDeleteUser = useCallback(async (userId: string, username: string) => {
     const confirmed = window.confirm(`Deactivate user "${username}"?`)
     if (!confirmed) return
 
@@ -213,7 +228,7 @@ export function UsersAdmin() {
     } finally {
       setBusyAction(null)
     }
-  }
+  }, [request])
 
   async function handleCreateUser(e: FormEvent) {
     e.preventDefault()
@@ -247,10 +262,10 @@ export function UsersAdmin() {
     }
   }
 
-  function openRolesEditor(user: UserResponse) {
+  const openRolesEditor = useCallback((user: UserResponse) => {
     setEditingRolesUser(user)
     setEditingRoleNames(user.roles ?? [])
-  }
+  }, [])
 
   async function handleRolesSubmit(e: FormEvent) {
     e.preventDefault()
@@ -279,7 +294,7 @@ export function UsersAdmin() {
     }
   }
 
-  async function openUserDetails(userId: string) {
+  const openUserDetails = useCallback(async (userId: string) => {
     setDetailsUserId(userId)
     setDetailsUser(null)
     setDetailsError('')
@@ -294,7 +309,7 @@ export function UsersAdmin() {
     } finally {
       setDetailsLoading(false)
     }
-  }
+  }, [request])
 
   function closeUserDetails() {
     setDetailsUserId(null)
@@ -348,53 +363,36 @@ export function UsersAdmin() {
     },
     {
       key: 'actions',
-      header: 'Actions',
-      headerClassName: 'ops-col-actions',
-      className: 'ops-actions-cell',
+      header: '',
+      width: '52px',
+      headerClassName: 'datatable-col-actions',
+      className: 'datatable-col-actions',
       render: user => {
         const status = deriveStatus(user)
         const rowBusy = Boolean(busyAction && busyAction.includes(user.id))
-        const canActivate = status === 'INACTIVE'
-        const canLock = status === 'ACTIVE'
-        const canUnlock = status === 'LOCKED'
+        const items: ActionMenuItem[] = []
 
-        return (
-          <div className="ops-actions">
-            <div className="ops-actions-quick">
-              {canActivate ? (
-                <button type="button" className="btn btn--secondary btn--small" disabled={rowBusy} onClick={() => void updateUserInList(`/api/v1/users/${user.id}/activate`, 'PATCH', 'User activated.')}>
-                  Activate
-                </button>
-              ) : (
-                <button type="button" className="btn btn--secondary btn--small" disabled={rowBusy} onClick={() => void updateUserInList(`/api/v1/users/${user.id}/deactivate`, 'PATCH', 'User deactivated.')}>
-                  Deactivate
-                </button>
-              )}
-              {canLock && (
-                <button type="button" className="btn btn--secondary btn--small" disabled={rowBusy} onClick={() => void updateUserInList(`/api/v1/users/${user.id}/lock`, 'PATCH', 'User locked.')}>
-                  Lock
-                </button>
-              )}
-              {canUnlock && (
-                <button type="button" className="btn btn--secondary btn--small" disabled={rowBusy} onClick={() => void updateUserInList(`/api/v1/users/${user.id}/unlock`, 'PATCH', 'User unlocked.')}>
-                  Unlock
-                </button>
-              )}
-            </div>
-            <details className="ops-action-menu">
-              <summary className="btn btn--secondary btn--small">More</summary>
-              <div className="ops-action-menu-list">
-                <button type="button" className="ops-action-menu-item" disabled={rowBusy} onClick={() => void openUserDetails(user.id)}>View details</button>
-                <button type="button" className="ops-action-menu-item" disabled={rowBusy} onClick={() => openRolesEditor(user)}>Edit roles</button>
-                <button type="button" className="ops-action-menu-item" disabled={rowBusy} onClick={() => void handlePasswordReset(user.id)}>Send reset</button>
-                <button type="button" className="ops-action-menu-item ops-action-menu-item--danger" disabled={rowBusy} onClick={() => void handleDeleteUser(user.id, user.username)}>Delete user</button>
-              </div>
-            </details>
-          </div>
+        if (status === 'INACTIVE') {
+          items.push({ label: 'Activate', onClick: () => void updateUserInList(`/api/v1/users/${user.id}/activate`, 'PATCH', 'User activated.'), disabled: rowBusy })
+        } else {
+          items.push({ label: 'Deactivate', onClick: () => void updateUserInList(`/api/v1/users/${user.id}/deactivate`, 'PATCH', 'User deactivated.'), disabled: rowBusy })
+        }
+        if (status === 'ACTIVE') {
+          items.push({ label: 'Lock', onClick: () => void updateUserInList(`/api/v1/users/${user.id}/lock`, 'PATCH', 'User locked.'), disabled: rowBusy })
+        }
+        if (status === 'LOCKED') {
+          items.push({ label: 'Unlock', onClick: () => void updateUserInList(`/api/v1/users/${user.id}/unlock`, 'PATCH', 'User unlocked.'), disabled: rowBusy })
+        }
+        items.push(
+          { label: 'View details', onClick: () => void openUserDetails(user.id), disabled: rowBusy },
+          { label: 'Edit roles', onClick: () => openRolesEditor(user), disabled: rowBusy },
+          { label: 'Send reset', onClick: () => void handlePasswordReset(user.id), disabled: rowBusy },
+          { label: 'Delete user', onClick: () => void handleDeleteUser(user.id, user.username), variant: 'danger', disabled: rowBusy },
         )
+        return <ActionMenu actions={items} />
       },
     },
-  ], [busyAction])
+  ], [busyAction, handleDeleteUser, handlePasswordReset, openRolesEditor, openUserDetails, updateUserInList])
 
   return (
     <div className="ops-page">
@@ -459,7 +457,14 @@ export function UsersAdmin() {
         data={filteredUsers}
         getRowKey={row => row.id}
         loading={loading}
-        emptyMessage="No users found."
+        emptyMessage={
+          users.length === 0
+            ? <div className="empty-state empty-state--illustrated">
+                <h3 className="empty-state-heading">No users registered</h3>
+                <p className="empty-state-text">Create user accounts so members can log in and access the system.</p>
+              </div>
+            : 'No users match your search.'
+        }
         getRowClassName={(_, i) => i % 2 === 1 ? 'datatable-row--alt' : ''}
       />
 
@@ -495,25 +500,27 @@ export function UsersAdmin() {
       >
         <form id="create-user-form" className="modal-form" onSubmit={event => void handleCreateUser(event)}>
           <div className="field">
-            <label className="field-label" htmlFor="create-username">Username</label>
+            <label className="field-label field-label--required" htmlFor="create-username">Username</label>
             <input
               id="create-username"
               className="field-input"
               type="text"
               minLength={3}
               required
+              disabled={busyAction === 'create'}
               value={createUserState.username}
               onChange={event => setCreateUserState(prev => ({ ...prev, username: event.target.value }))}
             />
           </div>
 
           <div className="field">
-            <label className="field-label" htmlFor="create-email">Email</label>
+            <label className="field-label field-label--required" htmlFor="create-email">Email</label>
             <input
               id="create-email"
               className="field-input"
               type="email"
               required
+              disabled={busyAction === 'create'}
               value={createUserState.email}
               onChange={event => setCreateUserState(prev => ({ ...prev, email: event.target.value }))}
             />

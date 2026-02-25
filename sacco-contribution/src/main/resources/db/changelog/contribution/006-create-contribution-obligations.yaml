@@ -1,0 +1,133 @@
+databaseChangeLog:
+  - changeSet:
+      id: 006-create-contribution-obligations-table
+      author: codex
+      changes:
+        - createTable:
+            tableName: contribution_obligations
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: member_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: schedule_config_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: obligation_month
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: due_date
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: gross_amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: paid_amount
+                  type: decimal(19,2)
+                  defaultValueNumeric: 0.00
+                  constraints:
+                    nullable: false
+              - column:
+                  name: penalty_amount
+                  type: decimal(19,2)
+                  defaultValueNumeric: 0.00
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: notes
+                  type: varchar(500)
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: contribution_obligations
+            baseColumnNames: schedule_config_id
+            referencedTableName: contribution_schedule_configs
+            referencedColumnNames: id
+            constraintName: fk_contribution_obligations_schedule
+            onDelete: RESTRICT
+        - addUniqueConstraint:
+            tableName: contribution_obligations
+            columnNames: member_id,schedule_config_id,obligation_month
+            constraintName: uk_contribution_obligations_member_schedule_month
+        - createIndex:
+            tableName: contribution_obligations
+            indexName: idx_contribution_obligations_member_month
+            columns:
+              - column:
+                  name: member_id
+              - column:
+                  name: obligation_month
+        - createIndex:
+            tableName: contribution_obligations
+            indexName: idx_contribution_obligations_status
+            columns:
+              - column:
+                  name: status
+        - createIndex:
+            tableName: contribution_obligations
+            indexName: idx_contribution_obligations_due_date
+            columns:
+              - column:
+                  name: due_date
+
+  - changeSet:
+      id: 006-link-contributions-to-obligations
+      author: codex
+      changes:
+        - addColumn:
+            tableName: contributions
+            columns:
+              - column:
+                  name: obligation_id
+                  type: uuid
+        - createIndex:
+            tableName: contributions
+            indexName: idx_contributions_obligation_id
+            columns:
+              - column:
+                  name: obligation_id
+        - addForeignKeyConstraint:
+            baseTableName: contributions
+            baseColumnNames: obligation_id
+            referencedTableName: contribution_obligations
+            referencedColumnNames: id
+            constraintName: fk_contributions_obligation
+            onDelete: SET NULL

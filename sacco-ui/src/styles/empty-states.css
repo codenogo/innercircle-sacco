@@ -1,0 +1,67 @@
+/* ─── Empty State ─── */
+
+.empty-state {
+  text-align: center;
+  padding: var(--space-7) var(--space-5);
+  color: var(--ink-muted);
+}
+
+.empty-state-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border-radius: 50%;
+  margin-bottom: var(--space-3);
+  color: var(--ink-muted);
+}
+
+.empty-state-heading {
+  font-family: var(--font-heading);
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--ink-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.empty-state-text {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+/* ─── Illustrated empty state — CSS-only ruled paper lines ─── */
+
+.empty-state--illustrated {
+  position: relative;
+}
+
+.empty-state--illustrated::before {
+  content: '';
+  display: block;
+  width: 120px;
+  height: 60px;
+  margin: 0 auto var(--space-4);
+  background:
+    linear-gradient(to right, var(--ink-faint) 0%, var(--ink-faint) 100%) no-repeat 10% 20% / 80% 2px,
+    linear-gradient(to right, var(--ink-faint) 0%, var(--ink-faint) 100%) no-repeat 15% 40% / 65% 2px,
+    linear-gradient(to right, var(--ink-faint) 0%, var(--ink-faint) 100%) no-repeat 10% 60% / 75% 2px,
+    linear-gradient(to right, var(--ink-faint) 0%, var(--ink-faint) 100%) no-repeat 20% 80% / 50% 2px;
+  opacity: 0.3;
+}
+
+.empty-state-action {
+  margin-top: var(--space-4);
+}
+
+/* ─── Table Empty State — when filters return no results ─── */
+
+.table-empty {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+  font-style: italic;
+}
+

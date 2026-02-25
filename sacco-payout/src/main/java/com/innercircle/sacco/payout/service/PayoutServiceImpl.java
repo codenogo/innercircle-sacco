@@ -31,8 +31,19 @@ public class PayoutServiceImpl implements PayoutService {
 
     @Override
     @Transactional
-    public Payout createPayout(UUID memberId, BigDecimal amount, PayoutType type, String actor) {
+    public Payout createPayout(
+            UUID memberId,
+            BigDecimal amount,
+            PayoutType type,
+            String sourceType,
+            UUID sourceId,
+            Integer installmentNumber,
+            String actor
+    ) {
         Payout payout = new Payout(memberId, amount, type);
+        payout.setSourceType(sourceType);
+        payout.setSourceId(sourceId);
+        payout.setInstallmentNumber(installmentNumber);
         payout.setCreatedBy(actor);
         Payout saved = payoutRepository.save(payout);
 
@@ -95,6 +106,9 @@ public class PayoutServiceImpl implements PayoutService {
                 savedPayout.getMemberId(),
                 savedPayout.getAmount(),
                 savedPayout.getType().name(),
+                savedPayout.getSourceType(),
+                savedPayout.getSourceId(),
+                savedPayout.getInstallmentNumber(),
                 UUID.randomUUID(),
                 actor
         ), "Payout", savedPayout.getId());

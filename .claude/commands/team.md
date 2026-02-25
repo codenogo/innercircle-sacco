@@ -31,32 +31,44 @@ Coordinate multi-agent work with explicit task boundaries and worktree sessions.
 1. Parse `<feature>` and `<plan>`.
 2. If memory enabled, verify phase (`phase-get`) and confirm if not `plan`/`implement`.
 3. Load `docs/planning/work/features/<feature>/<plan>-PLAN.json`.
-4. Generate task descriptions once and persist to:
-- `.cnogo/task-descriptions-<feature>-<plan>.json`
-5. Run conflict check on persisted descriptions (`detect_file_conflicts`).
-- Advisory only; continue with warning.
-6. Create worktree session from persisted descriptions (do not regenerate descriptions).
-7. If memory enabled, set phase to `implement`.
-8. Create TaskCreate entries in two passes:
-- Pass 1: create only non-skipped tasks, store `task_index_to_id` (`None` for skipped/closed).
-- Pass 2: wire `blockedBy`; skip dependencies whose mapped id is `None`.
-- If all dependencies are skipped/satisfied, leave task unblocked.
-9. Spawn one implementer teammate per task; include exact worktree path in each prompt.
-10. Monitor TaskList until complete.
-11. Merge branches with session guard:
-```bash
-python3 scripts/workflow_memory.py session-merge --json
+4. Generate run_id and team name:
+```python
+from scripts.memory.bridge import generate_run_id, plan_to_task_descriptions, generate_implement_prompt, detect_file_conflicts
+run_id = generate_run_id(feature)
+team_name = f"impl-{feature}-{run_id}"
 ```
-If merge conflict, run resolver agent with `.claude/skills/worktree-merge-recovery.md` and retry (max 2 attempts).
-12. Run `planVerify` commands from plan JSON.
-13. Write summary artifacts using contract integrity checks, commit, and set phase `review` (if memory enabled).
-14. Cleanup:
-```bash
-python3 scripts/workflow_memory.py session-cleanup
-python3 scripts/workflow_validate.py --json
+5. Generate TaskDescV2 list via bridge and persist as versioned wrapper:
+```python
+tasks = plan_to_task_descriptions(plan_json_path, root)
+wrapper = {"schema_version": 2, "feature": feature, "plan_number": plan, "generated_at": now, "tasks": tasks}
+# Persist to .cnogo/task-descriptions-<feature>-<plan>.json
 ```
-15. Before dismiss, run `.claude/skills/feature-lifecycle-closure.md` checklist for phase/worktree/memory closure.
-16. Dismiss team.
+6. Run conflict check (`detect_file_conflicts(tasks)`). Advisory only; continue with warning.
+7. Create worktree session from V2 task descriptions (pass `run_id=run_id`).
+8. If memory enabled, set phase to `implement`.
+9. Create TaskCreate entries (two-pass: create tasks, then wire blockedBy).
+10. Spawn one implementer per task. At spawn-time, render prompt:
+```python
+prompt = generate_implement_prompt(taskdesc)  # TaskDescV2 → markdown
+```
+Include worktree path in prompt.
+
+**Guaranteed lifecycle — try/finally structure:**
+```
+try:
+  11. Monitor TaskList until all tasks complete.
+  12. Run leader reconciliation:
+      python3 -c "from scripts.memory.reconcile_leader import reconcile; print(reconcile('<epic_id>'))"
+  13. Merge branches: `python3 scripts/workflow_memory.py session-merge --json`
+      If conflict, run resolver agent (max 2 retries).
+  14. Run planVerify commands.
+  15. Write summary artifacts, commit, set phase `review`.
+finally:
+  16. Cleanup (guaranteed teardown — MUST execute even if tasks fail):
+      python3 scripts/workflow_memory.py session-cleanup
+      python3 scripts/workflow_validate.py --json
+  17. Dismiss team via TeamDelete. If TeamDelete fails, retry once then log and continue.
+```
 
 ## Action: `status`
 

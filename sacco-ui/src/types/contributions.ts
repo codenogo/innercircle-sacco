@@ -1,10 +1,13 @@
 export type ContributionStatus = 'PENDING' | 'CONFIRMED' | 'REVERSED'
-export type PaymentMode = 'MPESA' | 'BANK_TRANSFER' | 'CASH' | 'CHECK'
+export type PaymentMode = 'MPESA' | 'BANK' | 'CASH' | 'CHECK'
 
 export interface ContributionResponse {
   id: string
   memberId: string
   amount: number
+  contributionAmount: number
+  welfareAmount: number
+  welfareSplitApplied: boolean
   category: ContributionCategoryResponse
   paymentMode: PaymentMode
   contributionMonth: string
@@ -58,13 +61,22 @@ export interface ContributionCategoryRequest {
   name: string
   description?: string
   active?: boolean
+  mandatory?: boolean
   isMandatory?: boolean
+  welfareEligible?: boolean
 }
 
 export interface ContributionCategoryResponse {
   id: string
   name: string
   description: string
-  isMandatory: boolean
+  mandatory?: boolean
+  isMandatory?: boolean
+  welfareEligible: boolean
   active: boolean
+}
+
+export interface ContributionWelfarePolicyResponse {
+  enabled: boolean
+  fixedAmount: number
 }

@@ -11,6 +11,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 /**
@@ -37,8 +38,23 @@ public class ContributionPenalty extends BaseEntity {
     @Column(nullable = false, length = 500)
     private String reason;
 
+    @Column(nullable = false, length = 120, unique = true)
+    private String penaltyCode;
+
+    @Column(nullable = false)
+    private LocalDate penaltyDate;
+
+    @Column
+    private UUID ruleTierId;
+
+    @Column
+    private UUID obligationId;
+
     @Column(nullable = false)
     private boolean waived = false;
+
+    @Column(length = 500)
+    private String waivedReason;
 
     @Column
     private String waivedBy;
@@ -46,11 +62,18 @@ public class ContributionPenalty extends BaseEntity {
     @Column
     private Instant waivedAt;
 
+    @Column(nullable = false)
+    private boolean settled = false;
+
+    @Column
+    private Instant settledAt;
+
     public ContributionPenalty(UUID memberId, UUID contributionId, BigDecimal amount, String reason) {
         this.memberId = memberId;
         this.contributionId = contributionId;
         this.amount = amount;
         this.reason = reason;
         this.waived = false;
+        this.penaltyDate = LocalDate.now();
     }
 }

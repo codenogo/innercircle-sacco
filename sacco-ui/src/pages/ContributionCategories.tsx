@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { DataTable, type ColumnDef } from '../components/DataTable'
+import { ActionMenu } from '../components/ActionMenu'
+import { Breadcrumb } from '../components/Breadcrumb'
 import { Modal } from '../components/Modal'
 import { ApiError } from '../services/apiClient'
 import { getCategories as fetchAllCategories } from '../services/contributionService'
@@ -92,7 +94,8 @@ export function ContributionCategories() {
 
     const name = (formData.get('name') as string).trim()
     const description = (formData.get('description') as string | null)?.trim() || undefined
-    const isMandatory = formData.get('isMandatory') === 'on'
+    const mandatory = formData.get('isMandatory') === 'on'
+    const welfareEligible = formData.get('welfareEligible') === 'on'
 
     if (!name) return
 
@@ -105,7 +108,8 @@ export function ContributionCategories() {
           name,
           description,
           active: editingCategory.active,
-          isMandatory,
+          mandatory,
+          welfareEligible,
         }
         const updated = await request<ContributionCategoryResponse>(
           `/api/v1/contribution-categories/${editingCategory.id}`,
@@ -114,7 +118,7 @@ export function ContributionCategories() {
         setCategories(prev => prev.map(c => c.id === updated.id ? updated : c))
         setFeedback({ type: 'success', text: `Category "${updated.name}" updated.` })
       } else {
-        const payload: ContributionCategoryRequest = { name, description, isMandatory }
+        const payload: ContributionCategoryRequest = { name, description, mandatory, welfareEligible }
         const created = await request<ContributionCategoryResponse>(
           '/api/v1/contribution-categories',
           { method: 'POST', body: JSON.stringify(payload) },
@@ -145,8 +149,17 @@ export function ContributionCategories() {
       key: 'mandatory',
       header: 'Mandatory',
       render: category => (
-        <span className={`badge ${category.isMandatory ? 'badge--active' : 'badge--inactive'}`}>
-          {category.isMandatory ? 'Yes' : 'No'}
+        <span className={`badge ${(category.isMandatory ?? category.mandatory ?? false) ? 'badge--active' : 'badge--inactive'}`}>
+          {(category.isMandatory ?? category.mandatory ?? false) ? 'Yes' : 'No'}
+        </span>
+      ),
+    },
+    {
+      key: 'welfare',
+      header: 'Welfare Eligible',
+      render: category => (
+        <span className={`badge ${category.welfareEligible ? 'badge--active' : 'badge--inactive'}`}>
+          {category.welfareEligible ? 'Yes' : 'No'}
         </span>
       ),
     },
@@ -161,16 +174,17 @@ export function ContributionCategories() {
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: '',
+      width: '52px',
+      headerClassName: 'datatable-col-actions',
+      className: 'datatable-col-actions',
       render: category => (
-        <div className="ops-inline-actions">
-          <button type="button" className="btn btn--secondary btn--small" onClick={() => handleOpenEdit(category)}>
-            Edit
-          </button>
-          <button type="button" className="btn btn--secondary btn--small" onClick={() => void handleDelete(category)}>
-            Delete
-          </button>
-        </div>
+        <ActionMenu
+          actions={[
+            { label: 'Edit', onClick: () => handleOpenEdit(category) },
+            { label: 'Delete', onClick: () => void handleDelete(category), variant: 'danger' },
+          ]}
+        />
       ),
     },
   ]
@@ -190,6 +204,10 @@ export function ContributionCategories() {
 
   return (
     <div className="ops-page">
+      <Breadcrumb items={[
+        { label: 'Operations', to: '/operations' },
+        { label: 'Contribution Categories' },
+      ]} />
       <div className="page-header">
         <div>
           <h1 className="page-title">Contribution Categories</h1>
@@ -262,10 +280,21 @@ export function ContributionCategories() {
               <input
                 type="checkbox"
                 name="isMandatory"
-                defaultChecked={editingCategory?.isMandatory ?? false}
+                defaultChecked={editingCategory?.isMandatory ?? editingCategory?.mandatory ?? false}
                 key={`mandatory-${editingCategory?.id ?? 'new'}`}
               />
               <span>Mandatory category</span>
+            </label>
+          </div>
+          <div className="field">
+            <label className="field-checkbox">
+              <input
+                type="checkbox"
+                name="welfareEligible"
+                defaultChecked={editingCategory?.welfareEligible ?? false}
+                key={`welfare-${editingCategory?.id ?? 'new'}`}
+              />
+              <span>Welfare split eligible</span>
             </label>
           </div>
         </form>

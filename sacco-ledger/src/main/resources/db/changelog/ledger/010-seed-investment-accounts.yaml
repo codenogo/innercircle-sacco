@@ -1,0 +1,70 @@
+databaseChangeLog:
+  - changeSet:
+      id: 010-seed-investment-asset-account
+      author: codex
+      changes:
+        - insert:
+            tableName: accounts
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: account_code
+                  value: "1005"
+              - column:
+                  name: account_name
+                  value: "Investments"
+              - column:
+                  name: account_type
+                  value: "ASSET"
+              - column:
+                  name: balance
+                  value: "0.00"
+              - column:
+                  name: description
+                  value: "Active investment portfolio assets"
+              - column:
+                  name: active
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+
+  - changeSet:
+      id: 011-seed-investment-income-account
+      author: codex
+      changes:
+        - insert:
+            tableName: accounts
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: account_code
+                  value: "4004"
+              - column:
+                  name: account_name
+                  value: "Investment Income"
+              - column:
+                  name: account_type
+                  value: "REVENUE"
+              - column:
+                  name: balance
+                  value: "0.00"
+              - column:
+                  name: description
+                  value: "Income from treasury instruments, dividends, and rentals"
+              - column:
+                  name: active
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"

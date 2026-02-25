@@ -1,0 +1,55 @@
+/* ─── Stat Card Grid ─── */
+
+.stat-card-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--stat-cols, 3), minmax(0, 1fr));
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+}
+
+.stat-card {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  background: var(--paper);
+}
+
+.stat-card-label {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+.stat-card-value {
+  display: block;
+  margin-top: var(--space-1);
+  font-family: var(--font-data);
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.stat-card-value.amount--positive {
+  color: var(--mpesa-text);
+}
+
+.stat-card-value.amount--negative {
+  color: var(--deficit);
+}
+
+/* ─── Responsive ─── */
+
+@media (max-width: 768px) {
+  .stat-card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .stat-card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

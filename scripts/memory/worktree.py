@@ -59,6 +59,7 @@ class WorktreeInfo:
     status: str = "created"
     memory_id: str = ""
     conflict_files: list[str] = field(default_factory=list)
+    resolved_tier: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {
@@ -74,6 +75,7 @@ class WorktreeInfo:
             d["conflictFiles"] = self.conflict_files
         else:
             d["conflictFiles"] = []
+        d["resolvedTier"] = self.resolved_tier
         return d
 
     @classmethod
@@ -86,6 +88,7 @@ class WorktreeInfo:
             status=d.get("status", "created"),
             memory_id=d.get("memoryId", ""),
             conflict_files=d.get("conflictFiles", []),
+            resolved_tier=d.get("resolvedTier", ""),
         )
 
 
@@ -97,6 +100,7 @@ class MergeResult:
     merged_indices: list[int] = field(default_factory=list)
     conflict_index: int | None = None
     conflict_files: list[str] = field(default_factory=list)
+    resolved_tier: str = ""
 
 
 @dataclass
@@ -106,6 +110,7 @@ class WorktreeSession:
     schema_version: int = 1
     feature: str = ""
     plan_number: str = ""
+    run_id: str = ""
     base_commit: str = ""
     base_branch: str = ""
     phase: str = "setup"
@@ -119,6 +124,7 @@ class WorktreeSession:
             "schemaVersion": self.schema_version,
             "feature": self.feature,
             "planNumber": self.plan_number,
+            "runId": self.run_id,
             "baseCommit": self.base_commit,
             "baseBranch": self.base_branch,
             "phase": self.phase,
@@ -134,6 +140,7 @@ class WorktreeSession:
             schema_version=d.get("schemaVersion", 1),
             feature=d.get("feature", ""),
             plan_number=d.get("planNumber", ""),
+            run_id=d.get("runId", ""),
             base_commit=d.get("baseCommit", ""),
             base_branch=d.get("baseBranch", ""),
             phase=d.get("phase", "setup"),
@@ -246,6 +253,8 @@ def create_session(
     plan_json_path: Path,
     root: Path,
     task_descriptions: list[dict[str, Any]],
+    *,
+    run_id: str = "",
 ) -> WorktreeSession:
     """Create worktrees for parallel agent execution.
 
@@ -253,6 +262,9 @@ def create_session(
     2. Record base commit/branch
     3. For each non-skipped task: create branch, worktree, symlink .cnogo/
     4. Write session state file
+
+    Requires TaskDesc V2 dicts (task_id, title, file_scope).
+    Raises ValueError if V1-only fields are detected without V2 equivalents.
 
     On failure, cleans up all worktrees created so far.
     """
@@ -271,6 +283,7 @@ def create_session(
     session = WorktreeSession(
         feature=feature,
         plan_number=plan_number,
+        run_id=run_id,
         base_commit=base_commit,
         base_branch=base_branch,
         phase="setup",
@@ -284,7 +297,15 @@ def create_session(
             if desc.get("skipped"):
                 continue
 
-            task_name = desc.get("name", f"task-{i}")
+            # V2 required — fail fast on V1-only input
+            if "title" not in desc and "name" in desc:
+                raise ValueError(
+                    f"Task {i} has V1 field 'name' but no V2 'title'. "
+                    "Pass TaskDesc V2 dicts from plan_to_task_descriptions()."
+                )
+            task_name = desc.get("title", f"task-{i}")
+            memory_id = desc.get("task_id", "")
+
             branch_name = f"{_BRANCH_PREFIX}{feature}-{plan_number}-task-{i}"
             wt_dir = f"{project_name}-wt-{feature}-{plan_number}-{i}"
             wt_path = (root / ".." / wt_dir).resolve()
@@ -306,7 +327,7 @@ def create_session(
                 branch=branch_name,
                 path=str(wt_path),
                 status="created",
-                memory_id=desc.get("memoryId", ""),
+                memory_id=memory_id,
             )
             created_worktrees.append(wt_info)
 
@@ -340,6 +361,107 @@ def create_session(
                 pass
         delete_session_file(root)
         raise
+
+
+# ---------------------------------------------------------------------------
+# Tier 2 Auto-Resolve Helpers
+# ---------------------------------------------------------------------------
+
+
+def _auto_resolve_keep_incoming(root: Path, conflict_files: list[str]) -> bool:
+    """Parse git conflict markers and keep only the INCOMING side.
+
+    For each conflicted file, replaces the full conflict block with only
+    the content between ======= and >>>>>>> (the incoming/agent changes).
+    Stages each resolved file with `git add`. Returns True if all files
+    resolved successfully, False on any error.
+    """
+    for file_path in conflict_files:
+        full_path = root / file_path
+        try:
+            content = full_path.read_text()
+        except OSError:
+            return False
+
+        lines = content.splitlines(keepends=True)
+        resolved_lines: list[str] = []
+        in_ours = False
+        in_theirs = False
+
+        for line in lines:
+            stripped = line.rstrip("\r\n")
+            if stripped.startswith("<<<<<<<"):
+                in_ours = True
+                in_theirs = False
+            elif stripped.startswith("=======") and in_ours:
+                in_ours = False
+                in_theirs = True
+            elif stripped.startswith(">>>>>>>") and in_theirs:
+                in_theirs = False
+            elif in_ours:
+                # Skip our side
+                pass
+            elif in_theirs:
+                resolved_lines.append(line)
+            else:
+                resolved_lines.append(line)
+
+        # If still inside a conflict block the file was malformed
+        if in_ours or in_theirs:
+            return False
+
+        try:
+            full_path.write_text("".join(resolved_lines))
+            _run_git("add", file_path, cwd=root)
+        except (OSError, subprocess.CalledProcessError):
+            return False
+
+    return True
+
+
+def _check_disjoint_files(session: WorktreeSession, task_index: int, root: Path) -> bool:
+    """Return True if the conflicting branch's files don't overlap with already-merged branches.
+
+    Compares files changed by `task_index`'s branch against files changed
+    by all already-merged branches. Disjoint means safe for auto-resolve.
+    """
+    wt = next(
+        (w for w in session.worktrees if w.task_index == task_index), None
+    )
+    if wt is None:
+        return False
+
+    try:
+        result = _run_git(
+            "diff", "--name-only", f"{session.base_commit}..{wt.branch}", cwd=root
+        )
+        branch_files = set(
+            f.strip() for f in result.stdout.strip().split("\n") if f.strip()
+        )
+    except subprocess.CalledProcessError:
+        return False
+
+    merged_files: set[str] = set()
+    for merged_index in session.merged_so_far:
+        merged_wt = next(
+            (w for w in session.worktrees if w.task_index == merged_index), None
+        )
+        if merged_wt is None:
+            continue
+        try:
+            result = _run_git(
+                "diff", "--name-only",
+                f"{session.base_commit}..{merged_wt.branch}",
+                cwd=root,
+            )
+            for f in result.stdout.strip().split("\n"):
+                f = f.strip()
+                if f:
+                    merged_files.add(f)
+        except subprocess.CalledProcessError:
+            continue
+
+    return branch_files.isdisjoint(merged_files)
 
 
 # ---------------------------------------------------------------------------
@@ -401,6 +523,34 @@ def merge_session(session: WorktreeSession | None, root: Path) -> MergeResult:
                 except subprocess.CalledProcessError:
                     conflict_files = []
 
+                # Tier 2: attempt auto-resolve when files are disjoint
+                if _check_disjoint_files(session, task_index, root):
+                    try:
+                        _run_git("merge", "--abort", cwd=root)
+                    except subprocess.CalledProcessError:
+                        pass
+                    # Re-attempt merge to produce conflict markers
+                    try:
+                        _run_git("merge", "--no-ff", wt.branch, cwd=root)
+                    except subprocess.CalledProcessError:
+                        pass  # Expected to conflict again
+                    if _auto_resolve_keep_incoming(root, conflict_files):
+                        try:
+                            _run_git("commit", "--no-edit", cwd=root)
+                            wt.resolved_tier = "auto-resolve"
+                            session.merged_so_far.append(task_index)
+                            wt.status = "merged"
+                            wt.conflict_files = conflict_files
+                            save_session(session, root)
+                            continue
+                        except subprocess.CalledProcessError:
+                            pass
+                    # Auto-resolve failed — abort and fall through
+                    try:
+                        _run_git("merge", "--abort", cwd=root)
+                    except subprocess.CalledProcessError:
+                        pass
+
                 wt.status = "conflict"
                 wt.conflict_files = conflict_files
                 save_session(session, root)
@@ -414,7 +564,8 @@ def merge_session(session: WorktreeSession | None, root: Path) -> MergeResult:
             # Non-conflict git error — re-raise
             raise
 
-        # Clean merge
+        # Clean merge (Tier 1)
+        wt.resolved_tier = "clean-merge"
         session.merged_so_far.append(task_index)
         wt.status = "merged"
         save_session(session, root)

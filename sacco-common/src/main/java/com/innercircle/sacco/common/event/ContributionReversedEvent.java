@@ -11,10 +11,33 @@ public record ContributionReversedEvent(
         UUID contributionId,
         UUID memberId,
         BigDecimal amount,
+        UUID categoryId,
+        BigDecimal contributionAmount,
+        BigDecimal welfareAmount,
         String referenceNumber,
         UUID correlationId,
         String actor
 ) implements AuditableEvent {
+
+    public ContributionReversedEvent(
+            UUID contributionId,
+            UUID memberId,
+            BigDecimal amount,
+            String referenceNumber,
+            UUID correlationId,
+            String actor
+    ) {
+        this(contributionId, memberId, amount, null, amount, BigDecimal.ZERO, referenceNumber, correlationId, actor);
+    }
+
+    public ContributionReversedEvent {
+        if (contributionAmount == null) {
+            contributionAmount = amount;
+        }
+        if (welfareAmount == null) {
+            welfareAmount = BigDecimal.ZERO;
+        }
+    }
 
     @Override
     public String getEventType() {

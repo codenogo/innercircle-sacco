@@ -4,8 +4,8 @@ import com.innercircle.sacco.common.event.LoanInterestAccrualEvent;
 import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import com.innercircle.sacco.config.entity.InterestMethod;
 import com.innercircle.sacco.config.entity.PenaltyRule;
-import com.innercircle.sacco.config.entity.SystemConfig;
 import com.innercircle.sacco.config.service.ConfigService;
+import com.innercircle.sacco.config.service.PolicyConfigResolver;
 import com.innercircle.sacco.loan.entity.InterestEventType;
 import com.innercircle.sacco.loan.entity.LoanApplication;
 import com.innercircle.sacco.loan.entity.LoanInterestHistory;
@@ -39,6 +39,7 @@ public class LoanItemProcessor implements ItemProcessor<LoanApplication, LoanApp
     private final LoanInterestHistoryRepository interestHistoryRepository;
     private final EventOutboxWriter outboxWriter;
     private final ConfigService configService;
+    private final PolicyConfigResolver policyConfigResolver;
     private final LoanPenaltyService loanPenaltyService;
     private final LoanPenaltyRepository loanPenaltyRepository;
 
@@ -90,8 +91,8 @@ public class LoanItemProcessor implements ItemProcessor<LoanApplication, LoanApp
         accrueDailyInterest(loan, targetDate);
 
         LocalDate today = LocalDate.now();
-        int gracePeriodDays = getConfigInt("loan.penalty.grace_period_days", 30);
-        int defaultThresholdDays = getConfigInt("loan.penalty.default_threshold_days", 90);
+        int gracePeriodDays = getConfigInt("loan.penalty.grace_period_days");
+        int defaultThresholdDays = getConfigInt("loan.penalty.default_threshold_days");
         Optional<PenaltyRule> penaltyRuleOpt = configService.getActivePenaltyRuleByType(
                 PenaltyRule.PenaltyType.LOAN_DEFAULT);
 
@@ -176,6 +177,10 @@ public class LoanItemProcessor implements ItemProcessor<LoanApplication, LoanApp
     }
 
     private void accrueDailyInterest(LoanApplication loan, LocalDate accrualDate) {
+        if (!loan.isInterestAccrualEnabled()) {
+            return;
+        }
+
         BigDecimal outstandingBalance = loan.getOutstandingBalance();
         if (outstandingBalance.compareTo(BigDecimal.ZERO) <= 0) {
             return;
@@ -229,17 +234,7 @@ public class LoanItemProcessor implements ItemProcessor<LoanApplication, LoanApp
                 dailyInterest, loan.getId(), outstandingBalance, loan.getInterestMethod());
     }
 
-    private int getConfigInt(String key, int defaultValue) {
-        try {
-            SystemConfig config = configService.getSystemConfig(key);
-            String value = config.getConfigValue();
-            if (value == null || value.isBlank()) {
-                return defaultValue;
-            }
-            return Integer.parseInt(value);
-        } catch (Exception e) {
-            log.warn("Invalid integer for config key '{}', using default {}", key, defaultValue);
-            return defaultValue;
-        }
+    private int getConfigInt(String key) {
+        return policyConfigResolver.requireIntAtLeast(key, 0);
     }
 }

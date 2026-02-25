@@ -1,0 +1,41 @@
+databaseChangeLog:
+  - changeSet:
+      id: 012-seed-welfare-fund-liability-account
+      author: codex
+      preConditions:
+        - onFail: MARK_RAN
+        - onError: MARK_RAN
+        - sqlCheck:
+            expectedResult: "0"
+            sql: "SELECT COUNT(*) FROM accounts WHERE account_code = '2003'"
+      changes:
+        - insert:
+            tableName: accounts
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: account_code
+                  value: "2003"
+              - column:
+                  name: account_name
+                  value: "Welfare Fund Liability"
+              - column:
+                  name: account_type
+                  value: "LIABILITY"
+              - column:
+                  name: balance
+                  value: "0.00"
+              - column:
+                  name: description
+                  value: "Accumulated welfare contributions pending utilization"
+              - column:
+                  name: active
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"

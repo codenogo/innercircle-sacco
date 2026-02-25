@@ -57,6 +57,7 @@ class FinancialEventListenerTest {
 
     private Account cashAccount;
     private Account memberSharesAccount;
+    private Account welfareFundLiabilityAccount;
     private Account loanReceivableAccount;
     private Account interestIncomeAccount;
     private Account interestReceivableAccount;
@@ -72,6 +73,7 @@ class FinancialEventListenerTest {
     void setUp() {
         cashAccount = createAccount("1001", "Cash", AccountType.ASSET);
         memberSharesAccount = createAccount("2001", "Member Shares", AccountType.LIABILITY);
+        welfareFundLiabilityAccount = createAccount("2003", "Welfare Fund Liability", AccountType.LIABILITY);
         loanReceivableAccount = createAccount("1002", "Loan Receivable", AccountType.ASSET);
         interestIncomeAccount = createAccount("4001", "Interest Income", AccountType.REVENUE);
         interestReceivableAccount = createAccount("1003", "Interest Receivable", AccountType.ASSET);
@@ -193,6 +195,48 @@ class FinancialEventListenerTest {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             assertEquals(0, totalDebits.compareTo(totalCredits));
+        }
+
+        @Test
+        @DisplayName("should post welfare split using member shares and welfare liability")
+        void shouldPostWelfareSplitContribution() {
+            BigDecimal gross = new BigDecimal("1000.00");
+            BigDecimal netContribution = new BigDecimal("800.00");
+            BigDecimal welfare = new BigDecimal("200.00");
+            ContributionReceivedEvent event = new ContributionReceivedEvent(
+                    UUID.randomUUID(),
+                    UUID.randomUUID(),
+                    gross,
+                    UUID.randomUUID(),
+                    netContribution,
+                    welfare,
+                    "REF-WS-001",
+                    UUID.randomUUID(),
+                    "admin"
+            );
+
+            setupAccountLookup("1001", cashAccount);
+            setupAccountLookup("2001", memberSharesAccount);
+            setupAccountLookup("2003", welfareFundLiabilityAccount);
+            setupLedgerService();
+
+            financialEventListener.handleContributionReceived(event);
+
+            verify(ledgerService).createJournalEntry(journalEntryCaptor.capture());
+            JournalEntry captured = journalEntryCaptor.getValue();
+            assertEquals(3, captured.getJournalLines().size());
+
+            JournalLine cashDebit = captured.getJournalLines().get(0);
+            assertEquals(cashAccount, cashDebit.getAccount());
+            assertEquals(gross, cashDebit.getDebitAmount());
+
+            JournalLine sharesCredit = captured.getJournalLines().get(1);
+            assertEquals(memberSharesAccount, sharesCredit.getAccount());
+            assertEquals(netContribution, sharesCredit.getCreditAmount());
+
+            JournalLine welfareCredit = captured.getJournalLines().get(2);
+            assertEquals(welfareFundLiabilityAccount, welfareCredit.getAccount());
+            assertEquals(welfare, welfareCredit.getCreditAmount());
         }
     }
 
@@ -990,6 +1034,48 @@ class FinancialEventListenerTest {
             financialEventListener.handleContributionReversed(event);
 
             verify(ledgerService).postEntry(entryId);
+        }
+
+        @Test
+        @DisplayName("should reverse welfare split using welfare liability and member shares")
+        void shouldReverseWelfareSplitContribution() {
+            BigDecimal gross = new BigDecimal("1000.00");
+            BigDecimal netContribution = new BigDecimal("800.00");
+            BigDecimal welfare = new BigDecimal("200.00");
+            ContributionReversedEvent event = new ContributionReversedEvent(
+                    UUID.randomUUID(),
+                    UUID.randomUUID(),
+                    gross,
+                    UUID.randomUUID(),
+                    netContribution,
+                    welfare,
+                    "REF-WS-002",
+                    UUID.randomUUID(),
+                    "admin"
+            );
+
+            setupAccountLookup("2001", memberSharesAccount);
+            setupAccountLookup("2003", welfareFundLiabilityAccount);
+            setupAccountLookup("1001", cashAccount);
+            setupLedgerService();
+
+            financialEventListener.handleContributionReversed(event);
+
+            verify(ledgerService).createJournalEntry(journalEntryCaptor.capture());
+            JournalEntry captured = journalEntryCaptor.getValue();
+            assertEquals(3, captured.getJournalLines().size());
+
+            JournalLine sharesDebit = captured.getJournalLines().get(0);
+            assertEquals(memberSharesAccount, sharesDebit.getAccount());
+            assertEquals(netContribution, sharesDebit.getDebitAmount());
+
+            JournalLine welfareDebit = captured.getJournalLines().get(1);
+            assertEquals(welfareFundLiabilityAccount, welfareDebit.getAccount());
+            assertEquals(welfare, welfareDebit.getDebitAmount());
+
+            JournalLine cashCredit = captured.getJournalLines().get(2);
+            assertEquals(cashAccount, cashCredit.getAccount());
+            assertEquals(gross, cashCredit.getCreditAmount());
         }
     }
 

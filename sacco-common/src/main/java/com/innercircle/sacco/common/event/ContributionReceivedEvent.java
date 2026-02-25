@@ -7,10 +7,33 @@ public record ContributionReceivedEvent(
         UUID contributionId,
         UUID memberId,
         BigDecimal amount,
+        UUID categoryId,
+        BigDecimal contributionAmount,
+        BigDecimal welfareAmount,
         String referenceNumber,
         UUID correlationId,
         String actor
 ) implements AuditableEvent {
+
+    public ContributionReceivedEvent(
+            UUID contributionId,
+            UUID memberId,
+            BigDecimal amount,
+            String referenceNumber,
+            UUID correlationId,
+            String actor
+    ) {
+        this(contributionId, memberId, amount, null, amount, BigDecimal.ZERO, referenceNumber, correlationId, actor);
+    }
+
+    public ContributionReceivedEvent {
+        if (contributionAmount == null) {
+            contributionAmount = amount;
+        }
+        if (welfareAmount == null) {
+            welfareAmount = BigDecimal.ZERO;
+        }
+    }
 
     @Override
     public String getEventType() {

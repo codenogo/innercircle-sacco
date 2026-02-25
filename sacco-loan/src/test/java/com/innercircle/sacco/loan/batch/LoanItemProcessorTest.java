@@ -4,8 +4,8 @@ import com.innercircle.sacco.common.event.LoanInterestAccrualEvent;
 import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import com.innercircle.sacco.config.entity.InterestMethod;
 import com.innercircle.sacco.config.entity.PenaltyRule;
-import com.innercircle.sacco.config.entity.SystemConfig;
 import com.innercircle.sacco.config.service.ConfigService;
+import com.innercircle.sacco.config.service.PolicyConfigResolver;
 import com.innercircle.sacco.loan.entity.LoanApplication;
 import com.innercircle.sacco.loan.entity.LoanPenalty;
 import com.innercircle.sacco.loan.entity.LoanStatus;
@@ -62,6 +62,9 @@ class LoanItemProcessorTest {
     private ConfigService configService;
 
     @Mock
+    private PolicyConfigResolver policyConfigResolver;
+
+    @Mock
     private LoanPenaltyService loanPenaltyService;
 
     @Mock
@@ -77,7 +80,7 @@ class LoanItemProcessorTest {
     void setUp() throws Exception {
         processor = new LoanItemProcessor(
                 scheduleRepository, interestHistoryRepository, outboxWriter,
-                configService, loanPenaltyService, loanPenaltyRepository);
+                configService, policyConfigResolver, loanPenaltyService, loanPenaltyRepository);
 
         loanId = UUID.randomUUID();
         memberId = UUID.randomUUID();
@@ -96,9 +99,7 @@ class LoanItemProcessorTest {
     }
 
     private void setupConfigMock(String key, String value) {
-        SystemConfig config = new SystemConfig();
-        config.setConfigValue(value);
-        when(configService.getSystemConfig(key)).thenReturn(config);
+        when(policyConfigResolver.requireIntAtLeast(key, 0)).thenReturn(Integer.parseInt(value));
     }
 
     private LoanApplication createLoan(Instant disbursedAt) {

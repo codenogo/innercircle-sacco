@@ -14,7 +14,7 @@
   color: var(--ink-secondary);
 }
 
-.ops-link-card:not(.ops-link-card--disabled):hover .report-card {
+.ops-link-card:not(.ops-link-card--disabled):hover {
   border-color: var(--rule-strong);
 }
 

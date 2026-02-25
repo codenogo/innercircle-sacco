@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CurrencyCircleDollar, HandCoins, Plus } from '@phosphor-icons/react'
 import { Spinner } from '../components/Spinner'
+import { StatCardGrid } from '../components/StatCard'
 import { DataTable } from '../components/DataTable'
 import type { ColumnDef } from '../components/DataTable'
 import { RecordContributionModal } from '../components/RecordContributionModal'
@@ -17,6 +18,7 @@ import { getAllMembers } from '../services/memberService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { useAuthorization } from '../hooks/useAuthorization'
 import { useCurrentUser } from '../hooks/useCurrentUser'
+import { useToast } from '../hooks/useToast'
 import type { MemberResponse } from '../types/members'
 import type {
   ContributionResponse,
@@ -75,6 +77,7 @@ export function Contributions() {
   const canRecordContribution = canAccess(['ADMIN', 'TREASURER'])
   const canUseContributionOps = canAccess(['ADMIN', 'TREASURER'])
   const canManageCategories = canAccess(['ADMIN', 'TREASURER'])
+  const toast = useToast()
 
   const [contributions, setContributions] = useState<ContributionResponse[]>([])
   const [loading, setLoading] = useState(true)
@@ -158,13 +161,14 @@ export function Contributions() {
   )
 
   const summary = useMemo(() => {
-    const collected = monthContributions
-      .filter(c => c.status !== 'REVERSED')
-      .reduce((sum, c) => sum + c.amount, 0)
+    const activeContributions = monthContributions.filter(c => c.status !== 'REVERSED')
+    const grossCollected = activeContributions.reduce((sum, c) => sum + c.amount, 0)
+    const netCollected = activeContributions.reduce((sum, c) => sum + (c.contributionAmount ?? c.amount), 0)
+    const welfareCollected = activeContributions.reduce((sum, c) => sum + (c.welfareAmount ?? 0), 0)
     const confirmed = monthContributions.filter(c => c.status === 'CONFIRMED').length
     const pending = monthContributions.filter(c => c.status === 'PENDING').length
     const reversed = monthContributions.filter(c => c.status === 'REVERSED').length
-    return { collected, confirmed, pending, reversed, total: monthContributions.length }
+    return { grossCollected, netCollected, welfareCollected, confirmed, pending, reversed, total: monthContributions.length }
   }, [monthContributions])
 
   const loadMembers = useCallback(async () => {
@@ -226,10 +230,24 @@ export function Contributions() {
     },
     {
       key: 'amount',
-      header: 'Amount (KES)',
+      header: 'Gross (KES)',
       className: 'amount ledger-table-amount',
       headerClassName: 'ledger-table-amount',
       render: (c) => c.amount > 0 ? fmt(c.amount) : '\u2014',
+    },
+    {
+      key: 'contribution-amount',
+      header: 'Net (KES)',
+      className: 'amount ledger-table-amount',
+      headerClassName: 'ledger-table-amount',
+      render: (c) => (c.contributionAmount ?? c.amount) > 0 ? fmt(c.contributionAmount ?? c.amount) : '\u2014',
+    },
+    {
+      key: 'welfare-amount',
+      header: 'Welfare (KES)',
+      className: 'amount ledger-table-amount',
+      headerClassName: 'ledger-table-amount',
+      render: (c) => (c.welfareAmount ?? 0) > 0 ? fmt(c.welfareAmount ?? 0) : '\u2014',
     },
   ], [memberMap])
 
@@ -239,15 +257,14 @@ export function Contributions() {
     }
 
     setRecordingContribution(true)
-    setFeedback(null)
     try {
       const created = await recordContribution(payload, request)
       setContributions(prev => [created, ...prev])
       setShowModal(false)
-      setFeedback({ type: 'success', text: 'Contribution recorded successfully.' })
+      toast.success('Contribution recorded', 'Contribution recorded successfully.')
     } catch (error) {
       const message = toErrorMessage(error, 'Unable to record contribution.')
-      setFeedback({ type: 'error', text: message })
+      toast.error('Unable to record contribution', message)
       throw error instanceof Error ? error : new Error(message)
     } finally {
       setRecordingContribution(false)
@@ -285,27 +302,22 @@ export function Contributions() {
 
       <hr className="rule rule--strong" />
 
-      <div className="page-summary">
-        <span>Total: <strong>{summary.total}</strong></span>
-        <span className="page-summary-divider">|</span>
-        <span>Confirmed: <strong>{summary.confirmed}</strong></span>
-        <span className="page-summary-divider">|</span>
-        <span>Pending: <strong>{summary.pending}</strong></span>
-        <span className="page-summary-divider">|</span>
-        <span>Reversed: <strong>{summary.reversed}</strong></span>
-        <span className="page-summary-divider">|</span>
-        <span>Collected: <strong>KES {fmt(summary.collected)}</strong></span>
-        {isMemberOnly && memberSummary && (
-          <>
-            <span className="page-summary-divider">|</span>
-            <span>Lifetime: <strong>KES {fmt(memberSummary.totalContributed)}</strong></span>
-            <span className="page-summary-divider">|</span>
-            <span>Pending: <strong>KES {fmt(memberSummary.totalPending)}</strong></span>
-            <span className="page-summary-divider">|</span>
-            <span>Penalties: <strong>KES {fmt(memberSummary.totalPenalties)}</strong></span>
-          </>
-        )}
-      </div>
+      <StatCardGrid
+        items={[
+          { label: 'Total', value: String(summary.total) },
+          { label: 'Confirmed', value: String(summary.confirmed) },
+          { label: 'Pending', value: String(summary.pending) },
+          { label: 'Reversed', value: String(summary.reversed) },
+          { label: 'Collected (Gross)', value: `KES ${fmt(summary.grossCollected)}` },
+          { label: 'Collected (Net)', value: `KES ${fmt(summary.netCollected)}` },
+          { label: 'Welfare Portion', value: `KES ${fmt(summary.welfareCollected)}` },
+          ...(isMemberOnly && memberSummary ? [
+            { label: 'Lifetime', value: `KES ${fmt(memberSummary.totalContributed)}` },
+            { label: 'Pending Amount', value: `KES ${fmt(memberSummary.totalPending)}` },
+            { label: 'Penalties', value: `KES ${fmt(memberSummary.totalPenalties)}`, valueClassName: 'amount--negative' },
+          ] : []),
+        ]}
+      />
 
       <hr className="rule" />
 
@@ -329,7 +341,14 @@ export function Contributions() {
         data={monthContributions}
         getRowKey={row => row.id}
         loading={loading}
-        emptyMessage="No contributions for the selected month."
+        emptyMessage={
+          contributions.length === 0
+            ? <div className="empty-state empty-state--illustrated">
+                <h3 className="empty-state-heading">No contributions recorded</h3>
+                <p className="empty-state-text">Record your first contribution to begin tracking member payments.</p>
+              </div>
+            : 'No contributions for the selected month.'
+        }
       />
 
       {hasMore && (

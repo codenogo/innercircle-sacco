@@ -35,6 +35,12 @@ public class Contribution extends BaseEntity {
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
 
+    @Column(name = "contribution_amount", nullable = false, precision = 19, scale = 2)
+    private BigDecimal contributionAmount;
+
+    @Column(name = "welfare_amount", nullable = false, precision = 19, scale = 2)
+    private BigDecimal welfareAmount;
+
     @ManyToOne
     @JoinColumn(name = "category_id", nullable = false)
     private ContributionCategory category;
@@ -45,6 +51,9 @@ public class Contribution extends BaseEntity {
 
     @Column(nullable = false)
     private LocalDate contributionMonth;
+
+    @Column
+    private UUID obligationId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -64,6 +73,8 @@ public class Contribution extends BaseEntity {
                         LocalDate contributionDate, String referenceNumber, String notes) {
         this.memberId = memberId;
         this.amount = amount;
+        this.contributionAmount = amount;
+        this.welfareAmount = BigDecimal.ZERO;
         this.category = category;
         this.paymentMode = paymentMode;
         this.contributionMonth = contributionMonth;

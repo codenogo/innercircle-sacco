@@ -2,13 +2,20 @@ package com.innercircle.sacco.contribution.controller;
 
 import com.innercircle.sacco.common.dto.ApiResponse;
 import com.innercircle.sacco.common.dto.CursorPage;
+import com.innercircle.sacco.common.exception.BusinessException;
 import com.innercircle.sacco.common.security.MemberAccessHelper;
 import com.innercircle.sacco.contribution.dto.BulkContributionRequest;
+import com.innercircle.sacco.contribution.dto.ContributionObligationResponse;
+import com.innercircle.sacco.contribution.dto.ContributionPenaltyResponse;
 import com.innercircle.sacco.contribution.dto.ContributionResponse;
 import com.innercircle.sacco.contribution.dto.ContributionSummaryResponse;
+import com.innercircle.sacco.contribution.dto.ContributionWelfarePolicyResponse;
 import com.innercircle.sacco.contribution.dto.RecordContributionRequest;
+import com.innercircle.sacco.contribution.dto.WaivePenaltyRequest;
 import com.innercircle.sacco.contribution.entity.Contribution;
 import com.innercircle.sacco.contribution.entity.ContributionStatus;
+import com.innercircle.sacco.contribution.service.ContributionObligationService;
+import com.innercircle.sacco.contribution.service.ContributionPenaltyService;
 import com.innercircle.sacco.contribution.service.ContributionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
 
@@ -42,6 +50,8 @@ import java.util.UUID;
 public class ContributionController {
 
     private final ContributionService contributionService;
+    private final ContributionPenaltyService contributionPenaltyService;
+    private final ContributionObligationService contributionObligationService;
     private final MemberAccessHelper memberAccessHelper;
 
     /**
@@ -180,5 +190,96 @@ public class ContributionController {
         memberAccessHelper.assertAccessToMember(memberId, authentication);
         ContributionSummaryResponse summary = contributionService.getMemberSummary(memberId);
         return ApiResponse.ok(summary);
+    }
+
+    /**
+     * Get welfare split policy for contributions.
+     * GET /api/v1/contributions/welfare-policy
+     */
+    @GetMapping("/welfare-policy")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
+    public ApiResponse<ContributionWelfarePolicyResponse> getWelfarePolicy() {
+        return ApiResponse.ok(contributionService.getWelfarePolicy());
+    }
+
+    /**
+     * List generated monthly contribution obligations.
+     * GET /api/v1/contributions/obligations?month=YYYY-MM
+     */
+    @GetMapping("/obligations")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
+    public ApiResponse<List<ContributionObligationResponse>> getObligations(
+            @RequestParam String month,
+            @RequestParam(required = false) UUID memberId) {
+        YearMonth targetMonth = parseMonth(month);
+        List<ContributionObligationResponse> response = contributionObligationService
+                .getObligations(targetMonth, memberId)
+                .stream()
+                .map(ContributionObligationResponse::fromEntity)
+                .toList();
+        return ApiResponse.ok(response);
+    }
+
+    /**
+     * Manually generate monthly obligations and penalties.
+     * POST /api/v1/contributions/obligations/run?month=YYYY-MM
+     */
+    @PostMapping("/obligations/run")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
+    public ApiResponse<List<ContributionObligationResponse>> runObligations(
+            @RequestParam String month,
+            Authentication authentication) {
+        YearMonth targetMonth = parseMonth(month);
+        String actor = memberAccessHelper.currentActor(authentication);
+        List<ContributionObligationResponse> response = contributionObligationService
+                .runMonthlyObligations(targetMonth, actor)
+                .stream()
+                .map(ContributionObligationResponse::fromEntity)
+                .toList();
+        return ApiResponse.ok(response, "Contribution obligations generated");
+    }
+
+    /**
+     * List contribution penalties with optional month filter.
+     * GET /api/v1/contributions/penalties?memberId=&month=
+     */
+    @GetMapping("/penalties")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
+    public ApiResponse<List<ContributionPenaltyResponse>> getPenalties(
+            @RequestParam UUID memberId,
+            @RequestParam(required = false) String month) {
+        YearMonth parsedMonth = month == null || month.isBlank() ? null : parseMonth(month);
+        List<ContributionPenaltyResponse> response = contributionPenaltyService
+                .getPenalties(memberId, parsedMonth)
+                .stream()
+                .map(ContributionPenaltyResponse::fromEntity)
+                .toList();
+        return ApiResponse.ok(response);
+    }
+
+    /**
+     * Waive a contribution penalty.
+     * PATCH /api/v1/contributions/penalties/{id}/waive
+     */
+    @PatchMapping("/penalties/{id}/waive")
+    @PreAuthorize("hasAnyRole('ADMIN','TREASURER')")
+    public ApiResponse<ContributionPenaltyResponse> waivePenalty(
+            @PathVariable UUID id,
+            @RequestBody(required = false) WaivePenaltyRequest request,
+            Authentication authentication) {
+        String actor = memberAccessHelper.currentActor(authentication);
+        String reason = request != null ? request.getReason() : null;
+        return ApiResponse.ok(
+                ContributionPenaltyResponse.fromEntity(contributionPenaltyService.waivePenalty(id, reason, actor)),
+                "Contribution penalty waived successfully"
+        );
+    }
+
+    private YearMonth parseMonth(String month) {
+        try {
+            return YearMonth.parse(month);
+        } catch (RuntimeException ex) {
+            throw new BusinessException("Invalid month format. Use YYYY-MM");
+        }
     }
 }

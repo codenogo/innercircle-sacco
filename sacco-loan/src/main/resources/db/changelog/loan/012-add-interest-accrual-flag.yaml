@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 012-add-interest-accrual-enabled-to-loans
+      author: codex
+      changes:
+        - addColumn:
+            tableName: loan_applications
+            columns:
+              - column:
+                  name: interest_accrual_enabled
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false

@@ -32,4 +32,15 @@ public class ContributionCategory extends BaseEntity {
 
     @Column(name = "is_mandatory", nullable = false)
     private boolean mandatory = false;
+
+    @Column(name = "welfare_eligible", nullable = false)
+    private boolean welfareEligible = false;
+
+    public ContributionCategory(String name, String description, boolean active, boolean mandatory) {
+        this.name = name;
+        this.description = description;
+        this.active = active;
+        this.mandatory = mandatory;
+        this.welfareEligible = false;
+    }
 }
