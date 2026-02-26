@@ -1,0 +1,74 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-add-welfare-split-columns
+      author: codex
+      preConditions:
+        - onFail: MARK_RAN
+        - onError: MARK_RAN
+        - tableExists:
+            tableName: contributions
+        - tableExists:
+            tableName: contribution_categories
+      changes:
+        - addColumn:
+            tableName: contributions
+            columns:
+              - column:
+                  name: contribution_amount
+                  type: decimal(19,2)
+              - column:
+                  name: welfare_amount
+                  type: decimal(19,2)
+                  defaultValueNumeric: 0.00
+
+        - sql:
+            splitStatements: false
+            sql: |
+              UPDATE contributions
+              SET contribution_amount = amount
+              WHERE contribution_amount IS NULL;
+
+              UPDATE contributions
+              SET welfare_amount = 0.00
+              WHERE welfare_amount IS NULL;
+
+        - addNotNullConstraint:
+            tableName: contributions
+            columnName: contribution_amount
+            columnDataType: decimal(19,2)
+
+        - addNotNullConstraint:
+            tableName: contributions
+            columnName: welfare_amount
+            columnDataType: decimal(19,2)
+
+        - addColumn:
+            tableName: contribution_categories
+            columns:
+              - column:
+                  name: welfare_eligible
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+
+        - createIndex:
+            tableName: contribution_categories
+            indexName: idx_contribution_categories_welfare_eligible
+            columns:
+              - column:
+                  name: welfare_eligible
+
+      rollback:
+        - dropIndex:
+            tableName: contribution_categories
+            indexName: idx_contribution_categories_welfare_eligible
+        - dropColumn:
+            tableName: contribution_categories
+            columnName: welfare_eligible
+        - dropColumn:
+            tableName: contributions
+            columnName: welfare_amount
+        - dropColumn:
+            tableName: contributions
+            columnName: contribution_amount

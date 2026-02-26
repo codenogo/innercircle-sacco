@@ -21,7 +21,11 @@ function formatDateTime(value: string | undefined) {
 
 function roleBadgeClass(role: string) {
   if (role.includes('ADMIN')) return 'badge--active'
-  if (role.includes('TREASURER') || role.includes('SECRETARY')) return 'badge--completed'
+  if (
+    role.includes('TREASURER')
+    || role.includes('SECRETARY')
+    || role.includes('CHAIRPERSON')
+  ) return 'badge--completed'
   if (role.includes('MEMBER')) return 'badge--pending'
   return 'badge--inactive'
 }

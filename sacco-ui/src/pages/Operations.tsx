@@ -9,6 +9,10 @@ import {
   Stack,
   Gift,
   Wallet,
+  TrendUp,
+  CalendarCheck,
+  Heartbeat,
+  SignOut,
   BookOpen,
   DownloadSimple,
   SquaresFour,
@@ -117,6 +121,42 @@ const operationLinks: OperationLink[] = [
     status: 'ready',
   },
   {
+    to: '/investment-ops',
+    title: 'Investment Operations',
+    description: 'Create, approve, record income, dispose, and manage investment portfolio.',
+    api: '/api/v1/investments/*',
+    icon: TrendUp,
+    allowed: ['ADMIN', 'TREASURER'],
+    status: 'ready',
+  },
+  {
+    to: '/meetings-fines',
+    title: 'Meetings & Fines',
+    description: 'Create meetings, capture attendance, generate and settle fines.',
+    api: '/api/v1/meetings/*',
+    icon: CalendarCheck,
+    allowed: ['ADMIN', 'TREASURER', 'SECRETARY', 'CHAIRPERSON', 'VICE_CHAIRPERSON', 'VICE_TREASURER'],
+    status: 'ready',
+  },
+  {
+    to: '/welfare-claims',
+    title: 'Welfare Claims',
+    description: 'Manage beneficiaries, claims, reviews, and welfare payouts.',
+    api: '/api/v1/welfare/*',
+    icon: Heartbeat,
+    allowed: ['ADMIN', 'TREASURER', 'CHAIRPERSON', 'VICE_CHAIRPERSON', 'VICE_TREASURER'],
+    status: 'ready',
+  },
+  {
+    to: '/member-exit',
+    title: 'Member Exit Workflow',
+    description: 'Capture notice, review approvals, and process settlement installments.',
+    api: '/api/v1/members/{memberId}/exit-requests/*',
+    icon: SignOut,
+    allowed: ['ADMIN', 'TREASURER', 'MEMBER', 'CHAIRPERSON', 'VICE_CHAIRPERSON', 'VICE_TREASURER'],
+    status: 'ready',
+  },
+  {
     to: '/ledger-statements',
     title: 'Ledger Statements',
     description: 'Trial balance, income statement, and balance sheet views.',
@@ -199,7 +239,14 @@ export function Operations() {
             const Icon = item.icon
             if (item.status === 'preview') {
               return (
-                <div key={item.to} className="report-card ops-link-card ops-link-card--disabled" aria-disabled="true">
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className="report-card ops-link-card ops-link-card--disabled"
+                  aria-disabled="true"
+                  tabIndex={-1}
+                  onClick={e => e.preventDefault()}
+                >
                   <div className="report-card-info">
                     <div className="ops-card-title-row">
                       <Icon size={15} className="ops-card-icon" />
@@ -210,7 +257,7 @@ export function Operations() {
                     <span className="ops-card-api data">{item.api}</span>
                     {item.previewNote && <span className="ops-note">{item.previewNote}</span>}
                   </div>
-                </div>
+                </Link>
               )
             }
 

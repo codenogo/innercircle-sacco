@@ -1,0 +1,25 @@
+databaseChangeLog:
+  - changeSet:
+      id: 009-seed-office-roles
+      author: codex
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              INSERT INTO roles (id, name, description, created_at, updated_at)
+              SELECT '01940000-0000-7000-8000-000000000005', 'CHAIRPERSON',
+                     'Chairperson with governance decision authority',
+                     CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM roles WHERE name = 'CHAIRPERSON');
+
+              INSERT INTO roles (id, name, description, created_at, updated_at)
+              SELECT '01940000-0000-7000-8000-000000000006', 'VICE_CHAIRPERSON',
+                     'Vice Chairperson governance role',
+                     CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM roles WHERE name = 'VICE_CHAIRPERSON');
+
+              INSERT INTO roles (id, name, description, created_at, updated_at)
+              SELECT '01940000-0000-7000-8000-000000000007', 'VICE_TREASURER',
+                     'Vice Treasurer support role for treasury operations',
+                     CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM roles WHERE name = 'VICE_TREASURER');

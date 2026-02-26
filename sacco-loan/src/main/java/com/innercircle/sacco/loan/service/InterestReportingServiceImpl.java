@@ -36,7 +36,7 @@ public class InterestReportingServiceImpl implements InterestReportingService {
                 .findByAccrualDateBetween(startDate, endDate);
 
         BigDecimal totalAccrued = monthlyHistory.stream()
-                .filter(h -> h.getEventType() == InterestEventType.MONTHLY_ACCRUAL)
+                .filter(h -> h.getEventType() == InterestEventType.DAILY_ACCRUAL)
                 .map(LoanInterestHistory::getInterestAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -84,7 +84,7 @@ public class InterestReportingServiceImpl implements InterestReportingService {
                     List<LoanInterestHistory> history = interestHistoryRepository
                             .findByLoanIdOrderByAccrualDateDesc(loan.getId());
                     LocalDate lastAccrualDate = history.stream()
-                            .filter(h -> h.getEventType() == InterestEventType.MONTHLY_ACCRUAL)
+                            .filter(h -> h.getEventType() == InterestEventType.DAILY_ACCRUAL)
                             .map(LoanInterestHistory::getAccrualDate)
                             .findFirst()
                             .orElse(null);
@@ -118,7 +118,7 @@ public class InterestReportingServiceImpl implements InterestReportingService {
                     List<LoanInterestHistory> history = interestHistoryRepository
                             .findByLoanIdOrderByAccrualDateDesc(loan.getId());
                     LocalDate lastAccrualDate = history.stream()
-                            .filter(h -> h.getEventType() == InterestEventType.MONTHLY_ACCRUAL)
+                            .filter(h -> h.getEventType() == InterestEventType.DAILY_ACCRUAL)
                             .map(LoanInterestHistory::getAccrualDate)
                             .findFirst()
                             .orElse(null);

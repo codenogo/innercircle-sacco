@@ -482,6 +482,7 @@ export function Ledger() {
             type="text"
             className="filter-search"
             placeholder="Search ref or description..."
+            aria-label="Search journal entries"
             value={filterQuery}
             onChange={e => setFilterQuery(e.target.value)}
           />
@@ -529,7 +530,14 @@ export function Ledger() {
         data={displayRows}
         getRowKey={(row) => row.key}
         loading={loading}
-        emptyMessage="No journal entries found."
+        emptyMessage={
+          entries.length === 0
+            ? <div className="empty-state empty-state--illustrated">
+                <h3 className="empty-state-heading">No journal entries</h3>
+                <p className="empty-state-text">Entries are created automatically when contributions, loans, or payouts are recorded.</p>
+              </div>
+            : 'No journal entries match the current filters.'
+        }
         getRowClassName={getRowClassName}
         sortColumn="date"
         sortDirection={sortDir}

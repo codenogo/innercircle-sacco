@@ -33,3 +33,9 @@ dist/
 
 # Worktree session state (transient, contains absolute paths)
 .cnogo/worktree-session.json
+
+.cnogo/compaction-checkpoint.json
+
+.cnogo/validate-baseline.json
+
+.cnogo/validate-latest.json

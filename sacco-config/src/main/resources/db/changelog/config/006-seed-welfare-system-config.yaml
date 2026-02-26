@@ -1,0 +1,32 @@
+databaseChangeLog:
+  - changeSet:
+      id: 006-seed-welfare-system-config
+      author: codex
+      preConditions:
+        - onFail: MARK_RAN
+        - onError: MARK_RAN
+        - sqlCheck:
+            expectedResult: "0"
+            sql: "SELECT COUNT(*) FROM system_configs WHERE config_key = 'contribution.welfare.fixed_amount'"
+      changes:
+        - insert:
+            tableName: system_configs
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: config_key
+                  value: "contribution.welfare.fixed_amount"
+              - column:
+                  name: config_value
+                  value: "0.00"
+              - column:
+                  name: description
+                  value: "Fixed welfare amount deducted from eligible contributions"
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"

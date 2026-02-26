@@ -10,6 +10,7 @@ import com.innercircle.sacco.security.repository.RefreshTokenRepository;
 import com.innercircle.sacco.security.repository.UserAccountRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
@@ -19,7 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -27,9 +30,17 @@ import java.util.UUID;
 @Slf4j
 public class AuthService {
 
-    private static final long ACCESS_TOKEN_EXPIRY_SECONDS = 3600L;
-    private static final long REFRESH_TOKEN_EXPIRY_SECONDS = 7 * 24 * 60 * 60L;
-    private static final long REFRESH_RETRY_GRACE_SECONDS = 5L;
+    @Value("${security.auth.access-token-expiry-seconds:3600}")
+    private long accessTokenExpirySeconds = 3600L;
+
+    @Value("${security.auth.refresh-token-expiry-seconds:604800}")
+    private long refreshTokenExpirySeconds = 7 * 24 * 60 * 60L;
+
+    @Value("${security.auth.refresh-retry-grace-seconds:5}")
+    private long refreshRetryGraceSeconds = 5L;
+
+    @Value("${security.auth.refresh-chain-max-depth:10}")
+    private int refreshChainMaxDepth = 10;
 
     private final SaccoUserDetailsService userDetailsService;
     private final PasswordEncoder passwordEncoder;
@@ -74,7 +85,7 @@ public class AuthService {
         RefreshToken refreshToken = RefreshToken.builder()
                 .userId(userAccount.getId())
                 .token(refreshTokenString)
-                .expiresAt(Instant.now().plusSeconds(REFRESH_TOKEN_EXPIRY_SECONDS))
+                .expiresAt(Instant.now().plusSeconds(refreshTokenExpirySeconds))
                 .revoked(false)
                 .build();
 
@@ -87,7 +98,7 @@ public class AuthService {
                 accessToken,
                 refreshTokenString,
                 "Bearer",
-                ACCESS_TOKEN_EXPIRY_SECONDS
+                accessTokenExpirySeconds
         );
     }
 
@@ -96,7 +107,7 @@ public class AuthService {
         // Find refresh token in database
         RefreshToken refreshToken = refreshTokenRepository.findByToken(request.refreshToken())
                 .orElseThrow(() -> {
-                    log.warn("Refresh token not found");
+                    log.warn("Refresh token rejected: reason=NOT_FOUND");
                     return new BadCredentialsException("Invalid refresh token");
                 });
 
@@ -104,7 +115,8 @@ public class AuthService {
 
         // Validate: not expired
         if (refreshToken.getExpiresAt().isBefore(now)) {
-            log.warn("Refresh token has expired: userId={}", refreshToken.getUserId());
+            log.warn("Refresh token rejected: reason=EXPIRED userId={} tokenId={}",
+                    refreshToken.getUserId(), refreshToken.getId());
             throw new BadCredentialsException("Refresh token expired");
         }
 
@@ -127,24 +139,21 @@ public class AuthService {
                 newAccessToken,
                 refreshTokenToIssue.getToken(),
                 "Bearer",
-                ACCESS_TOKEN_EXPIRY_SECONDS
+                accessTokenExpirySeconds
         );
     }
 
     private RefreshToken rotateOrResolveRefreshToken(RefreshToken refreshToken, Instant now) {
         if (Boolean.TRUE.equals(refreshToken.getRevoked())) {
             return resolveConcurrentRefreshRetry(refreshToken, now)
-                    .orElseThrow(() -> {
-                        log.warn("Refresh token has been revoked: userId={}", refreshToken.getUserId());
-                        return new BadCredentialsException("Invalid refresh token");
-                    });
+                    .orElseThrow(() -> new BadCredentialsException("Invalid refresh token"));
         }
 
         String newRefreshTokenString = jwtService.generateRefreshToken();
         RefreshToken newRefreshToken = RefreshToken.builder()
                 .userId(refreshToken.getUserId())
                 .token(newRefreshTokenString)
-                .expiresAt(now.plusSeconds(REFRESH_TOKEN_EXPIRY_SECONDS))
+                .expiresAt(now.plusSeconds(refreshTokenExpirySeconds))
                 .revoked(false)
                 .build();
         newRefreshToken.setId(UuidGenerator.generateV7());
@@ -173,20 +182,57 @@ public class AuthService {
     }
 
     private Optional<RefreshToken> resolveConcurrentRefreshRetry(RefreshToken refreshToken, Instant now) {
-        Instant revokedAt = refreshToken.getRevokedAt();
-        UUID replacementTokenId = refreshToken.getReplacedByTokenId();
-
-        if (!Boolean.TRUE.equals(refreshToken.getRevoked()) || revokedAt == null || replacementTokenId == null) {
+        if (!Boolean.TRUE.equals(refreshToken.getRevoked())) {
             return Optional.empty();
         }
 
-        Instant earliestAllowedReplay = now.minusSeconds(REFRESH_RETRY_GRACE_SECONDS);
-        if (revokedAt.isBefore(earliestAllowedReplay)) {
-            return Optional.empty();
+        RefreshToken cursor = refreshToken;
+        Set<UUID> visitedTokenIds = new HashSet<>();
+
+        for (int depth = 0; depth < refreshChainMaxDepth; depth++) {
+            if (cursor.getId() != null && !visitedTokenIds.add(cursor.getId())) {
+                log.warn("Refresh token rejected: reason=CHAIN_BROKEN userId={} tokenId={} detail=rotation-cycle",
+                        cursor.getUserId(), cursor.getId());
+                return Optional.empty();
+            }
+
+            Instant revokedAt = cursor.getRevokedAt();
+            UUID replacementTokenId = cursor.getReplacedByTokenId();
+            if (revokedAt == null || replacementTokenId == null) {
+                log.warn("Refresh token rejected: reason=CHAIN_BROKEN userId={} tokenId={} detail=missing-rotation-metadata",
+                        cursor.getUserId(), cursor.getId());
+                return Optional.empty();
+            }
+
+            Instant earliestAllowedReplay = now.minusSeconds(refreshRetryGraceSeconds);
+            if (revokedAt.isBefore(earliestAllowedReplay)) {
+                log.warn("Refresh token rejected: reason=REVOKED_OUTSIDE_GRACE userId={} tokenId={}",
+                        cursor.getUserId(), cursor.getId());
+                return Optional.empty();
+            }
+
+            Optional<RefreshToken> replacement = refreshTokenRepository.findById(replacementTokenId);
+            if (replacement.isEmpty()) {
+                log.warn("Refresh token rejected: reason=CHAIN_BROKEN userId={} tokenId={} detail=missing-replacement",
+                        cursor.getUserId(), cursor.getId());
+                return Optional.empty();
+            }
+
+            RefreshToken candidate = replacement.get();
+            if (!Boolean.TRUE.equals(candidate.getRevoked())) {
+                if (candidate.getExpiresAt().isBefore(now)) {
+                    log.warn("Refresh token rejected: reason=EXPIRED userId={} tokenId={} detail=replacement-expired",
+                            candidate.getUserId(), candidate.getId());
+                    return Optional.empty();
+                }
+                return Optional.of(candidate);
+            }
+
+            cursor = candidate;
         }
 
-        return refreshTokenRepository.findById(replacementTokenId)
-                .filter(token -> !Boolean.TRUE.equals(token.getRevoked()))
-                .filter(token -> !token.getExpiresAt().isBefore(now));
+        log.warn("Refresh token rejected: reason=CHAIN_BROKEN userId={} tokenId={} detail=chain-depth-exceeded depth={}",
+                refreshToken.getUserId(), refreshToken.getId(), refreshChainMaxDepth);
+        return Optional.empty();
     }
 }

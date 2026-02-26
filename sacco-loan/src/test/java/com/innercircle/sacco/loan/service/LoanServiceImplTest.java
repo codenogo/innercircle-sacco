@@ -104,8 +104,11 @@ class LoanServiceImplTest {
         product.setName("Test Loan Product");
         product.setInterestMethod(method);
         product.setAnnualInterestRate(rate);
+        product.setMinAmount(new BigDecimal("10000"));
         product.setMaxAmount(maxAmount);
+        product.setMinTermMonths(1);
         product.setMaxTermMonths(maxTermMonths);
+        product.setInterestAccrualEnabled(false);
         product.setActive(true);
         return product;
     }

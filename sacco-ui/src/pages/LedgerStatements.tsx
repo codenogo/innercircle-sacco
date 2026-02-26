@@ -1,4 +1,5 @@
 import { DataTable, type ColumnDef } from '../components/DataTable'
+import { Breadcrumb } from '../components/Breadcrumb'
 import './Operations.css'
 
 function fmt(n: number) {
@@ -30,6 +31,10 @@ export function LedgerStatements() {
 
   return (
     <div className="ops-page">
+      <Breadcrumb items={[
+        { label: 'Ledger', to: '/ledger' },
+        { label: 'Ledger Statements' },
+      ]} />
       <div className="page-header">
         <div>
           <h1 className="page-title">Ledger Statements</h1>

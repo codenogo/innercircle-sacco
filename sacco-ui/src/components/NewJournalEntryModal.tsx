@@ -57,17 +57,17 @@ export function NewJournalEntryModal({ open, onClose, accounts }: NewJournalEntr
       <form id="new-journal-form" className="modal-form" onSubmit={handleSubmit}>
         <div className="field-row">
           <div className="field">
-            <label className="field-label">Date</label>
+            <label className="field-label field-label--required">Date</label>
             <DatePicker value={date} onChange={setDate} required />
           </div>
           <div className="field">
-            <label className="field-label">Account</label>
+            <label className="field-label field-label--required">Account</label>
             <Select options={accountOptions} value={account} onChange={setAccount} placeholder="Select account" required />
           </div>
         </div>
 
         <div className="field">
-          <label className="field-label">Description</label>
+          <label className="field-label field-label--required">Description</label>
           <input className="field-input" type="text" required value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g. Contribution — Jane Wanjiku" />
         </div>
 

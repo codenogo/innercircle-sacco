@@ -10,7 +10,7 @@ import java.util.UUID;
 
 @Repository
 public interface BatchProcessingLogRepository extends JpaRepository<BatchProcessingLog, UUID> {
-    Optional<BatchProcessingLog> findByProcessingMonth(String processingMonth);
-    boolean existsByProcessingMonth(String processingMonth);
-    Optional<BatchProcessingLog> findTopByStatusOrderByProcessingMonthDesc(BatchProcessingStatus status);
+    Optional<BatchProcessingLog> findByProcessingDate(String processingDate);
+    boolean existsByProcessingDate(String processingDate);
+    Optional<BatchProcessingLog> findTopByStatusOrderByProcessingDateDesc(BatchProcessingStatus status);
 }

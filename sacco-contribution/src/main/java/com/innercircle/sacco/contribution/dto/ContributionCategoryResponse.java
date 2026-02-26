@@ -17,7 +17,8 @@ public class ContributionCategoryResponse {
     private String name;
     private String description;
     private boolean active;
-    private boolean isMandatory;
+    private boolean mandatory;
+    private boolean welfareEligible;
 
     public static ContributionCategoryResponse fromEntity(ContributionCategory category) {
         return new ContributionCategoryResponse(
@@ -25,7 +26,8 @@ public class ContributionCategoryResponse {
                 category.getName(),
                 category.getDescription(),
                 category.isActive(),
-                category.isMandatory()
+                category.isMandatory(),
+                category.isWelfareEligible()
         );
     }
 }

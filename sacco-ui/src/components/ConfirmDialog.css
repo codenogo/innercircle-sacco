@@ -1,0 +1,59 @@
+/* ─── Confirm Dialog ─── */
+
+.confirm-dialog-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.confirm-dialog-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+.confirm-dialog-icon--danger {
+  background: var(--deficit-soft);
+  color: var(--deficit);
+}
+
+.confirm-dialog-icon--warning {
+  background: var(--caution-soft);
+  color: var(--caution);
+}
+
+.confirm-dialog-icon--info {
+  background: var(--mpesa-soft);
+  color: var(--mpesa);
+}
+
+.confirm-dialog-description {
+  font-size: var(--text-sm);
+  color: var(--ink-secondary);
+  line-height: var(--leading-normal);
+  max-width: 320px;
+}
+
+/* ─── Danger button variant ─── */
+
+.btn--danger {
+  background: var(--deficit);
+  color: #fff;
+  border: none;
+}
+
+.btn--danger:hover {
+  background: #a3402f;
+}
+
+.btn--danger:focus-visible {
+  outline: 2px solid var(--deficit);
+  outline-offset: 2px;
+}
+

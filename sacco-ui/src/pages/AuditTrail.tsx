@@ -224,7 +224,14 @@ export function AuditTrail() {
         data={events}
         getRowKey={event => event.id}
         loading={loading}
-        emptyMessage="No events found."
+        emptyMessage={
+          events.length === 0 && typeFilter === 'ALL' && !startDate && !endDate
+            ? <div className="empty-state empty-state--illustrated">
+                <h3 className="empty-state-heading">No audit events</h3>
+                <p className="empty-state-text">Events will appear here as members, loans, and other records are created or modified.</p>
+              </div>
+            : 'No events match the current filters.'
+        }
         getRowClassName={(_, i) => i % 2 === 1 ? 'datatable-row--alt' : ''}
       />
 

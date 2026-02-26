@@ -25,6 +25,7 @@
         <module>sacco-contribution</module>
         <module>sacco-loan</module>
         <module>sacco-payout</module>
+        <module>sacco-investment</module>
         <module>sacco-ledger</module>
         <module>sacco-reporting</module>
         <module>sacco-audit</module>
@@ -72,6 +73,11 @@
             <dependency>
                 <groupId>com.innercircle</groupId>
                 <artifactId>sacco-payout</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.innercircle</groupId>
+                <artifactId>sacco-investment</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

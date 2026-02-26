@@ -19,17 +19,17 @@ public class ContributionCategoryServiceImpl implements ContributionCategoryServ
 
     @Override
     @Transactional
-    public ContributionCategory createCategory(String name, String description, boolean isMandatory) {
+    public ContributionCategory createCategory(String name, String description, boolean mandatory, boolean welfareEligible) {
         if (categoryRepository.existsByName(name)) {
             throw new BusinessException("Category with name '" + name + "' already exists");
         }
-        ContributionCategory category = new ContributionCategory(name, description, true, isMandatory);
+        ContributionCategory category = new ContributionCategory(name, description, true, mandatory, welfareEligible);
         return categoryRepository.save(category);
     }
 
     @Override
     @Transactional
-    public ContributionCategory updateCategory(UUID id, String name, String description, boolean active, boolean isMandatory) {
+    public ContributionCategory updateCategory(UUID id, String name, String description, boolean active, boolean mandatory, boolean welfareEligible) {
         ContributionCategory category = getCategory(id);
         
         if (!category.getName().equals(name) && categoryRepository.existsByName(name)) {
@@ -39,7 +39,8 @@ public class ContributionCategoryServiceImpl implements ContributionCategoryServ
         category.setName(name);
         category.setDescription(description);
         category.setActive(active);
-        category.setMandatory(isMandatory);
+        category.setMandatory(mandatory);
+        category.setWelfareEligible(welfareEligible);
         
         return categoryRepository.save(category);
     }

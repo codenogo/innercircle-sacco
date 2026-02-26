@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FileText, DownloadSimple, ChartBar, TrendUp, Users, Wallet, MagnifyingGlass, type Icon } from '@phosphor-icons/react'
 import { Spinner } from '../components/Spinner'
+import { SkeletonStat } from '../components/Skeleton'
+import { Modal } from '../components/Modal'
+import { DatePicker } from '../components/DatePicker'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { ApiError } from '../services/apiClient'
 import { getAllMembers } from '../services/memberService'
@@ -76,10 +79,8 @@ function toErrorMessage(error: unknown, fallback: string): string {
   return fallback
 }
 
-function defaultDateRange(now: Date = new Date()): { fromDate: string; toDate: string } {
-  const toDate = localISODate(now)
-  const fromDate = localISODate(new Date(now.getFullYear(), now.getMonth(), 1))
-  return { fromDate, toDate }
+function defaultFromDate(now: Date = new Date()): string {
+  return localISODate(new Date(now.getFullYear(), now.getMonth(), 1))
 }
 
 function isDownloadAvailable(reportId: string, format: string): boolean {
@@ -98,6 +99,10 @@ export function Reports() {
 
   // Per-button downloading state: key is "reportId-format"
   const [downloading, setDownloading] = useState<Record<string, boolean>>({})
+
+  // Date range for reports
+  const [fromDate, setFromDate] = useState(defaultFromDate)
+  const [toDate, setToDate] = useState(() => localISODate())
 
   // Member search for Member Statement
   const [memberSearchOpen, setMemberSearchOpen] = useState(false)
@@ -171,7 +176,6 @@ export function Reports() {
   }
 
   function handleDownload(reportId: string, format: string) {
-    const { fromDate, toDate } = defaultDateRange()
     const downloadKey = `${reportId}-${format}`
 
     if (reportId === 'member-statement') {
@@ -190,7 +194,6 @@ export function Reports() {
   }
 
   function handleMemberSelect(member: MemberResponse) {
-    const { fromDate, toDate } = defaultDateRange()
     const url = exportMemberStatementPdfUrl(member.id, fromDate, toDate)
     const filename = `statement-${member.firstName}-${member.lastName}-${fromDate}-${toDate}.pdf`
     setMemberSearchOpen(false)
@@ -224,14 +227,33 @@ export function Reports() {
         </div>
       )}
 
+      {/* Date range picker */}
+      <section className="page-section">
+        <span className="page-section-title">Report Period</span>
+        <hr className="rule" />
+        <div className="reports-date-range">
+          <label className="reports-date-label">
+            From
+            <DatePicker value={fromDate} onChange={setFromDate} />
+          </label>
+          <label className="reports-date-label">
+            To
+            <DatePicker value={toDate} onChange={setToDate} />
+          </label>
+        </div>
+        <hr className="rule" />
+      </section>
+
       {/* Quick stats */}
       <section className="page-section">
         <span className="page-section-title">At a Glance</span>
         <hr className="rule" />
         {statsLoading ? (
-          <div className="reports-stats-loading">
-            <Spinner size="sm" />
-            <span>Loading stats...</span>
+          <div className="reports-stats">
+            <SkeletonStat />
+            <SkeletonStat />
+            <SkeletonStat />
+            <SkeletonStat />
           </div>
         ) : statsError ? (
           <div className="reports-stats-error">{statsError}</div>
@@ -249,57 +271,50 @@ export function Reports() {
       </section>
 
       {/* Member search modal for Member Statement */}
-      {memberSearchOpen && (
-        <div className="reports-member-overlay" onClick={() => setMemberSearchOpen(false)}>
-          <div className="reports-member-modal" onClick={e => e.stopPropagation()}>
-            <h3 className="reports-member-modal-title">Select Member for Statement</h3>
-            <div className="reports-member-search-wrap">
-              <MagnifyingGlass size={14} className="reports-member-search-icon" />
-              <input
-                type="text"
-                className="reports-member-search"
-                placeholder="Search by name, number, or email..."
-                value={memberQuery}
-                onChange={e => setMemberQuery(e.target.value)}
-                autoFocus
-              />
-            </div>
-            <div className="reports-member-list">
-              {membersLoading ? (
-                <div className="reports-member-list-empty">
-                  <Spinner size="sm" />
-                  Loading members...
-                </div>
-              ) : filteredMembers.length === 0 ? (
-                <div className="reports-member-list-empty">No members found.</div>
-              ) : (
-                filteredMembers.map(m => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    className="reports-member-item"
-                    onClick={() => handleMemberSelect(m)}
-                  >
-                    <span className="reports-member-item-name">
-                      {m.firstName} {m.lastName}
-                    </span>
-                    <span className="reports-member-item-sub">{m.memberNumber}</span>
-                  </button>
-                ))
-              )}
-            </div>
-            <div className="reports-member-modal-actions">
-              <button
-                type="button"
-                className="btn btn--secondary btn--small"
-                onClick={() => setMemberSearchOpen(false)}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
+      <Modal
+        open={memberSearchOpen}
+        onClose={() => { setMemberSearchOpen(false); setMemberQuery('') }}
+        title="Select Member for Statement"
+        subtitle="Choose a member to generate their statement"
+        width="md"
+      >
+        <div className="reports-member-search-wrap">
+          <MagnifyingGlass size={14} className="reports-member-search-icon" />
+          <input
+            type="text"
+            className="reports-member-search"
+            placeholder="Search by name, number, or email..."
+            aria-label="Search members"
+            value={memberQuery}
+            onChange={e => setMemberQuery(e.target.value)}
+            autoFocus
+          />
         </div>
-      )}
+        <div className="reports-member-list">
+          {membersLoading ? (
+            <div className="reports-member-list-empty">
+              <Spinner size="sm" />
+              Loading members...
+            </div>
+          ) : filteredMembers.length === 0 ? (
+            <div className="reports-member-list-empty">No members found.</div>
+          ) : (
+            filteredMembers.map(m => (
+              <button
+                key={m.id}
+                type="button"
+                className="reports-member-item"
+                onClick={() => handleMemberSelect(m)}
+              >
+                <span className="reports-member-item-name">
+                  {m.firstName} {m.lastName}
+                </span>
+                <span className="reports-member-item-sub">{m.memberNumber}</span>
+              </button>
+            ))
+          )}
+        </div>
+      </Modal>
 
       {/* Available reports */}
       <section className="page-section">

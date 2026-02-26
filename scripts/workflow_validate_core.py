@@ -11,6 +11,7 @@ No external dependencies.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -23,25 +24,16 @@ from typing import Any, Callable, Iterable
 
 try:
     from workflow_utils import load_json as _load_json
+    from workflow_utils import parse_skill_frontmatter as _parse_skill_frontmatter
 except ModuleNotFoundError:
     from .workflow_utils import load_json as _load_json  # type: ignore
+    from .workflow_utils import parse_skill_frontmatter as _parse_skill_frontmatter  # type: ignore
 
 
 FEATURE_SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 QUICK_DIR_RE = re.compile(r"^[0-9]{3}-[a-z0-9]+(?:-[a-z0-9]+)*$")
 PLAN_MD_RE = re.compile(r"^(?P<num>[0-9]{2})-PLAN\.md$")
 SUMMARY_MD_RE = re.compile(r"^(?P<num>[0-9]{2})-SUMMARY\.md$")
-REVIEW_PRINCIPLES_REQUIRED_SCHEMA = 2
-DEFAULT_REVIEW_PRINCIPLES = [
-    "Think Before Coding",
-    "Simplicity First",
-    "Surgical Changes",
-    "Goal-Driven Execution",
-    "Prefer shared utility packages over hand-rolled helpers",
-    "Don't probe data YOLO-style",
-    "Validate boundaries",
-    "Typed SDKs",
-]
 DEFAULT_TOKEN_BUDGETS = {
     "enabled": True,
     "commandWordMax": 400,
@@ -616,23 +608,9 @@ def _validate_workflow_config(cfg: dict[str, Any], findings: list[Finding], root
         mvs = enf.get("monorepoVerifyScope", "warn")
         if mvs not in {"warn", "error"}:
             findings.append(Finding("WARN", "WORKFLOW.json: enforcement.monorepoVerifyScope should be warn|error.", str(cfg_path)))
-        kc = enf.get("karpathyChecklist", "warn")
-        if kc not in {"off", "warn", "error"}:
-            findings.append(Finding("WARN", "WORKFLOW.json: enforcement.karpathyChecklist should be off|warn|error.", str(cfg_path)))
-        rp = enf.get("reviewPrinciples")
-        if rp is not None:
-            if not isinstance(rp, list) or not rp:
-                findings.append(Finding("WARN", "WORKFLOW.json: enforcement.reviewPrinciples should be a non-empty array of strings.", str(cfg_path)))
-            else:
-                for i, item in enumerate(rp, start=1):
-                    if not isinstance(item, str) or not item.strip():
-                        findings.append(
-                            Finding(
-                                "WARN",
-                                f"WORKFLOW.json: enforcement.reviewPrinciples[{i}] should be a non-empty string.",
-                                str(cfg_path),
-                            )
-                        )
+        op = enf.get("operatingPrinciples", "warn")
+        if op not in {"off", "warn", "error"}:
+            findings.append(Finding("WARN", "WORKFLOW.json: enforcement.operatingPrinciples should be off|warn|error.", str(cfg_path)))
 
     pkgs = cfg.get("packages")
     if pkgs is not None and not isinstance(pkgs, list):
@@ -798,30 +776,13 @@ def _get_monorepo_scope_level(cfg: dict[str, Any]) -> str:
     return level
 
 
-def _get_karpathy_checklist_level(cfg: dict[str, Any]) -> str:
+def _get_operating_principles_level(cfg: dict[str, Any]) -> str:
     enforcement = cfg.get("enforcement") if isinstance(cfg.get("enforcement"), dict) else {}
-    level = enforcement.get("karpathyChecklist", "warn")
+    level = enforcement.get("operatingPrinciples", "warn")
     if level not in {"off", "warn", "error"}:
         return "warn"
     return level
 
-
-def _review_principles_cfg(cfg: dict[str, Any]) -> list[str]:
-    enforcement = cfg.get("enforcement") if isinstance(cfg.get("enforcement"), dict) else {}
-    raw = enforcement.get("reviewPrinciples")
-    if not isinstance(raw, list):
-        return list(DEFAULT_REVIEW_PRINCIPLES)
-    out: list[str] = []
-    seen: set[str] = set()
-    for item in raw:
-        if not isinstance(item, str):
-            continue
-        val = item.strip()
-        if not val or val in seen:
-            continue
-        seen.add(val)
-        out.append(val)
-    return out if out else list(DEFAULT_REVIEW_PRINCIPLES)
 
 
 def _verify_cmd_scoped(cmd: str) -> bool:
@@ -860,8 +821,7 @@ def _validate_features(
     touched,
     shape: dict[str, Any],
     monorepo_scope_level: str,
-    karpathy_level: str,
-    review_principles: list[str],
+    operating_principles_level: str,
     packages_cfg: list[dict[str, str]],
     freshness_cfg: dict[str, Any],
 ) -> None:
@@ -1023,7 +983,7 @@ def _validate_features(
             if m:
                 summary_nums.add(m.group("num"))
 
-        _validate_ci_verification(feature_dir, findings, karpathy_level, review_principles)
+        _validate_ci_verification(feature_dir, findings, operating_principles_level)
         _validate_feature_lifecycle_and_freshness(
             feature_dir=feature_dir,
             context_md=context_md,
@@ -1040,8 +1000,7 @@ def _validate_features(
 def _validate_ci_verification(
     feature_dir: Path,
     findings: list[Finding],
-    karpathy_level: str,
-    review_principles: list[str],
+    operating_principles_level: str,
 ) -> None:
     """Validate review, CI verification, and human verification artifacts within a feature."""
     # Review artifacts
@@ -1049,15 +1008,6 @@ def _validate_ci_verification(
     review_json = feature_dir / "REVIEW.json"
     if review_md.exists():
         _require(review_json, findings, "Missing REVIEW.json contract for REVIEW.md")
-        if karpathy_level != "off":
-            try:
-                txt = review_md.read_text(encoding="utf-8", errors="replace")
-                has = ("Karpathy" in txt) and ("Checklist" in txt or "Principles" in txt)
-                if not has:
-                    lvl = "ERROR" if karpathy_level == "error" else "WARN"
-                    findings.append(Finding(lvl, "REVIEW.md missing Karpathy checklist section (enforced by WORKFLOW.json).", str(review_md)))
-            except Exception:
-                pass
         if review_json.exists():
             try:
                 r = _load_json(review_json)
@@ -1065,56 +1015,24 @@ def _validate_ci_verification(
                     if "schemaVersion" not in r:
                         findings.append(Finding("WARN", "REVIEW.json missing schemaVersion (recommended).", str(review_json)))
                     schema_version = r.get("schemaVersion")
-                    principles = r.get("principles")
-                    requires_principles = (
+                    # New schema (v3+): validate securityFindings, performanceFindings, patternCompliance
+                    if (
                         isinstance(schema_version, int)
                         and not isinstance(schema_version, bool)
-                        and schema_version >= REVIEW_PRINCIPLES_REQUIRED_SCHEMA
-                    )
-                    if principles is None:
-                        if requires_principles:
-                            lvl = "ERROR" if karpathy_level == "error" else "WARN"
-                            findings.append(
-                                Finding(
-                                    lvl,
-                                    f"REVIEW.json schemaVersion>={REVIEW_PRINCIPLES_REQUIRED_SCHEMA} requires a principles array.",
-                                    str(review_json),
-                                )
-                            )
-                    elif not isinstance(principles, list):
-                        lvl = "ERROR" if requires_principles and karpathy_level == "error" else "WARN"
-                        findings.append(Finding(lvl, "REVIEW.json principles should be an array.", str(review_json)))
-                    else:
-                        names: set[str] = set()
-                        for i, item in enumerate(principles, start=1):
-                            if isinstance(item, str):
-                                name = item.strip()
-                            elif isinstance(item, dict):
-                                raw_name = item.get("name")
-                                name = raw_name.strip() if isinstance(raw_name, str) else ""
-                            else:
-                                name = ""
-                            if not name:
+                        and schema_version >= 3
+                    ):
+                        for field in ("securityFindings", "performanceFindings", "patternCompliance"):
+                            val = r.get(field)
+                            if val is None:
+                                lvl = "ERROR" if operating_principles_level == "error" else "WARN"
                                 findings.append(
-                                    Finding(
-                                        "WARN",
-                                        f"REVIEW.json principles[{i}] missing non-empty name.",
-                                        str(review_json),
-                                    )
+                                    Finding(lvl, f"REVIEW.json schemaVersion>=3 requires {field} array.", str(review_json))
                                 )
-                                continue
-                            names.add(name)
-                        missing = [p for p in review_principles if p not in names]
-                        if missing:
-                            lvl = "ERROR" if karpathy_level == "error" else "WARN"
-                            findings.append(
-                                Finding(
-                                    lvl,
-                                    "REVIEW.json principles missing required entries: "
-                                    + ", ".join(missing),
-                                    str(review_json),
+                            elif not isinstance(val, list):
+                                findings.append(
+                                    Finding("WARN", f"REVIEW.json {field} should be an array.", str(review_json))
                                 )
-                            )
+                    # Old schema (v1-v2): accept silently for backward compat
             except Exception:
                 pass
 
@@ -1545,6 +1463,57 @@ def _validate_bootstrap_context(
             )
 
 
+_SKILL_REF_RE = re.compile(r"`?\.claude/skills/([^`\s]+\.md)`?")
+
+
+def _validate_skills(
+    root: Path,
+    findings: list[Finding],
+    touched: Callable[[Path], bool],
+) -> None:
+    """Validate skill frontmatter and command cross-references."""
+    skills_dir = root / ".claude" / "skills"
+    if not skills_dir.is_dir():
+        return
+
+    # (1) Check all skill files have valid frontmatter (name field)
+    for md_path in sorted(skills_dir.glob("*.md")):
+        if not touched(md_path):
+            continue
+        info = _parse_skill_frontmatter(md_path)
+        if info["name"] is None:
+            findings.append(
+                Finding(
+                    "WARN",
+                    f"Skill file missing frontmatter 'name' field.",
+                    str(md_path),
+                )
+            )
+
+    # (2) Check command skill references resolve to existing files
+    cmd_dir = root / ".claude" / "commands"
+    if not cmd_dir.is_dir():
+        return
+    for cmd_path in sorted(cmd_dir.glob("*.md")):
+        if not touched(cmd_path):
+            continue
+        try:
+            text = cmd_path.read_text(encoding="utf-8")
+        except Exception:
+            continue
+        for m in _SKILL_REF_RE.finditer(text):
+            skill_file = m.group(1)
+            skill_path = root / ".claude" / "skills" / skill_file
+            if not skill_path.exists():
+                findings.append(
+                    Finding(
+                        "WARN",
+                        f"Skill reference '.claude/skills/{skill_file}' not found.",
+                        str(cmd_path),
+                    )
+                )
+
+
 def validate_repo(root: Path, *, staged_only: bool) -> list[Finding]:
     findings: list[Finding] = []
 
@@ -1552,8 +1521,7 @@ def validate_repo(root: Path, *, staged_only: bool) -> list[Finding]:
     _validate_workflow_config(cfg, findings, root)
     shape = _detect_repo_shape(root, cfg)
     monorepo_scope_level = _get_monorepo_scope_level(cfg)
-    karpathy_level = _get_karpathy_checklist_level(cfg)
-    review_principles = _review_principles_cfg(cfg)
+    operating_principles_level = _get_operating_principles_level(cfg)
     packages_cfg = _packages_from_cfg(cfg)
     freshness_cfg = _freshness_cfg(cfg)
     token_budgets_cfg = _token_budgets_cfg(cfg)
@@ -1603,8 +1571,7 @@ def validate_repo(root: Path, *, staged_only: bool) -> list[Finding]:
         touched,
         shape,
         monorepo_scope_level,
-        karpathy_level,
-        review_principles,
+        operating_principles_level,
         packages_cfg,
         freshness_cfg,
     )
@@ -1614,8 +1581,83 @@ def validate_repo(root: Path, *, staged_only: bool) -> list[Finding]:
     _validate_worktree_session(root, findings)
     _validate_token_budgets(root, findings, touched, token_budgets_cfg)
     _validate_bootstrap_context(root, findings, bootstrap_context_cfg)
+    _validate_skills(root, findings, touched)
 
     return findings
+
+
+# --- Baseline infrastructure (Contract 09) ---
+
+_BASELINE_FILE = "validate-baseline.json"
+_LATEST_FILE = "validate-latest.json"
+_CNOGO_DIR = ".cnogo"
+
+
+def _finding_to_warning(f: Finding) -> dict[str, Any]:
+    """Convert a Finding to a baseline warning dict with stable signature."""
+    file_part = f.path or ""
+    raw = f"{f.level}|{file_part}|{f.message}"
+    sig = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
+    return {
+        "level": f.level,
+        "file": f.path,
+        "message": f.message,
+        "signature": sig,
+    }
+
+
+def save_baseline(warnings: list[dict[str, Any]], root: Path) -> Path:
+    """Write warnings to .cnogo/validate-baseline.json, sorted by signature."""
+    out_dir = root / _CNOGO_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / _BASELINE_FILE
+    sorted_warnings = sorted(warnings, key=lambda w: w.get("signature", ""))
+    path.write_text(
+        json.dumps(sorted_warnings, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def load_baseline(root: Path) -> list[dict[str, Any]] | None:
+    """Read .cnogo/validate-baseline.json. Returns None if missing."""
+    path = root / _CNOGO_DIR / _BASELINE_FILE
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, list) else None
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def _save_latest(warnings: list[dict[str, Any]], root: Path) -> None:
+    """Write current warnings snapshot to .cnogo/validate-latest.json."""
+    out_dir = root / _CNOGO_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / _LATEST_FILE
+    sorted_warnings = sorted(warnings, key=lambda w: w.get("signature", ""))
+    path.write_text(
+        json.dumps(sorted_warnings, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def diff_baselines(
+    baseline: list[dict[str, Any]], current: list[dict[str, Any]]
+) -> dict[str, list[dict[str, Any]]]:
+    """Compare baseline and current warnings by signature.
+
+    Returns {new, resolved, unchanged}.
+    """
+    base_sigs = {w["signature"]: w for w in baseline}
+    curr_sigs = {w["signature"]: w for w in current}
+
+    new = [w for sig, w in curr_sigs.items() if sig not in base_sigs]
+    resolved = [w for sig, w in base_sigs.items() if sig not in curr_sigs]
+    unchanged = [w for sig, w in curr_sigs.items() if sig in base_sigs]
+
+    return {"new": new, "resolved": resolved, "unchanged": unchanged}
 
 
 def main() -> int:
@@ -1623,11 +1665,44 @@ def main() -> int:
     parser.add_argument("--root", default=".", help="Repo root (defaults to current directory).")
     parser.add_argument("--staged", action="store_true", help="Validate only areas touched by staged changes.")
     parser.add_argument("--json", action="store_true", help="Emit findings as JSON.")
+    parser.add_argument("--save-baseline", action="store_true", help="Save current warnings as baseline.")
+    parser.add_argument("--diff-baseline", action="store_true", help="Diff current warnings against saved baseline.")
     args = parser.parse_args()
 
     root = _repo_root(Path(args.root))
     findings = validate_repo(root, staged_only=args.staged)
+    warnings = [_finding_to_warning(f) for f in findings]
 
+    # --save-baseline: capture and save
+    if args.save_baseline:
+        path = save_baseline(warnings, root)
+        print(f"Baseline saved: {path} ({len(warnings)} warnings)")
+        return 0
+
+    # --diff-baseline: compare against saved baseline
+    if args.diff_baseline:
+        baseline = load_baseline(root)
+        if baseline is None:
+            print("No baseline found. Run with --save-baseline first.")
+            return 1
+        result = diff_baselines(baseline, warnings)
+        print("## Validation Diff")
+        print(f"\nNew warnings ({len(result['new'])}):")
+        for w in result["new"]:
+            loc = f" ({w['file']})" if w.get("file") else ""
+            print(f"  [{w['level']}]{loc} {w['message']}")
+        print(f"\nResolved warnings ({len(result['resolved'])}):")
+        for w in result["resolved"]:
+            loc = f" ({w['file']})" if w.get("file") else ""
+            print(f"  [{w['level']}]{loc} {w['message']}")
+        print(f"\nUnchanged warnings ({len(result['unchanged'])}):")
+        for w in result["unchanged"]:
+            loc = f" ({w['file']})" if w.get("file") else ""
+            print(f"  [{w['level']}]{loc} {w['message']}")
+        _save_latest(warnings, root)
+        return 1 if result["new"] else 0
+
+    # Normal validation output
     if args.json:
         print(
             json.dumps(
@@ -1645,6 +1720,9 @@ def main() -> int:
         else:
             for f in findings:
                 print(f.format())
+
+    # Always save latest snapshot
+    _save_latest(warnings, root)
 
     errors = [f for f in findings if f.level == "ERROR"]
     return 1 if errors else 0

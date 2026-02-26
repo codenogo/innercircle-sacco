@@ -1,0 +1,198 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-create-member-exit-requests-table
+      author: codex
+      changes:
+        - createTable:
+            tableName: member_exit_requests
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: member_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: notice_date
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: effective_date
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: gross_settlement_amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: liability_offset_amount
+                  type: decimal(19,2)
+                  defaultValueNumeric: 0.00
+                  constraints:
+                    nullable: false
+              - column:
+                  name: exit_fee_amount
+                  type: decimal(19,2)
+                  defaultValueNumeric: 0.00
+                  constraints:
+                    nullable: false
+              - column:
+                  name: net_settlement_amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: installment_count
+                  type: integer
+                  defaultValueNumeric: 2
+                  constraints:
+                    nullable: false
+              - column:
+                  name: installments_processed
+                  type: integer
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: next_installment_due_date
+                  type: date
+              - column:
+                  name: review_notes
+                  type: varchar(1000)
+              - column:
+                  name: reviewed_by
+                  type: varchar(255)
+              - column:
+                  name: reviewed_at
+                  type: timestamp
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: member_exit_requests
+            baseColumnNames: member_id
+            referencedTableName: members
+            referencedColumnNames: id
+            constraintName: fk_member_exit_requests_member
+            onDelete: RESTRICT
+        - createIndex:
+            tableName: member_exit_requests
+            indexName: idx_member_exit_requests_member_status
+            columns:
+              - column:
+                  name: member_id
+              - column:
+                  name: status
+
+  - changeSet:
+      id: 004-create-member-exit-installments-table
+      author: codex
+      changes:
+        - createTable:
+            tableName: member_exit_installments
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: exit_request_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: installment_number
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: due_date
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: processed
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: processed_at
+                  type: timestamp
+              - column:
+                  name: payout_id
+                  type: uuid
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: member_exit_installments
+            baseColumnNames: exit_request_id
+            referencedTableName: member_exit_requests
+            referencedColumnNames: id
+            constraintName: fk_member_exit_installments_request
+            onDelete: CASCADE
+        - addUniqueConstraint:
+            tableName: member_exit_installments
+            columnNames: exit_request_id,installment_number
+            constraintName: uk_member_exit_installments_request_number
+        - createIndex:
+            tableName: member_exit_installments
+            indexName: idx_member_exit_installments_due_date
+            columns:
+              - column:
+                  name: due_date
+              - column:
+                  name: processed

@@ -1,5 +1,10 @@
 export interface TreasurerDashboardResponse {
   totalCollectionsThisMonth: number
+  totalNetContributionsThisMonth: number
+  totalWelfareThisMonth: number
+  totalMeetingFinesThisMonth: number
+  totalWelfareClaimsThisMonth: number
+  totalExitSettlementsThisMonth: number
   totalDisbursementsThisMonth: number
   pendingApprovals: number
   overdueLoans: number
@@ -25,6 +30,12 @@ export interface SaccoStateResponse {
   totalShareCapital: number
   totalOutstandingLoans: number
   totalContributions: number
+  totalNetContributions: number
+  totalWelfareContributions: number
+  totalMeetingFines: number
+  totalWelfareBenefitsPaid: number
+  totalExitSettlements: number
+  totalExitFees: number
   totalPayouts: number
   loanRecoveryRate: number
   memberGrowthRate: number

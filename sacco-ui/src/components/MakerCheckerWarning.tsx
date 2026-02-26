@@ -79,12 +79,12 @@ export function MakerCheckerWarning({
             <p className="maker-checker-warning__override-note">
               As an administrator, you may override this control with a documented reason.
             </p>
-            <label className="form-label" htmlFor="override-reason">
+            <label className="field-label" htmlFor="override-reason">
               Override Reason <span className="form-required">*</span>
             </label>
             <textarea
               id="override-reason"
-              className="form-textarea"
+              className="field-input"
               rows={3}
               maxLength={500}
               value={reason}

@@ -9,6 +9,7 @@ import com.innercircle.sacco.common.exception.ResourceNotFoundException;
 import com.innercircle.sacco.contribution.dto.BulkContributionItemRequest;
 import com.innercircle.sacco.contribution.dto.BulkContributionRequest;
 import com.innercircle.sacco.contribution.dto.ContributionSummaryResponse;
+import com.innercircle.sacco.contribution.dto.ContributionWelfarePolicyResponse;
 import com.innercircle.sacco.contribution.dto.RecordContributionRequest;
 import com.innercircle.sacco.contribution.entity.Contribution;
 import com.innercircle.sacco.contribution.entity.ContributionCategory;
@@ -17,8 +18,10 @@ import com.innercircle.sacco.contribution.guard.ContributionTransitionGuards;
 import com.innercircle.sacco.contribution.repository.ContributionCategoryRepository;
 import com.innercircle.sacco.contribution.repository.ContributionPenaltyRepository;
 import com.innercircle.sacco.contribution.repository.ContributionRepository;
+import com.innercircle.sacco.config.service.PolicyConfigResolver;
 import com.innercircle.sacco.common.outbox.EventOutboxWriter;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -36,12 +39,19 @@ import java.util.UUID;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ContributionServiceImpl implements ContributionService {
+
+    private static final String WELFARE_FIXED_AMOUNT_CONFIG_KEY = "contribution.welfare.fixed_amount";
 
     private final ContributionRepository contributionRepository;
     private final ContributionPenaltyRepository penaltyRepository;
     private final ContributionCategoryRepository categoryRepository;
+    private final PolicyConfigResolver policyConfigResolver;
+    private final ContributionObligationService obligationService;
     private final EventOutboxWriter outboxWriter;
+
+    private record ContributionSplit(BigDecimal contributionAmount, BigDecimal welfareAmount) {}
 
     @Override
     @Transactional
@@ -54,6 +64,8 @@ public class ContributionServiceImpl implements ContributionService {
 
         // Resolve and validate category
         ContributionCategory category = resolveCategory(request.getCategoryId());
+        BigDecimal fixedWelfareAmount = getWelfareFixedAmount();
+        ContributionSplit split = calculateSplit(request.getAmount(), category, fixedWelfareAmount);
 
         Contribution contribution = new Contribution(
                 request.getMemberId(),
@@ -64,6 +76,14 @@ public class ContributionServiceImpl implements ContributionService {
                 request.getContributionDate(),
                 request.getReferenceNumber(),
                 request.getNotes()
+        );
+        contribution.setContributionAmount(split.contributionAmount());
+        contribution.setWelfareAmount(split.welfareAmount());
+        contribution.setObligationId(
+                obligationService.resolveObligationIdForContribution(
+                        contribution.getMemberId(),
+                        contribution.getContributionMonth()
+                )
         );
 
         Contribution saved = contributionRepository.save(contribution);
@@ -84,6 +104,7 @@ public class ContributionServiceImpl implements ContributionService {
     @Transactional
     public List<Contribution> recordBulk(BulkContributionRequest request) {
         ContributionCategory category = resolveCategory(request.getCategoryId());
+        BigDecimal fixedWelfareAmount = getWelfareFixedAmount();
 
         List<Contribution> contributions = new ArrayList<>();
         for (BulkContributionItemRequest req : request.getContributions()) {
@@ -101,6 +122,15 @@ public class ContributionServiceImpl implements ContributionService {
                     req.getContributionDate() != null ? req.getContributionDate() : request.getContributionDate(),
                     req.getReferenceNumber(),
                     req.getNotes() != null ? req.getNotes() : "Bulk entry: " + request.getBatchReference()
+            );
+            ContributionSplit split = calculateSplit(req.getAmount(), category, fixedWelfareAmount);
+            c.setContributionAmount(split.contributionAmount());
+            c.setWelfareAmount(split.welfareAmount());
+            c.setObligationId(
+                    obligationService.resolveObligationIdForContribution(
+                            c.getMemberId(),
+                            c.getContributionMonth()
+                    )
             );
 
             contributions.add(c);
@@ -131,11 +161,15 @@ public class ContributionServiceImpl implements ContributionService {
 
         contribution.setStatus(ContributionStatus.CONFIRMED);
         Contribution confirmed = contributionRepository.save(contribution);
+        obligationService.applyConfirmedContribution(confirmed);
 
         outboxWriter.write(new ContributionReceivedEvent(
                 confirmed.getId(),
                 confirmed.getMemberId(),
                 confirmed.getAmount(),
+                confirmed.getCategory().getId(),
+                confirmed.getContributionAmount(),
+                confirmed.getWelfareAmount(),
                 confirmed.getReferenceNumber(),
                 UUID.randomUUID(),
                 actor
@@ -153,11 +187,15 @@ public class ContributionServiceImpl implements ContributionService {
 
         contribution.setStatus(ContributionStatus.REVERSED);
         Contribution reversed = contributionRepository.save(contribution);
+        obligationService.reverseConfirmedContribution(reversed);
 
         outboxWriter.write(new ContributionReversedEvent(
                 reversed.getId(),
                 reversed.getMemberId(),
                 reversed.getAmount(),
+                reversed.getCategory().getId(),
+                reversed.getContributionAmount(),
+                reversed.getWelfareAmount(),
                 reversed.getReferenceNumber(),
                 UUID.randomUUID(),
                 actor
@@ -247,6 +285,16 @@ public class ContributionServiceImpl implements ContributionService {
         );
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public ContributionWelfarePolicyResponse getWelfarePolicy() {
+        BigDecimal fixedAmount = getWelfareFixedAmount();
+        return new ContributionWelfarePolicyResponse(
+                fixedAmount.compareTo(BigDecimal.ZERO) > 0,
+                fixedAmount
+        );
+    }
+
     // -------------------------------------------------------
     // Helper methods
     // -------------------------------------------------------
@@ -258,5 +306,22 @@ public class ContributionServiceImpl implements ContributionService {
             throw new BusinessException("Category is not active: " + category.getName());
         }
         return category;
+    }
+
+    private ContributionSplit calculateSplit(BigDecimal grossAmount, ContributionCategory category, BigDecimal fixedWelfareAmount) {
+        if (!category.isWelfareEligible() || fixedWelfareAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return new ContributionSplit(grossAmount, BigDecimal.ZERO);
+        }
+
+        if (grossAmount.compareTo(fixedWelfareAmount) < 0) {
+            throw new BusinessException("Contribution amount cannot be lower than welfare fixed amount: " + fixedWelfareAmount);
+        }
+
+        return new ContributionSplit(grossAmount.subtract(fixedWelfareAmount), fixedWelfareAmount);
+    }
+
+    private BigDecimal getWelfareFixedAmount() {
+        BigDecimal amount = policyConfigResolver.requireNonNegativeDecimal(WELFARE_FIXED_AMOUNT_CONFIG_KEY);
+        return amount.compareTo(BigDecimal.ZERO) > 0 ? amount : BigDecimal.ZERO;
     }
 }

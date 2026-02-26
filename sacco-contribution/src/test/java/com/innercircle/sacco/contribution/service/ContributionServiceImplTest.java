@@ -5,6 +5,7 @@ import com.innercircle.sacco.common.event.ContributionReceivedEvent;
 import com.innercircle.sacco.common.exception.BusinessException;
 import com.innercircle.sacco.common.exception.InvalidStateTransitionException;
 import com.innercircle.sacco.common.exception.ResourceNotFoundException;
+import com.innercircle.sacco.config.service.PolicyConfigResolver;
 import com.innercircle.sacco.contribution.dto.BulkContributionItemRequest;
 import com.innercircle.sacco.contribution.dto.BulkContributionRequest;
 import com.innercircle.sacco.contribution.dto.ContributionSummaryResponse;
@@ -58,6 +59,12 @@ class ContributionServiceImplTest {
 
     @Mock
     private ContributionCategoryRepository categoryRepository;
+
+    @Mock
+    private PolicyConfigResolver policyConfigResolver;
+
+    @Mock
+    private ContributionObligationService obligationService;
 
     @Mock
     private EventOutboxWriter outboxWriter;
@@ -121,6 +128,8 @@ class ContributionServiceImplTest {
 
             when(categoryRepository.findById(sharesCategory.getId())).thenReturn(Optional.of(sharesCategory));
             when(contributionRepository.existsByReferenceNumber("REF-001")).thenReturn(false);
+            when(policyConfigResolver.requireNonNegativeDecimal("contribution.welfare.fixed_amount"))
+                    .thenReturn(BigDecimal.ZERO);
             when(contributionRepository.save(any(Contribution.class))).thenAnswer(inv -> {
                 Contribution c = inv.getArgument(0);
                 c.setId(contributionId);
@@ -137,6 +146,50 @@ class ContributionServiceImplTest {
             assertThat(result.getPaymentMode()).isEqualTo(PaymentMode.MPESA);
             assertThat(result.getContributionMonth()).isEqualTo(LocalDate.of(2024, 6, 1));
             verify(contributionRepository).save(any(Contribution.class));
+        }
+
+        @Test
+        @DisplayName("should apply welfare split when category is eligible and config is active")
+        void shouldApplyWelfareSplitWhenEnabled() {
+            sharesCategory.setWelfareEligible(true);
+
+            RecordContributionRequest request = new RecordContributionRequest(
+                    memberId, new BigDecimal("1000.00"), sharesCategory.getId(),
+                    PaymentMode.MPESA, LocalDate.of(2024, 6, 1),
+                    LocalDate.of(2024, 6, 5), "REF-WS-1", "Welfare split"
+            );
+
+            when(policyConfigResolver.requireNonNegativeDecimal("contribution.welfare.fixed_amount"))
+                    .thenReturn(new BigDecimal("200.00"));
+            when(categoryRepository.findById(sharesCategory.getId())).thenReturn(Optional.of(sharesCategory));
+            when(contributionRepository.existsByReferenceNumber("REF-WS-1")).thenReturn(false);
+            when(contributionRepository.save(any(Contribution.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            Contribution result = contributionService.recordContribution(request);
+
+            assertThat(result.getContributionAmount()).isEqualByComparingTo("800.00");
+            assertThat(result.getWelfareAmount()).isEqualByComparingTo("200.00");
+        }
+
+        @Test
+        @DisplayName("should reject contribution when amount is lower than welfare fixed amount")
+        void shouldRejectContributionWhenBelowWelfareAmount() {
+            sharesCategory.setWelfareEligible(true);
+
+            RecordContributionRequest request = new RecordContributionRequest(
+                    memberId, new BigDecimal("250.00"), sharesCategory.getId(),
+                    PaymentMode.MPESA, LocalDate.of(2024, 6, 1),
+                    LocalDate.of(2024, 6, 5), "REF-WS-2", "Invalid welfare split"
+            );
+
+            when(policyConfigResolver.requireNonNegativeDecimal("contribution.welfare.fixed_amount"))
+                    .thenReturn(new BigDecimal("300.00"));
+            when(categoryRepository.findById(sharesCategory.getId())).thenReturn(Optional.of(sharesCategory));
+            when(contributionRepository.existsByReferenceNumber("REF-WS-2")).thenReturn(false);
+
+            assertThatThrownBy(() -> contributionService.recordContribution(request))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("welfare fixed amount");
         }
 
         @Test
@@ -167,6 +220,8 @@ class ContributionServiceImplTest {
             );
 
             when(categoryRepository.findById(welfareCategory.getId())).thenReturn(Optional.of(welfareCategory));
+            when(policyConfigResolver.requireNonNegativeDecimal("contribution.welfare.fixed_amount"))
+                    .thenReturn(BigDecimal.ZERO);
             when(contributionRepository.save(any(Contribution.class))).thenAnswer(inv -> {
                 Contribution c = inv.getArgument(0);
                 c.setId(UUID.randomUUID());
@@ -247,6 +302,8 @@ class ContributionServiceImplTest {
             );
 
             when(categoryRepository.findById(sharesCategory.getId())).thenReturn(Optional.of(sharesCategory));
+            when(policyConfigResolver.requireNonNegativeDecimal("contribution.welfare.fixed_amount"))
+                    .thenReturn(BigDecimal.ZERO);
             when(contributionRepository.existsByReferenceNumber(any())).thenReturn(false);
             when(contributionRepository.saveAll(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -272,6 +329,8 @@ class ContributionServiceImplTest {
             );
 
             when(categoryRepository.findById(sharesCategory.getId())).thenReturn(Optional.of(sharesCategory));
+            when(policyConfigResolver.requireNonNegativeDecimal("contribution.welfare.fixed_amount"))
+                    .thenReturn(BigDecimal.ZERO);
             when(contributionRepository.existsByReferenceNumber("REF-EXISTS")).thenReturn(true);
 
             assertThatThrownBy(() -> contributionService.recordBulk(bulk))
@@ -306,6 +365,8 @@ class ContributionServiceImplTest {
             assertThat(event.contributionId()).isEqualTo(contributionId);
             assertThat(event.memberId()).isEqualTo(memberId);
             assertThat(event.amount()).isEqualTo(new BigDecimal("1000.00"));
+            assertThat(event.contributionAmount()).isEqualTo(sampleContribution.getContributionAmount());
+            assertThat(event.welfareAmount()).isEqualTo(sampleContribution.getWelfareAmount());
             assertThat(event.actor()).isEqualTo("treasurer");
         }
 

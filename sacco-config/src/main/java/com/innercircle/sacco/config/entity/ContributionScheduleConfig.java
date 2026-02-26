@@ -7,6 +7,8 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -42,6 +44,25 @@ public class ContributionScheduleConfig extends BaseEntity {
     @NotNull
     @DecimalMin(value = "0.0", inclusive = false)
     private BigDecimal amount;
+
+    @Column(nullable = false)
+    @NotNull
+    @Min(1)
+    @Max(31)
+    private Integer dueDayOfMonth;
+
+    @Column(nullable = false)
+    @NotNull
+    @Min(0)
+    private Integer gracePeriodDays;
+
+    @Column(nullable = false)
+    private boolean mandatory;
+
+    @Column(nullable = false, precision = 15, scale = 2)
+    @NotNull
+    @DecimalMin(value = "0.0", inclusive = true)
+    private BigDecimal expectedGrossAmount;
 
     @Column(nullable = false)
     private boolean penaltyEnabled;

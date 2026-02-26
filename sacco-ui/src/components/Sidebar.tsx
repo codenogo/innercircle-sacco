@@ -6,6 +6,10 @@ import {
   HandCoins,
   Bank,
   ArrowLineDown,
+  TrendUp,
+  CalendarCheck,
+  Heartbeat,
+  SignOut,
   BookOpen,
   ChartBar,
   Briefcase,
@@ -27,9 +31,13 @@ const navItems = [
   { to: '/loans', icon: Bank, label: 'Loans', allowed: ['ADMIN', 'TREASURER', 'MEMBER'] as UserRole[] },
   { to: '/payouts', icon: ArrowLineDown, label: 'Payouts', allowed: ['ADMIN', 'TREASURER', 'MEMBER'] as UserRole[] },
   { to: '/petty-cash', icon: HandCoins, label: 'Petty Cash', allowed: ['ADMIN', 'TREASURER'] as UserRole[] },
+  { to: '/investments', icon: TrendUp, label: 'Investments', allowed: ['ADMIN', 'TREASURER', 'MEMBER'] as UserRole[] },
+  { to: '/meetings-fines', icon: CalendarCheck, label: 'Meetings', allowed: ['ADMIN', 'TREASURER', 'SECRETARY', 'CHAIRPERSON', 'VICE_CHAIRPERSON', 'VICE_TREASURER'] as UserRole[] },
+  { to: '/welfare-claims', icon: Heartbeat, label: 'Welfare', allowed: ['ADMIN', 'TREASURER', 'CHAIRPERSON', 'VICE_CHAIRPERSON', 'VICE_TREASURER'] as UserRole[] },
+  { to: '/member-exit', icon: SignOut, label: 'Member Exit', allowed: ['ADMIN', 'TREASURER', 'MEMBER', 'CHAIRPERSON', 'VICE_CHAIRPERSON', 'VICE_TREASURER'] as UserRole[] },
   { to: '/ledger', icon: BookOpen, label: 'Ledger', allowed: ['ADMIN', 'TREASURER'] as UserRole[] },
   { to: '/reports', icon: ChartBar, label: 'Reports', allowed: ['ADMIN', 'TREASURER'] as UserRole[] },
-  { to: '/operations', icon: Briefcase, label: 'Operations', allowed: ['ADMIN', 'TREASURER'] as UserRole[] },
+  { to: '/operations', icon: Briefcase, label: 'Operations', allowed: ['ADMIN', 'TREASURER', 'MEMBER', 'SECRETARY', 'CHAIRPERSON', 'VICE_CHAIRPERSON', 'VICE_TREASURER'] as UserRole[] },
 ]
 
 interface SidebarProps {
@@ -101,7 +109,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
         <div className="sidebar-footer">
           <hr className="rule" />
-          {canAccess(['ADMIN', 'TREASURER', 'MEMBER']) && (
+          {canAccess(['ADMIN', 'TREASURER', 'MEMBER', 'SECRETARY', 'CHAIRPERSON', 'VICE_CHAIRPERSON', 'VICE_TREASURER']) && (
             <NavLink
               to="/settings"
               className={({ isActive }) =>

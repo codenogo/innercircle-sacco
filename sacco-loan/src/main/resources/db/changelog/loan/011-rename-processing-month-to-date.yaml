@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - changeSet:
+      id: loan-011-rename-processing-month-to-date
+      author: system
+      changes:
+        - renameColumn:
+            tableName: batch_processing_log
+            oldColumnName: processing_month
+            newColumnName: processing_date
+            columnDataType: varchar(10)
+
+        - modifyDataType:
+            tableName: batch_processing_log
+            columnName: processing_date
+            newDataType: varchar(10)
+
+        - update:
+            tableName: system_configs
+            columns:
+              - column:
+                  name: config_key
+                  value: loan.batch.last_processed_date
+            where: config_key = 'loan.batch.last_processed_month'

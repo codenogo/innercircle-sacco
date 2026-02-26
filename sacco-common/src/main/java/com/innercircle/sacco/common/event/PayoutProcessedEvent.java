@@ -8,9 +8,23 @@ public record PayoutProcessedEvent(
         UUID memberId,
         BigDecimal amount,
         String payoutType,
+        String sourceType,
+        UUID sourceId,
+        Integer installmentNumber,
         UUID correlationId,
         String actor
 ) implements AuditableEvent {
+
+    public PayoutProcessedEvent(
+            UUID payoutId,
+            UUID memberId,
+            BigDecimal amount,
+            String payoutType,
+            UUID correlationId,
+            String actor
+    ) {
+        this(payoutId, memberId, amount, payoutType, null, null, null, correlationId, actor);
+    }
 
     @Override
     public String getEventType() {

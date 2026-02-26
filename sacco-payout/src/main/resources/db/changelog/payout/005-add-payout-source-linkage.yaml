@@ -1,0 +1,25 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-add-payout-source-linkage
+      author: codex
+      changes:
+        - addColumn:
+            tableName: payouts
+            columns:
+              - column:
+                  name: source_type
+                  type: varchar(40)
+              - column:
+                  name: source_id
+                  type: uuid
+              - column:
+                  name: installment_number
+                  type: integer
+        - createIndex:
+            tableName: payouts
+            indexName: idx_payouts_source
+            columns:
+              - column:
+                  name: source_type
+              - column:
+                  name: source_id

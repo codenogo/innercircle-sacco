@@ -55,6 +55,26 @@ class MemberAccessHelperTest {
     }
 
     @Test
+    void assertAccessToMember_allowsOfficeRolesWithoutMemberLookup() {
+        UUID requestedMemberId = UUID.randomUUID();
+        List<String> officeRoles = List.of(
+                "ROLE_SECRETARY",
+                "ROLE_CHAIRPERSON",
+                "ROLE_VICE_CHAIRPERSON",
+                "ROLE_VICE_TREASURER"
+        );
+
+        for (String role : officeRoles) {
+            Collection<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(role));
+            doReturn(authorities).when(authentication).getAuthorities();
+
+            helper.assertAccessToMember(requestedMemberId, authentication);
+        }
+
+        verify(jdbcTemplate, never()).queryForObject(anyString(), eq(UUID.class), anyString(), anyString());
+    }
+
+    @Test
     void assertAccessToMember_allowsCurrentMember() {
         UUID requestedMemberId = UUID.randomUUID();
         Collection<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_MEMBER"));

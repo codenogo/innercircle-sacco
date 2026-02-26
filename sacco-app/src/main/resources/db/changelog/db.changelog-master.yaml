@@ -21,10 +21,18 @@ databaseChangeLog:
       file: db/changelog/security/007-create-refresh-tokens.yaml
   - include:
       file: db/changelog/security/008-add-refresh-token-rotation-metadata.yaml
+  - include:
+      file: db/changelog/security/009-seed-office-roles.yaml
 
   # Member module
   - include:
       file: db/changelog/member/001-create-members-table.yaml
+  - include:
+      file: db/changelog/member/002-create-meeting-and-fines-tables.yaml
+  - include:
+      file: db/changelog/member/003-create-welfare-tables.yaml
+  - include:
+      file: db/changelog/member/004-create-member-exit-workflow-tables.yaml
 
   # Config module
   - include:
@@ -37,6 +45,14 @@ databaseChangeLog:
       file: db/changelog/config/004-add-penalty-compounding.yaml
   - include:
       file: db/changelog/config/005-seed-penalty-system-config.yaml
+  - include:
+      file: db/changelog/config/006-seed-welfare-system-config.yaml
+  - include:
+      file: db/changelog/config/007-add-policy-model-columns.yaml
+  - include:
+      file: db/changelog/config/008-create-penalty-rule-tiers.yaml
+  - include:
+      file: db/changelog/config/009-seed-policy-defaults.yaml
 
   # Contribution module
   - include:
@@ -45,6 +61,14 @@ databaseChangeLog:
       file: db/changelog/contribution/002-create-contribution-categories-table.yaml
   - include:
       file: db/changelog/contribution/003-align-contribution-schema-with-categories.yaml
+  - include:
+      file: db/changelog/contribution/004-add-welfare-split-columns.yaml
+  - include:
+      file: db/changelog/contribution/005-enable-monthly-savings-welfare-split.yaml
+  - include:
+      file: db/changelog/contribution/006-create-contribution-obligations.yaml
+  - include:
+      file: db/changelog/contribution/007-extend-contribution-penalties.yaml
 
   # Audit module
   - include:
@@ -69,6 +93,12 @@ databaseChangeLog:
       file: db/changelog/ledger/008-add-search-indexes.yaml
   - include:
       file: db/changelog/ledger/009-add-journal-entry-idempotency-constraint.yaml
+  - include:
+      file: db/changelog/ledger/010-seed-investment-accounts.yaml
+  - include:
+      file: db/changelog/ledger/011-seed-welfare-fund-account.yaml
+  - include:
+      file: db/changelog/ledger/012-seed-exit-fee-income-account.yaml
 
   # Loan module
   - include:
@@ -89,6 +119,12 @@ databaseChangeLog:
       file: db/changelog/loan/008-add-penalty-portion-to-repayments.yaml
   - include:
       file: db/changelog/loan/009-add-loan-number.yaml
+  - include:
+      file: db/changelog/loan/010-spring-batch-schema.yaml
+  - include:
+      file: db/changelog/loan/011-rename-processing-month-to-date.yaml
+  - include:
+      file: db/changelog/loan/012-add-interest-accrual-flag.yaml
 
   # Payout module
   - include:
@@ -99,6 +135,12 @@ databaseChangeLog:
       file: db/changelog/payout/003-bank-withdrawal-add-approval.yaml
   - include:
       file: db/changelog/payout/004-cash-disbursement-add-status-workflow.yaml
+  - include:
+      file: db/changelog/payout/005-add-payout-source-linkage.yaml
+
+  # Investment module
+  - include:
+      file: db/changelog/investment/001-create-investment-tables.yaml
 
   # Common cross-cutting migrations
   - include:

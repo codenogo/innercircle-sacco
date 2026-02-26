@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { SkeletonRow, SkeletonStat } from '../components/Skeleton'
+import { ConfirmDialog } from '../components/ConfirmDialog'
+import { Breadcrumb } from '../components/Breadcrumb'
 import { ApiError } from '../services/apiClient'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { useAuthorization } from '../hooks/useAuthorization'
+import { useToast } from '../hooks/useToast'
 import type { MemberResponse } from '../types/members'
 import './Operations.css'
-
-interface Feedback {
-  type: 'success' | 'error'
-  text: string
-}
 
 function toErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiError) return error.message
@@ -61,8 +59,9 @@ export function MemberProfile() {
   const [member, setMember] = useState<MemberResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [feedback, setFeedback] = useState<Feedback | null>(null)
+  const toast = useToast()
   const [busyAction, setBusyAction] = useState<'suspend' | 'reactivate' | null>(null)
+  const [confirmAction, setConfirmAction] = useState<'suspend' | 'reactivate' | null>(null)
 
   const loadMember = useCallback(async () => {
     if (!id) {
@@ -95,15 +94,14 @@ export function MemberProfile() {
     if (!member) return
 
     setBusyAction('suspend')
-    setFeedback(null)
     try {
       const updated = await request<MemberResponse>(`/api/v1/members/${member.id}/suspend`, {
         method: 'PATCH',
       })
       setMember(updated)
-      setFeedback({ type: 'success', text: 'Member suspended successfully.' })
+      toast.success('Member suspended', 'Member suspended successfully.')
     } catch (suspendError) {
-      setFeedback({ type: 'error', text: toErrorMessage(suspendError, 'Unable to suspend member.') })
+      toast.error('Unable to suspend member', toErrorMessage(suspendError, 'Unable to suspend member.'))
     } finally {
       setBusyAction(null)
     }
@@ -114,15 +112,14 @@ export function MemberProfile() {
     if (!member) return
 
     setBusyAction('reactivate')
-    setFeedback(null)
     try {
       const updated = await request<MemberResponse>(`/api/v1/members/${member.id}/reactivate`, {
         method: 'PATCH',
       })
       setMember(updated)
-      setFeedback({ type: 'success', text: 'Member reactivated successfully.' })
+      toast.success('Member reactivated', 'Member reactivated successfully.')
     } catch (reactivateError) {
-      setFeedback({ type: 'error', text: toErrorMessage(reactivateError, 'Unable to reactivate member.') })
+      toast.error('Unable to reactivate member', toErrorMessage(reactivateError, 'Unable to reactivate member.'))
     } finally {
       setBusyAction(null)
     }
@@ -169,6 +166,10 @@ export function MemberProfile() {
 
   return (
     <div className="ops-page">
+      <Breadcrumb items={[
+        { label: 'Members', to: '/members' },
+        { label: `${member.firstName} ${member.lastName} (${member.memberNumber})` },
+      ]} />
       <div className="page-header">
         <div>
           <h1 className="page-title">{member.firstName} {member.lastName}</h1>
@@ -180,7 +181,7 @@ export function MemberProfile() {
               type="button"
               className="btn btn--secondary"
               disabled={busyAction !== null}
-              onClick={() => void suspendMember()}
+              onClick={() => setConfirmAction('suspend')}
             >
               {busyAction === 'suspend' ? 'Suspending...' : 'Suspend'}
             </button>
@@ -190,7 +191,7 @@ export function MemberProfile() {
               type="button"
               className="btn btn--secondary"
               disabled={busyAction !== null}
-              onClick={() => void reactivateMember()}
+              onClick={() => setConfirmAction('reactivate')}
             >
               {busyAction === 'reactivate' ? 'Reactivating...' : 'Reactivate'}
             </button>
@@ -202,12 +203,6 @@ export function MemberProfile() {
       </div>
 
       <hr className="rule rule--strong" />
-
-      {feedback && (
-        <div className={`ops-feedback ops-feedback--${feedback.type}`} role="status">
-          {feedback.text}
-        </div>
-      )}
 
       <div className="ops-kpi-grid">
         <div className="ops-kpi">
@@ -287,6 +282,28 @@ export function MemberProfile() {
           </div>
         </div>
       </section>
+
+      <ConfirmDialog
+        open={confirmAction === 'suspend'}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={() => { setConfirmAction(null); void suspendMember() }}
+        title="Suspend Member"
+        description={`Are you sure you want to suspend ${member.firstName} ${member.lastName}? They will lose access to SACCO services until reactivated.`}
+        confirmLabel="Suspend Member"
+        variant="danger"
+        loading={busyAction === 'suspend'}
+      />
+
+      <ConfirmDialog
+        open={confirmAction === 'reactivate'}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={() => { setConfirmAction(null); void reactivateMember() }}
+        title="Reactivate Member"
+        description={`Reactivate ${member.firstName} ${member.lastName}? They will regain access to all SACCO services.`}
+        confirmLabel="Reactivate"
+        variant="info"
+        loading={busyAction === 'reactivate'}
+      />
     </div>
   )
 }

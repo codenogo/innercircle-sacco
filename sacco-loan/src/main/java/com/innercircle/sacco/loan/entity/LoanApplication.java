@@ -72,4 +72,7 @@ public class LoanApplication extends BaseEntity {
 
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal totalPenalties = BigDecimal.ZERO;
+
+    @Column(nullable = false)
+    private boolean interestAccrualEnabled = true;
 }

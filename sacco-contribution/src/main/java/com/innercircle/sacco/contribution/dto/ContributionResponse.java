@@ -23,9 +23,13 @@ public class ContributionResponse {
     private UUID id;
     private UUID memberId;
     private BigDecimal amount;
+    private BigDecimal contributionAmount;
+    private BigDecimal welfareAmount;
+    private boolean welfareSplitApplied;
     private ContributionCategoryResponse category;
     private PaymentMode paymentMode;
     private LocalDate contributionMonth;
+    private UUID obligationId;
     private ContributionStatus status;
     private LocalDate contributionDate;
     private String referenceNumber;
@@ -38,9 +42,13 @@ public class ContributionResponse {
                 contribution.getId(),
                 contribution.getMemberId(),
                 contribution.getAmount(),
+                contribution.getContributionAmount(),
+                contribution.getWelfareAmount(),
+                contribution.getWelfareAmount() != null && contribution.getWelfareAmount().compareTo(BigDecimal.ZERO) > 0,
                 ContributionCategoryResponse.fromEntity(contribution.getCategory()),
                 contribution.getPaymentMode(),
                 contribution.getContributionMonth(),
+                contribution.getObligationId(),
                 contribution.getStatus(),
                 contribution.getContributionDate(),
                 contribution.getReferenceNumber(),
