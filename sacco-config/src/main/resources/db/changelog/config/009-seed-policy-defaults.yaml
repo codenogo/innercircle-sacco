@@ -197,12 +197,12 @@ databaseChangeLog:
               INSERT INTO contribution_schedule_configs (
                 id, name, frequency, amount, penalty_enabled, active,
                 due_day_of_month, grace_period_days, mandatory, expected_gross_amount,
-                created_at, updated_at, created_by, version
+                created_at, updated_at, created_by
               )
               SELECT
                 gen_random_uuid(), 'Monthly Contribution', 'MONTHLY', 11000.00, TRUE, TRUE,
                 10, 0, TRUE, 11000.00,
-                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed', 0
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed'
               WHERE NOT EXISTS (
                 SELECT 1 FROM contribution_schedule_configs WHERE LOWER(TRIM(name)) = 'monthly contribution'
               );
@@ -235,14 +235,14 @@ databaseChangeLog:
                 min_term_months, max_term_months, min_amount, max_amount,
                 contribution_cap_percent, pool_cap_amount, rollover_enabled,
                 max_rollover_months, rollover_surcharge_rate, interest_accrual_enabled,
-                requires_guarantor, active, created_at, updated_at, created_by, version
+                requires_guarantor, active, created_at, updated_at, created_by
               )
               SELECT
                 gen_random_uuid(), 'Short Term Loan', 'FLAT_RATE', 10.00,
                 3, 3, 10000.00, 100000.00,
                 NULL, 300000.00, TRUE,
                 2, 10.00, FALSE,
-                TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed', 0
+                TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed'
               WHERE NOT EXISTS (
                 SELECT 1 FROM loan_product_configs WHERE LOWER(TRIM(name)) = 'short term loan'
               );
@@ -270,14 +270,14 @@ databaseChangeLog:
                 min_term_months, max_term_months, min_amount, max_amount,
                 contribution_cap_percent, pool_cap_amount, rollover_enabled,
                 max_rollover_months, rollover_surcharge_rate, interest_accrual_enabled,
-                requires_guarantor, active, created_at, updated_at, created_by, version
+                requires_guarantor, active, created_at, updated_at, created_by
               )
               SELECT
                 gen_random_uuid(), 'Medium Term Loan', 'FLAT_RATE', 12.00,
                 6, 12, 60000.00, 300000.00,
                 75.00, NULL, FALSE,
                 NULL, NULL, FALSE,
-                TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed', 0
+                TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed'
               WHERE NOT EXISTS (
                 SELECT 1 FROM loan_product_configs WHERE LOWER(TRIM(name)) = 'medium term loan'
               );
@@ -291,11 +291,11 @@ databaseChangeLog:
             sql: |
               -- Ensure loan default penalty rule exists and reflects policy defaults.
               INSERT INTO penalty_rules (
-                id, name, penalty_type, rate, calculation_method, active, compounding, created_at, updated_at, created_by, version
+                id, name, penalty_type, rate, calculation_method, active, compounding, created_at, updated_at, created_by
               )
               SELECT
                 gen_random_uuid(), 'Loan Default Penalty', 'LOAN_DEFAULT', 10.00, 'PERCENTAGE', TRUE, FALSE,
-                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed', 0
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed'
               WHERE NOT EXISTS (
                 SELECT 1 FROM penalty_rules WHERE LOWER(TRIM(name)) = 'loan default penalty'
               );
@@ -315,11 +315,11 @@ databaseChangeLog:
 
               -- Ensure late contribution penalty rule exists.
               INSERT INTO penalty_rules (
-                id, name, penalty_type, rate, calculation_method, active, compounding, created_at, updated_at, created_by, version
+                id, name, penalty_type, rate, calculation_method, active, compounding, created_at, updated_at, created_by
               )
               SELECT
                 gen_random_uuid(), 'Late Contribution Penalty', 'LATE_CONTRIBUTION', 100.00, 'FLAT', TRUE, FALSE,
-                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed', 0
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed'
               WHERE NOT EXISTS (
                 SELECT 1 FROM penalty_rules WHERE LOWER(TRIM(name)) = 'late contribution penalty'
               );
@@ -349,12 +349,12 @@ databaseChangeLog:
               INSERT INTO penalty_rule_tiers (
                 id, rule_id, sequence, start_overdue_day, end_overdue_day,
                 frequency, calculation_method, rate, max_applications, active,
-                created_at, updated_at, created_by, version
+                created_at, updated_at, created_by
               )
               SELECT
                 gen_random_uuid(), pr.id, 1, 1, 60,
                 'MONTHLY', 'PERCENTAGE', 10.0000, NULL, TRUE,
-                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed', 0
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed'
               FROM penalty_rules pr
               WHERE LOWER(TRIM(pr.name)) = 'loan default penalty'
               ORDER BY pr.created_at ASC
@@ -363,12 +363,12 @@ databaseChangeLog:
               INSERT INTO penalty_rule_tiers (
                 id, rule_id, sequence, start_overdue_day, end_overdue_day,
                 frequency, calculation_method, rate, max_applications, active,
-                created_at, updated_at, created_by, version
+                created_at, updated_at, created_by
               )
               SELECT
                 gen_random_uuid(), pr.id, 2, 61, 120,
                 'DAILY', 'FLAT', 100.0000, NULL, TRUE,
-                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed', 0
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed'
               FROM penalty_rules pr
               WHERE LOWER(TRIM(pr.name)) = 'loan default penalty'
               ORDER BY pr.created_at ASC
@@ -386,12 +386,12 @@ databaseChangeLog:
               INSERT INTO penalty_rule_tiers (
                 id, rule_id, sequence, start_overdue_day, end_overdue_day,
                 frequency, calculation_method, rate, max_applications, active,
-                created_at, updated_at, created_by, version
+                created_at, updated_at, created_by
               )
               SELECT
                 gen_random_uuid(), pr.id, 1, 1, NULL,
                 'DAILY', 'FLAT', 100.0000, NULL, TRUE,
-                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed', 0
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed'
               FROM penalty_rules pr
               WHERE LOWER(TRIM(pr.name)) = 'late contribution penalty'
               ORDER BY pr.created_at ASC

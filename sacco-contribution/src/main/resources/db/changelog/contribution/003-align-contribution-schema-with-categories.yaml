@@ -14,7 +14,7 @@ databaseChangeLog:
             splitStatements: false
             sql: |
               INSERT INTO contribution_categories (
-                id, name, description, active, is_mandatory, created_at, updated_at, created_by, version
+                id, name, description, active, is_mandatory, created_at, updated_at, created_by
               )
               SELECT
                 gen_random_uuid(),
