@@ -1,0 +1,31 @@
+databaseChangeLog:
+  - changeSet:
+      id: loan-013-normalize-and-unique-loan-repayment-reference
+      author: innercircle
+      preConditions:
+        - onFail: HALT
+        - sqlCheck:
+            expectedResult: "0"
+            sql: >-
+              SELECT COUNT(*)
+              FROM (
+                SELECT UPPER(TRIM(reference_number)) AS normalized_reference
+                FROM loan_repayments
+                WHERE reference_number IS NOT NULL
+                GROUP BY UPPER(TRIM(reference_number))
+                HAVING COUNT(*) > 1
+              ) duplicates
+      changes:
+        - sql:
+            sql: >-
+              UPDATE loan_repayments
+              SET reference_number = UPPER(TRIM(reference_number))
+              WHERE reference_number IS NOT NULL
+        - addUniqueConstraint:
+            tableName: loan_repayments
+            columnNames: reference_number
+            constraintName: uk_loan_repayments_reference_number
+      rollback:
+        - dropUniqueConstraint:
+            tableName: loan_repayments
+            constraintName: uk_loan_repayments_reference_number

@@ -1,0 +1,31 @@
+databaseChangeLog:
+  - changeSet:
+      id: common-006-create-reference-sequences
+      author: innercircle
+      comment: "Create deterministic sequences for business reference generation"
+      changes:
+        - createSequence:
+            sequenceName: payout_reference_seq
+            startValue: 1
+            incrementBy: 1
+        - createSequence:
+            sequenceName: petty_cash_reference_seq
+            startValue: 1
+            incrementBy: 1
+        - createSequence:
+            sequenceName: investment_reference_seq
+            startValue: 1
+            incrementBy: 1
+        - createSequence:
+            sequenceName: loan_number_seq
+            startValue: 1
+            incrementBy: 1
+      rollback:
+        - dropSequence:
+            sequenceName: payout_reference_seq
+        - dropSequence:
+            sequenceName: petty_cash_reference_seq
+        - dropSequence:
+            sequenceName: investment_reference_seq
+        - dropSequence:
+            sequenceName: loan_number_seq
