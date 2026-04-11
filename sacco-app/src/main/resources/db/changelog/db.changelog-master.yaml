@@ -38,6 +38,12 @@ databaseChangeLog:
   - include:
       file: db/changelog/member/004-create-member-exit-workflow-tables.yaml
 
+  # Common cross-cutting migrations (must run before seeds that reference version column)
+  - include:
+      file: db/changelog/common/001-add-version-column.yaml
+  - include:
+      file: db/changelog/common/002-add-fk-and-unique-constraints.yaml
+
   # Config module
   - include:
       file: db/changelog/config/001-create-config-tables.yaml
@@ -146,11 +152,7 @@ databaseChangeLog:
   - include:
       file: db/changelog/investment/001-create-investment-tables.yaml
 
-  # Common cross-cutting migrations
-  - include:
-      file: db/changelog/common/001-add-version-column.yaml
-  - include:
-      file: db/changelog/common/002-add-fk-and-unique-constraints.yaml
+  # Common remaining migrations
   - include:
       file: db/changelog/common/003-create-event-outbox-table.yaml
   - include:
