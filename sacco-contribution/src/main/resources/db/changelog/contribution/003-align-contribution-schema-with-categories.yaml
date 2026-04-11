@@ -24,8 +24,7 @@ databaseChangeLog:
                 TRUE,
                 CURRENT_TIMESTAMP,
                 CURRENT_TIMESTAMP,
-                'system-migration',
-                0
+                'system-migration'
               WHERE NOT EXISTS (SELECT 1 FROM contribution_categories);
 
               UPDATE contributions
