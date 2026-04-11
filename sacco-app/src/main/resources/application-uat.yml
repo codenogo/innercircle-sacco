@@ -18,6 +18,11 @@ spring:
   liquibase:
     enabled: true
 
+management:
+  health:
+    mail:
+      enabled: false
+
 logging:
   level:
     com.innercircle.sacco: INFO
