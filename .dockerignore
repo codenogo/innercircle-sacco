@@ -1,0 +1,13 @@
+**/target/
+.git/
+.env
+.env.*
+*.log
+logs/
+tmp/
+docs/
+scripts/
+README.md
+CHANGELOG.md
+CLAUDE.md
+sacco-ui/

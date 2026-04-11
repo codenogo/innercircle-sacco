@@ -1,0 +1,24 @@
+services:
+  innercircle:
+    image: ${DOCKER_IMAGE:-738754313966.dkr.ecr.eu-west-2.amazonaws.com/innercircle-sacco:latest}
+    container_name: innercircle
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8083:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=uat
+      - DB_PASSWORD=${DB_PASSWORD}
+      - OAUTH2_RSA_PUBLIC_KEY=${OAUTH2_RSA_PUBLIC_KEY:-}
+      - OAUTH2_RSA_PRIVATE_KEY=${OAUTH2_RSA_PRIVATE_KEY:-}
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://innercircle.footsapp.com}
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
