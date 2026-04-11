@@ -2,23 +2,9 @@
 FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
 
-COPY pom.xml ./
-COPY sacco-common/pom.xml sacco-common/
-COPY sacco-config/pom.xml sacco-config/
-COPY sacco-member/pom.xml sacco-member/
-COPY sacco-security/pom.xml sacco-security/
-COPY sacco-contribution/pom.xml sacco-contribution/
-COPY sacco-loan/pom.xml sacco-loan/
-COPY sacco-payout/pom.xml sacco-payout/
-COPY sacco-investment/pom.xml sacco-investment/
-COPY sacco-ledger/pom.xml sacco-ledger/
-COPY sacco-reporting/pom.xml sacco-reporting/
-COPY sacco-audit/pom.xml sacco-audit/
-COPY sacco-app/pom.xml sacco-app/
+RUN apt-get update && apt-get install -y --no-install-recommends maven && rm -rf /var/lib/apt/lists/*
 
-RUN apt-get update && apt-get install -y --no-install-recommends maven && rm -rf /var/lib/apt/lists/* && \
-    mvn dependency:go-offline -B 2>/dev/null || true
-
+# Copy everything and build
 COPY . .
 RUN mvn package -DskipTests -B && \
     mv sacco-app/target/sacco-app-0.0.1-SNAPSHOT.jar target/app.jar
