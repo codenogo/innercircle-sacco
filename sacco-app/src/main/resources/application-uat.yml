@@ -1,0 +1,31 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://innercircle-db.cluster-cekdqhdjdk6e.eu-west-2.rds.amazonaws.com:5432/sacco_db
+    username: innercircle_admin
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 3
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-timeout: 20000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  liquibase:
+    enabled: true
+
+logging:
+  level:
+    com.innercircle.sacco: INFO
+    org.springframework: WARN
+    org.hibernate.SQL: WARN
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
