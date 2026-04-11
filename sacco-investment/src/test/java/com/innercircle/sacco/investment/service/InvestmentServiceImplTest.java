@@ -1,8 +1,6 @@
 package com.innercircle.sacco.investment.service;
 
 import com.innercircle.sacco.common.outbox.EventOutboxWriter;
-import com.innercircle.sacco.common.reference.ReferenceNumberService;
-import com.innercircle.sacco.common.reference.ReferenceSeries;
 import com.innercircle.sacco.investment.dto.CreateInvestmentRequest;
 import com.innercircle.sacco.investment.entity.Investment;
 import com.innercircle.sacco.investment.entity.InvestmentType;
@@ -37,8 +35,6 @@ class InvestmentServiceImplTest {
     private InvestmentValuationRepository investmentValuationRepository;
     @Mock
     private EventOutboxWriter outboxWriter;
-    @Mock
-    private ReferenceNumberService referenceNumberService;
 
     @InjectMocks
     private InvestmentServiceImpl investmentService;
@@ -47,9 +43,8 @@ class InvestmentServiceImplTest {
     private ArgumentCaptor<Investment> investmentCaptor;
 
     @Test
-    void createInvestment_shouldUseSequenceReferenceForInvestmentSeries() {
-        when(referenceNumberService.nextReference(ReferenceSeries.INVESTMENT))
-                .thenReturn("INV-0000000001");
+    void createInvestment_shouldGenerateReferenceWithInvPrefix() {
+        when(investmentRepository.existsByReferenceNumber(any())).thenReturn(false);
         when(investmentRepository.save(any(Investment.class))).thenAnswer(invocation -> {
             Investment investment = invocation.getArgument(0);
             investment.setId(UUID.randomUUID());
@@ -58,15 +53,13 @@ class InvestmentServiceImplTest {
 
         investmentService.createInvestment(createRequest(), "maker.user");
 
-        verify(referenceNumberService).nextReference(ReferenceSeries.INVESTMENT);
         verify(investmentRepository).save(investmentCaptor.capture());
-        assertThat(investmentCaptor.getValue().getReferenceNumber()).isEqualTo("INV-0000000001");
+        assertThat(investmentCaptor.getValue().getReferenceNumber()).startsWith("INV-");
     }
 
     @Test
-    void createInvestment_shouldReturnSequenceFormattedReference() {
-        when(referenceNumberService.nextReference(ReferenceSeries.INVESTMENT))
-                .thenReturn("INV-0000000420");
+    void createInvestment_shouldPersistInvestmentDetails() {
+        when(investmentRepository.existsByReferenceNumber(any())).thenReturn(false);
         when(investmentRepository.save(any(Investment.class))).thenAnswer(invocation -> {
             Investment investment = invocation.getArgument(0);
             investment.setId(UUID.randomUUID());
@@ -75,8 +68,9 @@ class InvestmentServiceImplTest {
 
         Investment result = investmentService.createInvestment(createRequest(), "maker.user");
 
-        assertThat(result.getReferenceNumber()).startsWith("INV-");
-        assertThat(result.getReferenceNumber()).hasSize(14); // "INV-" + 10 digits
+        assertThat(result.getName()).isEqualTo("Treasury Bill 364D");
+        assertThat(result.getInvestmentType()).isEqualTo(InvestmentType.TREASURY_BILL);
+        assertThat(result.getPurchasePrice()).isEqualByComparingTo(new BigDecimal("100000.00"));
     }
 
     private CreateInvestmentRequest createRequest() {

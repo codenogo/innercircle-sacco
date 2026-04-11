@@ -26,7 +26,7 @@ jobs:
           cache: maven
 
       - name: Run tests
-        run: mvn test -B -pl '!sacco-investment'
+        run: mvn test -B
 
   build:
     needs: test
