@@ -33,6 +33,15 @@ public class MeetingController {
 
     private final MeetingService meetingService;
 
+    @GetMapping
+    public ApiResponse<List<MeetingResponse>> getAllMeetings() {
+        return ApiResponse.ok(
+                meetingService.getAllMeetings().stream()
+                        .map(MeetingResponse::fromEntity)
+                        .toList()
+        );
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<MeetingResponse> createMeeting(

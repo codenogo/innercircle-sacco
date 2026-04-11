@@ -40,6 +40,12 @@ public class MeetingServiceImpl implements MeetingService {
     private final EventOutboxWriter outboxWriter;
 
     @Override
+    @Transactional(readOnly = true)
+    public List<MeetingSession> getAllMeetings() {
+        return meetingSessionRepository.findAllByOrderByMeetingDateDesc();
+    }
+
+    @Override
     @Transactional
     public MeetingSession createMeeting(CreateMeetingRequest request, String actor) {
         MeetingSession session = new MeetingSession();
