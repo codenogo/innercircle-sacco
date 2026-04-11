@@ -157,7 +157,7 @@ class ContributionPenaltyServiceImplTest {
             when(penaltyRepository.findById(penaltyId)).thenReturn(Optional.of(samplePenalty));
             when(penaltyRepository.save(samplePenalty)).thenReturn(samplePenalty);
 
-            ContributionPenalty result = penaltyService.waivePenalty(penaltyId, "treasurer");
+            ContributionPenalty result = penaltyService.waivePenalty(penaltyId, null, "treasurer");
 
             assertThat(result.isWaived()).isTrue();
             assertThat(result.getWaivedBy()).isEqualTo("treasurer");
@@ -175,7 +175,7 @@ class ContributionPenaltyServiceImplTest {
             when(penaltyRepository.findById(penaltyId)).thenReturn(Optional.of(samplePenalty));
             when(penaltyRepository.save(samplePenalty)).thenReturn(samplePenalty);
 
-            ContributionPenalty result = penaltyService.waivePenalty(penaltyId, "admin");
+            ContributionPenalty result = penaltyService.waivePenalty(penaltyId, null, "admin");
             Instant after = Instant.now();
 
             assertThat(result.getWaivedAt()).isAfterOrEqualTo(before);
@@ -191,7 +191,7 @@ class ContributionPenaltyServiceImplTest {
 
             when(penaltyRepository.findById(penaltyId)).thenReturn(Optional.of(samplePenalty));
 
-            assertThatThrownBy(() -> penaltyService.waivePenalty(penaltyId, "treasurer"))
+            assertThatThrownBy(() -> penaltyService.waivePenalty(penaltyId, null, "treasurer"))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("Penalty is already waived");
 
@@ -204,7 +204,7 @@ class ContributionPenaltyServiceImplTest {
             UUID unknownId = UUID.randomUUID();
             when(penaltyRepository.findById(unknownId)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> penaltyService.waivePenalty(unknownId, "treasurer"))
+            assertThatThrownBy(() -> penaltyService.waivePenalty(unknownId, null, "treasurer"))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("ContributionPenalty");
         }

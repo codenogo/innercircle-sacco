@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Bank, MagnifyingGlass } from '@phosphor-icons/react'
+import { Breadcrumb } from '../components/Breadcrumb'
 import { DataTable, type ColumnDef } from '../components/DataTable'
+import { ActionMenu, type ActionMenuItem } from '../components/ActionMenu'
 import { Spinner } from '../components/Spinner'
 import { Modal } from '../components/Modal'
 import { NewLoanModal } from '../components/NewLoanModal'
@@ -174,11 +176,11 @@ export function LoanWorkflow() {
     }
   }
 
-  async function handleLoanAction(
+  const handleLoanAction = useCallback(async (
     loanId: string,
     action: 'approve' | 'reject' | 'disburse',
     overrideReason?: string,
-  ) {
+  ) => {
     const loadingKey = `${action}:${loanId}`
     setActionLoading(loadingKey)
     setFeedback(null)
@@ -216,7 +218,7 @@ export function LoanWorkflow() {
     } finally {
       setActionLoading(null)
     }
-  }
+  }, [request])
 
   async function handleOverride(reason: string) {
     if (!overrideTarget) return
@@ -228,11 +230,11 @@ export function LoanWorkflow() {
     }
   }
 
-  function openRepayModal(loan: LoanResponse) {
+  const openRepayModal = useCallback((loan: LoanResponse) => {
     setRepayTarget(loan)
     setRepayAmount('')
     setRepayReference('')
-  }
+  }, [])
 
   async function submitRepayment() {
     if (!repayTarget) return
@@ -266,7 +268,7 @@ export function LoanWorkflow() {
     }
   }
 
-  async function openSchedule(loan: LoanResponse) {
+  const openSchedule = useCallback(async (loan: LoanResponse) => {
     setScheduleTarget(loan)
     setScheduleRows([])
     setScheduleError(null)
@@ -279,7 +281,7 @@ export function LoanWorkflow() {
     } finally {
       setLoadingSchedule(false)
     }
-  }
+  }, [request])
 
   const filteredLoans = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -356,69 +358,31 @@ export function LoanWorkflow() {
       },
       {
         key: 'actions',
-        header: 'Actions',
+        header: '',
+        width: '52px',
+        headerClassName: 'datatable-col-actions',
+        className: 'datatable-col-actions',
         render: loan => {
-          const approveLoading = actionLoading === `approve:${loan.id}`
-          const rejectLoading = actionLoading === `reject:${loan.id}`
-          const disburseLoading = actionLoading === `disburse:${loan.id}`
-
-          return (
-            <div className="ops-inline-actions">
-              {loan.status === 'PENDING' && (
-                <>
-                  <button
-                    type="button"
-                    className="btn btn--secondary btn--small"
-                    disabled={approveLoading || actionLoading !== null}
-                    onClick={() => void handleLoanAction(loan.id, 'approve')}
-                  >
-                    {approveLoading ? 'Approving...' : 'Approve'}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn--secondary btn--small btn--danger-text"
-                    disabled={rejectLoading || actionLoading !== null}
-                    onClick={() => void handleLoanAction(loan.id, 'reject')}
-                  >
-                    {rejectLoading ? 'Rejecting...' : 'Reject'}
-                  </button>
-                </>
-              )}
-
-              {loan.status === 'APPROVED' && (
-                <button
-                  type="button"
-                  className="btn btn--secondary btn--small"
-                  disabled={disburseLoading || actionLoading !== null}
-                  onClick={() => void handleLoanAction(loan.id, 'disburse')}
-                >
-                  {disburseLoading ? 'Disbursing...' : 'Disburse'}
-                </button>
-              )}
-
-              {(loan.status === 'REPAYING' || loan.status === 'DISBURSED') && (
-                <button
-                  type="button"
-                  className="btn btn--secondary btn--small"
-                  onClick={() => openRepayModal(loan)}
-                >
-                  Repay
-                </button>
-              )}
-
-              <button
-                type="button"
-                className="btn btn--secondary btn--small"
-                onClick={() => void openSchedule(loan)}
-              >
-                Schedule
-              </button>
-            </div>
-          )
+          const busy = actionLoading !== null
+          const items: ActionMenuItem[] = []
+          if (loan.status === 'PENDING') {
+            items.push(
+              { label: 'Approve', onClick: () => void handleLoanAction(loan.id, 'approve'), disabled: busy },
+              { label: 'Reject', onClick: () => void handleLoanAction(loan.id, 'reject'), variant: 'danger', disabled: busy },
+            )
+          }
+          if (loan.status === 'APPROVED') {
+            items.push({ label: 'Disburse', onClick: () => void handleLoanAction(loan.id, 'disburse'), disabled: busy })
+          }
+          if (loan.status === 'REPAYING' || loan.status === 'DISBURSED') {
+            items.push({ label: 'Repay', onClick: () => openRepayModal(loan) })
+          }
+          items.push({ label: 'Schedule', onClick: () => void openSchedule(loan) })
+          return <ActionMenu actions={items} />
         },
       },
     ],
-    [actionLoading, memberIndex],
+    [actionLoading, handleLoanAction, memberIndex, openRepayModal, openSchedule],
   )
 
   const scheduleColumns: ColumnDef<RepaymentScheduleResponse>[] = useMemo(
@@ -468,6 +432,10 @@ export function LoanWorkflow() {
 
   return (
     <div className="loan-workflow-page">
+      <Breadcrumb items={[
+        { label: 'Operations', to: '/operations' },
+        { label: 'Loan Workflow' },
+      ]} />
       <div className="page-header">
         <div>
           <h1 className="page-title">Loan Workflow</h1>

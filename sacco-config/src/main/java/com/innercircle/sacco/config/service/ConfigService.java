@@ -1,6 +1,7 @@
 package com.innercircle.sacco.config.service;
 
 import com.innercircle.sacco.config.dto.ContributionScheduleRequest;
+import com.innercircle.sacco.config.dto.ConfigHealthResponse;
 import com.innercircle.sacco.config.dto.LoanProductRequest;
 import com.innercircle.sacco.config.dto.PenaltyRuleRequest;
 import com.innercircle.sacco.config.entity.ContributionScheduleConfig;
@@ -19,6 +20,7 @@ public interface ConfigService {
     SystemConfig getSystemConfig(String configKey);
     SystemConfig updateSystemConfig(String configKey, String configValue);
     SystemConfig createSystemConfig(String configKey, String configValue, String description);
+    ConfigHealthResponse getSystemConfigHealth();
 
     // Loan Product Config
     List<LoanProductConfig> getAllLoanProducts();

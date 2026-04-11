@@ -5,3 +5,58 @@
 .settings-bottom-rule {
   margin-top: var(--space-6);
 }
+
+.settings-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.settings-subtitle {
+  margin: var(--space-3) 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.settings-row-block {
+  margin-bottom: var(--space-2);
+}
+
+.settings-row-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.settings-inline-input {
+  width: 180px;
+}
+
+.settings-row-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+@media (max-width: 768px) {
+  .settings-group-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .settings-row-control {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .settings-inline-input {
+    width: 100%;
+  }
+
+  .settings-row-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}

@@ -10,106 +10,400 @@
     },
     {
       "name": "tests",
-      "result": "skipped"
+      "result": "pass"
     }
   ],
   "blockers": [],
-  "branch": "feat/custom-auth-api",
+  "branch": "codex/loan-fix0issue",
   "feature": "loan-batch-processing",
   "invariants": {
-    "findings": [
-      {
-        "file": "scripts/memory/__init__.py",
-        "line": 1,
-        "message": "File has 894 lines (max 800).",
-        "rule": "max-file-lines",
-        "severity": "warn"
-      },
-      {
-        "file": "scripts/memory/bridge.py",
-        "line": 146,
-        "message": "Line length 200 exceeds 140.",
-        "rule": "max-line-length",
-        "severity": "warn"
-      },
-      {
-        "file": "scripts/memory/bridge.py",
-        "line": 147,
-        "message": "Line length 199 exceeds 140.",
-        "rule": "max-line-length",
-        "severity": "warn"
-      },
-      {
-        "file": "scripts/memory/bridge.py",
-        "line": 148,
-        "message": "Line length 186 exceeds 140.",
-        "rule": "max-line-length",
-        "severity": "warn"
-      },
-      {
-        "file": "scripts/memory/bridge.py",
-        "line": 149,
-        "message": "Line length 192 exceeds 140.",
-        "rule": "max-line-length",
-        "severity": "warn"
-      },
-      {
-        "file": "scripts/memory/bridge.py",
-        "line": 150,
-        "message": "Line length 185 exceeds 140.",
-        "rule": "max-line-length",
-        "severity": "warn"
-      },
-      {
-        "file": "scripts/workflow_checks.py",
-        "line": 1,
-        "message": "File has 868 lines (max 800).",
-        "rule": "max-file-lines",
-        "severity": "warn"
-      },
-      {
-        "file": "scripts/workflow_validate.py",
-        "line": 1,
-        "message": "File has 1391 lines (max 800).",
-        "rule": "max-file-lines",
-        "severity": "warn"
-      },
-      {
-        "file": "scripts/workflow_validate.py",
-        "line": 473,
-        "message": "Line length 150 exceeds 140.",
-        "rule": "max-line-length",
-        "severity": "warn"
-      },
-      {
-        "file": "scripts/workflow_validate.py",
-        "line": 507,
-        "message": "Line length 147 exceeds 140.",
-        "rule": "max-line-length",
-        "severity": "warn"
-      },
-      {
-        "file": "scripts/workflow_validate.py",
-        "line": 832,
-        "message": "Line length 142 exceeds 140.",
-        "rule": "max-line-length",
-        "severity": "warn"
-      },
-      {
-        "file": "scripts/workflow_validate.py",
-        "line": 892,
-        "message": "Line length 142 exceeds 140.",
-        "rule": "max-line-length",
-        "severity": "warn"
-      }
-    ],
+    "findings": [],
     "summary": {
       "fail": 0,
-      "total": 12,
-      "warn": 12
+      "total": 0,
+      "warn": 0
     }
   },
-  "packages": [],
+  "packages": [
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "cwd": ".",
+          "exitCode": 1,
+          "fullOutputPath": ".cnogo/tee/20260221T042621.349749Z_62210_innercircle-sacco_lint.log",
+          "name": "lint",
+          "output": "FINDINGS:\n[ERROR] No plugin found for prefix 'spotless' in the current project and in the plugin groups [org.apache.maven.plugins, org.codehaus.mojo] available from the repositories [local (/Users/arnoldkizzitoh/.m2/repository), central (https://repo.maven.apache.org/maven2)] -> [Help 1] (x2)\n[ERROR] (x4)\n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch. (x2)\n[ERROR] Re-run Maven using the -X switch to enable full debug logging. (x2)\n[ERROR] For more information about the errors and possible solutions, please read the following articles: (x2)\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/NoPluginFoundForPrefixException (x2)\nSUMMARY:",
+          "outputReducer": "grouped-errors",
+          "reason": "spotless plugin not configured",
+          "result": "skipped",
+          "tokenTelemetry": {
+            "inputTokens": 164,
+            "outputTokens": 173,
+            "savedTokens": 0,
+            "savingsPct": 0.0
+          }
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "cwd": ".",
+          "exitCode": 0,
+          "fullOutputPath": null,
+          "name": "test",
+          "output": "SUMMARY:\n04:26:24.643 [main] ERROR com.innercircle.sacco.common.service.EmailServiceImpl -- Failed to send email to: user@test.com\norg.springframework.mail.MailSendException: Authentication failed\n04:26:24.652 [main] ERROR com.innercircle.sacco.common.service.EmailServiceImpl -- Failed to send email to: user@test.com\n04:26:24.671 [main] ERROR com.innercircle.sacco.common.service.EmailServiceImpl -- Failed to send email to: user@test.com\n04:26:24.851 [main] ERROR com.innercircle.sacco.common.exception.GlobalExceptionHandler -- Unhandled exception\nat com.innercircle.sacco.common.exception.GlobalExceptionHandlerTest.handleGeneral_shouldReturnGenericErrorMessage(GlobalExceptionHandlerTest.java:197)\n04:26:24.856 [main] ERROR com.innercircle.sacco.common.exception.GlobalExceptionHandler -- Unhandled exception\njava.lang.RuntimeException: Sensitive SQL error: SELECT * FROM users WHERE password='admin'\n04:26:24.863 [main] ERROR com.innercircle.sacco.common.exception.GlobalExceptionHandler -- Unhandled exception\nat com.innercircle.sacco.common.exception.GlobalExceptionHandlerTest.handleGeneral_withNullPointerException_shouldReturnInternalServerError(GlobalExceptionHandlerTest.java:221)\n04:26:24.867 [main] ERROR com.innercircle.sacco.common.exception.GlobalExceptionHandler -- Unhandled exception\njava.lang.RuntimeException: Unexpected error\nat com.innercircle.sacco.common.exception.GlobalExceptionHandlerTest.handleGeneral_shouldReturnInternalServerErrorStatus(GlobalExceptionHandlerTest.java:188)\n04:26:27.860 [main] WARN com.innercircle.sacco.security.controller.AuthController -- Password reset failed: Invalid or expired token\n04:26:27.862 [main] WARN com.innercircle.sacco.security.controller.AuthController -- Password reset failed: Token has already been used\n04:26:27.863 [main] WARN com.innercircle.sacco.security.controller.AuthController -- Password reset failed: Password must be at least 8 characters long\n04:26:27.864 [main] WARN com.innercircle.sacco.security.controller.AuthController -- Password reset failed: Token has expired\n04:26:27.869 [main] ERROR com.innercircle.sacco.security.controller.AuthController -- Error processing password reset\njava.lang.RuntimeException: Database connection failed\nat com.innercircle.sacco.security.controller.AuthControllerTest$ResetPassword.shouldReturnInternalServerErrorOnUnexpectedException(AuthControllerTest.java:207)\n04:26:27.871 [main] ERROR com.innercircle.sacco.security.controller.AuthController -- Error processing password reset\nat com.innercircle.sacco.security.controller.AuthControllerTest$ResetPassword.shouldNotExposeInternalErrorDetails(AuthControllerTest.java:226)\n04:26:27.877 [main] ERROR com.innercircle.sacco.security.controller.AuthController -- Error processing forgot password request\njava.lang.RuntimeException: Internal error\n04:26:28.129 [main] WARN com.innercircle.sacco.security.service.AuthService -- Authentication failed: Invalid password for user 'testuser'\n04:26:28.131 [main] WARN com.innercircle.sacco.security.service.AuthService -- Authentication failed: Account locked for user 'lockeduser'\n04:26:28.134 [main] WARN com.innercircle.sacco.security.service.AuthService -- Authentication failed: Account disabled for user 'disableduser'\n04:26:34.144 [main] ERROR com.innercircle.sacco.loan.service.LoanBatchServiceImpl -- Failed to launch or execute Spring Batch job\njava.lang.RuntimeException: Job launch failed\nat com.innercircle.sacco.loan.service.LoanBatchServiceImplTest$ProcessDailyLoans.lambda$shouldUpdateBatchLogToFailedOnException$9(LoanBatchServiceImplTest.java:639)",
+          "outputReducer": "failure-focus",
+          "reason": null,
+          "result": "pass",
+          "tokenTelemetry": {
+            "inputTokens": 61542,
+            "outputTokens": 895,
+            "savedTokens": 60647,
+            "savingsPct": 98.5
+          }
+        }
+      ],
+      "kind": "java",
+      "name": "innercircle-sacco",
+      "path": "."
+    },
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "cwd": "sacco-app",
+          "exitCode": 1,
+          "fullOutputPath": ".cnogo/tee/20260221T042651.736487Z_62210_sacco-app_lint.log",
+          "name": "lint",
+          "output": "FINDINGS:\n[ERROR] No plugin found for prefix 'spotless' in the current project and in the plugin groups [org.apache.maven.plugins, org.codehaus.mojo] available from the repositories [local (/Users/arnoldkizzitoh/.m2/repository), central (https://repo.maven.apache.org/maven2)] -> [Help 1] (x2)\n[ERROR] (x4)\n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch. (x2)\n[ERROR] Re-run Maven using the -X switch to enable full debug logging. (x2)\n[ERROR] For more information about the errors and possible solutions, please read the following articles: (x2)\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/NoPluginFoundForPrefixException (x2)\nSUMMARY:",
+          "outputReducer": "grouped-errors",
+          "reason": "spotless plugin not configured",
+          "result": "skipped",
+          "tokenTelemetry": {
+            "inputTokens": 164,
+            "outputTokens": 173,
+            "savedTokens": 0,
+            "savingsPct": 0.0
+          }
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "cwd": "sacco-app",
+          "exitCode": 0,
+          "fullOutputPath": null,
+          "name": "test",
+          "output": "SUMMARY:\n04:26:55.023 [main] ERROR com.innercircle.sacco.outbox.OutboxProcessor -- Unexpected executor failure for outbox event d1120ab9-2af2-4639-867c-344919f44958: boom\n04:26:55.194 [main] ERROR com.innercircle.sacco.outbox.DeadLetterRetryJob -- Unexpected executor failure for dead letter 9314b645-9fa9-4884-b283-af13cbc78395: fail\n04:26:55.210 [main] ERROR com.innercircle.sacco.outbox.OutboxEventExecutor -- Failed to process outbox event 7bd33451-6fc9-485e-8877-36bc5d9bf253: publish failed\njava.lang.RuntimeException: publish failed\nat com.innercircle.sacco.outbox.OutboxEventExecutorTest.processEvent_whenPublishFails_shouldMarkFailedAndUpsertDeadLetter(OutboxEventExecutorTest.java:85)",
+          "outputReducer": "failure-focus",
+          "reason": null,
+          "result": "pass",
+          "tokenTelemetry": {
+            "inputTokens": 6177,
+            "outputTokens": 173,
+            "savedTokens": 6004,
+            "savingsPct": 97.2
+          }
+        }
+      ],
+      "kind": "java",
+      "name": "sacco-app",
+      "path": "sacco-app"
+    },
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "name": "lint",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "name": "test",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        }
+      ],
+      "kind": "java",
+      "name": "sacco-audit",
+      "path": "sacco-audit"
+    },
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "name": "lint",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "name": "test",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        }
+      ],
+      "kind": "java",
+      "name": "sacco-common",
+      "path": "sacco-common"
+    },
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "name": "lint",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "name": "test",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        }
+      ],
+      "kind": "java",
+      "name": "sacco-config",
+      "path": "sacco-config"
+    },
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "name": "lint",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "name": "test",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        }
+      ],
+      "kind": "java",
+      "name": "sacco-contribution",
+      "path": "sacco-contribution"
+    },
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "name": "lint",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "name": "test",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        }
+      ],
+      "kind": "java",
+      "name": "sacco-ledger",
+      "path": "sacco-ledger"
+    },
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "cwd": "sacco-loan",
+          "exitCode": 1,
+          "fullOutputPath": ".cnogo/tee/20260221T042657.029690Z_62210_sacco-loan_lint.log",
+          "name": "lint",
+          "output": "FINDINGS:\n[ERROR] No plugin found for prefix 'spotless' in the current project and in the plugin groups [org.apache.maven.plugins, org.codehaus.mojo] available from the repositories [local (/Users/arnoldkizzitoh/.m2/repository), central (https://repo.maven.apache.org/maven2)] -> [Help 1] (x2)\n[ERROR] (x4)\n[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch. (x2)\n[ERROR] Re-run Maven using the -X switch to enable full debug logging. (x2)\n[ERROR] For more information about the errors and possible solutions, please read the following articles: (x2)\n[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/NoPluginFoundForPrefixException (x2)\nSUMMARY:",
+          "outputReducer": "grouped-errors",
+          "reason": "spotless plugin not configured",
+          "result": "skipped",
+          "tokenTelemetry": {
+            "inputTokens": 164,
+            "outputTokens": 173,
+            "savedTokens": 0,
+            "savingsPct": 0.0
+          }
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "cwd": "sacco-loan",
+          "exitCode": 0,
+          "fullOutputPath": null,
+          "name": "test",
+          "output": "SUMMARY:\n04:27:01.695 [main] ERROR com.innercircle.sacco.loan.service.LoanBatchServiceImpl -- Failed to launch or execute Spring Batch job\njava.lang.RuntimeException: Job launch failed\nat com.innercircle.sacco.loan.service.LoanBatchServiceImplTest$ProcessDailyLoans.lambda$shouldUpdateBatchLogToFailedOnException$9(LoanBatchServiceImplTest.java:639) (x2)\nat com.innercircle.sacco.loan.service.LoanBatchServiceImplTest$ProcessDailyLoans.shouldUpdateBatchLogToFailedOnException(LoanBatchServiceImplTest.java:639) (x2)\n04:27:01.697 [main] ERROR com.innercircle.sacco.loan.service.LoanBatchServiceImpl -- Batch processing failed for 2026-02-01: Batch job execution failed\njava.lang.RuntimeException: Batch job execution failed\nCaused by: java.lang.RuntimeException: Job launch failed",
+          "outputReducer": "failure-focus",
+          "reason": null,
+          "result": "pass",
+          "tokenTelemetry": {
+            "inputTokens": 13784,
+            "outputTokens": 194,
+            "savedTokens": 13590,
+            "savingsPct": 98.6
+          }
+        }
+      ],
+      "kind": "java",
+      "name": "sacco-loan",
+      "path": "sacco-loan"
+    },
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "name": "lint",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "name": "test",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        }
+      ],
+      "kind": "java",
+      "name": "sacco-member",
+      "path": "sacco-member"
+    },
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "name": "lint",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "name": "test",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        }
+      ],
+      "kind": "java",
+      "name": "sacco-payout",
+      "path": "sacco-payout"
+    },
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "name": "lint",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "name": "test",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        }
+      ],
+      "kind": "java",
+      "name": "sacco-reporting",
+      "path": "sacco-reporting"
+    },
+    {
+      "checks": [
+        {
+          "cmd": "mvn -q spotless:check",
+          "name": "lint",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "mvn -q test -DskipITs",
+          "name": "test",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        }
+      ],
+      "kind": "java",
+      "name": "sacco-security",
+      "path": "sacco-security"
+    },
+    {
+      "checks": [
+        {
+          "cmd": "npm run lint",
+          "name": "lint",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        },
+        {
+          "cmd": null,
+          "name": "typecheck",
+          "result": "skipped"
+        },
+        {
+          "cmd": "npm run test",
+          "name": "test",
+          "reason": "no changed files for package",
+          "result": "skipped"
+        }
+      ],
+      "kind": "typescript",
+      "name": "sacco-ui",
+      "path": "sacco-ui"
+    }
+  ],
   "principles": [
     {
       "name": "Think Before Coding",
@@ -153,92 +447,15 @@
     }
   ],
   "schemaVersion": 2,
-  "timestamp": "2026-02-16T00:57:29Z",
+  "timestamp": "2026-02-21T04:27:02Z",
+  "tokenTelemetry": {
+    "checksRun": 3,
+    "checksSkipped": 36,
+    "inputTokens": 81503,
+    "outputTokens": 1262,
+    "savedTokens": 80241,
+    "savingsPct": 98.5
+  },
   "verdict": "warn",
-  "warnings": [
-    {
-      "file": "scripts/memory/__init__.py",
-      "issue": "File has 894 lines (max 800).",
-      "line": 1,
-      "rule": "max-file-lines",
-      "severity": "medium"
-    },
-    {
-      "file": "scripts/memory/bridge.py",
-      "issue": "Line length 200 exceeds 140.",
-      "line": 146,
-      "rule": "max-line-length",
-      "severity": "medium"
-    },
-    {
-      "file": "scripts/memory/bridge.py",
-      "issue": "Line length 199 exceeds 140.",
-      "line": 147,
-      "rule": "max-line-length",
-      "severity": "medium"
-    },
-    {
-      "file": "scripts/memory/bridge.py",
-      "issue": "Line length 186 exceeds 140.",
-      "line": 148,
-      "rule": "max-line-length",
-      "severity": "medium"
-    },
-    {
-      "file": "scripts/memory/bridge.py",
-      "issue": "Line length 192 exceeds 140.",
-      "line": 149,
-      "rule": "max-line-length",
-      "severity": "medium"
-    },
-    {
-      "file": "scripts/memory/bridge.py",
-      "issue": "Line length 185 exceeds 140.",
-      "line": 150,
-      "rule": "max-line-length",
-      "severity": "medium"
-    },
-    {
-      "file": "scripts/workflow_checks.py",
-      "issue": "File has 868 lines (max 800).",
-      "line": 1,
-      "rule": "max-file-lines",
-      "severity": "medium"
-    },
-    {
-      "file": "scripts/workflow_validate.py",
-      "issue": "File has 1391 lines (max 800).",
-      "line": 1,
-      "rule": "max-file-lines",
-      "severity": "medium"
-    },
-    {
-      "file": "scripts/workflow_validate.py",
-      "issue": "Line length 150 exceeds 140.",
-      "line": 473,
-      "rule": "max-line-length",
-      "severity": "medium"
-    },
-    {
-      "file": "scripts/workflow_validate.py",
-      "issue": "Line length 147 exceeds 140.",
-      "line": 507,
-      "rule": "max-line-length",
-      "severity": "medium"
-    },
-    {
-      "file": "scripts/workflow_validate.py",
-      "issue": "Line length 142 exceeds 140.",
-      "line": 832,
-      "rule": "max-line-length",
-      "severity": "medium"
-    },
-    {
-      "file": "scripts/workflow_validate.py",
-      "issue": "Line length 142 exceeds 140.",
-      "line": 892,
-      "rule": "max-line-length",
-      "severity": "medium"
-    }
-  ]
+  "warnings": []
 }

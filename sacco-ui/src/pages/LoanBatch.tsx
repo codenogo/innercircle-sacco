@@ -1,4 +1,5 @@
 import { DataTable, type ColumnDef } from '../components/DataTable'
+import { Breadcrumb } from '../components/Breadcrumb'
 import './Operations.css'
 
 interface UnpaidLoan {
@@ -29,6 +30,10 @@ export function LoanBatch() {
 
   return (
     <div className="ops-page">
+      <Breadcrumb items={[
+        { label: 'Operations', to: '/operations' },
+        { label: 'Loan Batch Processing' },
+      ]} />
       <div className="page-header">
         <div>
           <h1 className="page-title">Loan Batch Processing</h1>

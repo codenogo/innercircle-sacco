@@ -1,0 +1,296 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-create-meeting-sessions-table
+      author: codex
+      changes:
+        - createTable:
+            tableName: meeting_sessions
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: title
+                  type: varchar(200)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: meeting_date
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: late_threshold_minutes
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: absence_fine_amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: late_fine_amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: unpaid_daily_penalty_amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: finalized_at
+                  type: timestamp
+              - column:
+                  name: notes
+                  type: varchar(1000)
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: meeting_sessions
+            indexName: idx_meeting_sessions_date
+            columns:
+              - column:
+                  name: meeting_date
+        - createIndex:
+            tableName: meeting_sessions
+            indexName: idx_meeting_sessions_status
+            columns:
+              - column:
+                  name: status
+
+  - changeSet:
+      id: 002-create-meeting-attendance-table
+      author: codex
+      changes:
+        - createTable:
+            tableName: meeting_attendance
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: meeting_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: member_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: attendance_status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: arrived_at
+                  type: timestamp
+              - column:
+                  name: remarks
+                  type: varchar(500)
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: meeting_attendance
+            baseColumnNames: meeting_id
+            referencedTableName: meeting_sessions
+            referencedColumnNames: id
+            constraintName: fk_meeting_attendance_session
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: meeting_attendance
+            baseColumnNames: member_id
+            referencedTableName: members
+            referencedColumnNames: id
+            constraintName: fk_meeting_attendance_member
+            onDelete: RESTRICT
+        - addUniqueConstraint:
+            tableName: meeting_attendance
+            columnNames: meeting_id,member_id
+            constraintName: uk_meeting_attendance_meeting_member
+        - createIndex:
+            tableName: meeting_attendance
+            indexName: idx_meeting_attendance_member
+            columns:
+              - column:
+                  name: member_id
+
+  - changeSet:
+      id: 002-create-meeting-fines-table
+      author: codex
+      changes:
+        - createTable:
+            tableName: meeting_fines
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: meeting_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: attendance_id
+                  type: uuid
+              - column:
+                  name: member_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: fine_type
+                  type: varchar(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: base_fine_id
+                  type: uuid
+              - column:
+                  name: amount
+                  type: decimal(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: due_date
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: settled
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: settled_at
+                  type: timestamp
+              - column:
+                  name: waived
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: waived_by
+                  type: varchar(255)
+              - column:
+                  name: waived_at
+                  type: timestamp
+              - column:
+                  name: waived_reason
+                  type: varchar(500)
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: meeting_fines
+            baseColumnNames: meeting_id
+            referencedTableName: meeting_sessions
+            referencedColumnNames: id
+            constraintName: fk_meeting_fines_session
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: meeting_fines
+            baseColumnNames: attendance_id
+            referencedTableName: meeting_attendance
+            referencedColumnNames: id
+            constraintName: fk_meeting_fines_attendance
+            onDelete: SET NULL
+        - addForeignKeyConstraint:
+            baseTableName: meeting_fines
+            baseColumnNames: member_id
+            referencedTableName: members
+            referencedColumnNames: id
+            constraintName: fk_meeting_fines_member
+            onDelete: RESTRICT
+        - addForeignKeyConstraint:
+            baseTableName: meeting_fines
+            baseColumnNames: base_fine_id
+            referencedTableName: meeting_fines
+            referencedColumnNames: id
+            constraintName: fk_meeting_fines_base_fine
+            onDelete: SET NULL
+        - createIndex:
+            tableName: meeting_fines
+            indexName: idx_meeting_fines_member_status
+            columns:
+              - column:
+                  name: member_id
+              - column:
+                  name: settled
+              - column:
+                  name: waived
+        - createIndex:
+            tableName: meeting_fines
+            indexName: idx_meeting_fines_due_date
+            columns:
+              - column:
+                  name: due_date

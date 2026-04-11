@@ -1,15 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Bank, MagnifyingGlass } from '@phosphor-icons/react'
 import { Spinner } from '../components/Spinner'
+import { ActionMenu } from '../components/ActionMenu'
+import { StatCardGrid } from '../components/StatCard'
 import { DataTable } from '../components/DataTable'
 import type { ColumnDef } from '../components/DataTable'
 import { NewLoanModal } from '../components/NewLoanModal'
 import { MakerCheckerWarning } from '../components/MakerCheckerWarning'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { ApiError } from '../services/apiClient'
 import { getAllMembers } from '../services/memberService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { useAuthorization } from '../hooks/useAuthorization'
 import { useCurrentUser } from '../hooks/useCurrentUser'
+import { useToast } from '../hooks/useToast'
 import { isMakerCheckerViolation } from '../types/makerChecker'
 import type { CursorPage } from '../types/users'
 import type { LoanApplicationRequest, LoanResponse, LoanStatus, LoanSummaryResponse } from '../types/loans'
@@ -68,9 +72,10 @@ export function Loans() {
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const toast = useToast()
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [overrideTarget, setOverrideTarget] = useState<{ id: string; action: 'approve' | 'reject' } | null>(null)
+  const [confirmTarget, setConfirmTarget] = useState<{ id: string; action: 'approve' | 'reject' } | null>(null)
 
   const loadLoans = useCallback(async (opts?: { append?: boolean; cursor?: string | null }) => {
     if (isMemberOnly) {
@@ -161,7 +166,6 @@ export function Loans() {
     }
 
     setSubmittingLoan(true)
-    setFeedback(null)
     try {
       const created = await request<LoanResponse>('/api/v1/loans/apply', {
         method: 'POST',
@@ -169,10 +173,10 @@ export function Loans() {
       })
       setLoans(prev => [created, ...prev])
       setShowModal(false)
-      setFeedback({ type: 'success', text: 'Loan application submitted successfully.' })
+      toast.success('Loan submitted', 'Loan application submitted successfully.')
     } catch (err) {
       const message = toErrorMessage(err, 'Unable to submit loan application.')
-      setFeedback({ type: 'error', text: message })
+      toast.error('Loan application failed', message)
       throw err instanceof Error ? err : new Error(message)
     } finally {
       setSubmittingLoan(false)
@@ -181,18 +185,17 @@ export function Loans() {
 
   async function handleLoanAction(loanId: string, action: 'approve' | 'reject') {
     setActionLoading(loanId)
-    setFeedback(null)
     try {
       const updated = await request<LoanResponse>(`/api/v1/loans/${loanId}/${action}`, {
         method: 'PATCH',
       })
       setLoans(prev => prev.map(l => l.id === loanId ? updated : l))
-      setFeedback({ type: 'success', text: `Loan ${action === 'approve' ? 'approved' : 'rejected'} successfully.` })
+      toast.success(`Loan ${action === 'approve' ? 'approved' : 'rejected'}`, `Loan ${action === 'approve' ? 'approved' : 'rejected'} successfully.`)
     } catch (err) {
       if (isMakerCheckerViolation(err)) {
         setOverrideTarget({ id: loanId, action })
       } else {
-        setFeedback({ type: 'error', text: toErrorMessage(err, `Unable to ${action} loan.`) })
+        toast.error(`Unable to ${action} loan`, toErrorMessage(err, `Unable to ${action} loan.`))
       }
     } finally {
       setActionLoading(null)
@@ -210,9 +213,9 @@ export function Loans() {
       })
       setLoans(prev => prev.map(l => l.id === id ? updated : l))
       setOverrideTarget(null)
-      setFeedback({ type: 'success', text: `Loan ${action === 'approve' ? 'approved' : 'rejected'} with admin override.` })
+      toast.success(`Loan ${action === 'approve' ? 'approved' : 'rejected'} with admin override.`)
     } catch (err) {
-      setFeedback({ type: 'error', text: toErrorMessage(err, `Unable to ${action} loan with override.`) })
+      toast.error(`Unable to ${action} loan with override`, toErrorMessage(err, ''))
     } finally {
       setActionLoading(null)
     }
@@ -305,26 +308,17 @@ export function Loans() {
     if (canManageLoans) {
       cols.push({
         key: 'actions',
-        header: 'Actions',
+        header: '',
+        width: '52px',
+        headerClassName: 'datatable-col-actions',
+        className: 'datatable-col-actions',
         render: (loan) => loan.status === 'PENDING' ? (
-          <div className="table-actions">
-            <button
-              type="button"
-              className="btn btn--ghost btn--small"
-              disabled={actionLoading === loan.id}
-              onClick={() => void handleLoanAction(loan.id, 'approve')}
-            >
-              Approve
-            </button>
-            <button
-              type="button"
-              className="btn btn--ghost btn--small btn--danger-text"
-              disabled={actionLoading === loan.id}
-              onClick={() => void handleLoanAction(loan.id, 'reject')}
-            >
-              Reject
-            </button>
-          </div>
+          <ActionMenu
+            actions={[
+              { label: 'Approve', onClick: () => setConfirmTarget({ id: loan.id, action: 'approve' }), disabled: actionLoading === loan.id },
+              { label: 'Reject', onClick: () => setConfirmTarget({ id: loan.id, action: 'reject' }), variant: 'danger', disabled: actionLoading === loan.id },
+            ]}
+          />
         ) : null,
       })
     }
@@ -358,28 +352,16 @@ export function Loans() {
       <section className="page-section">
         <span className="page-section-title">Loan Portfolio</span>
         <hr className="rule" />
-        <div className="loan-summary">
-          <div className="dot-leader">
-            <span>Total Disbursed (active)</span>
-            <span className="dot-leader-value">KES {fmt(totalDisbursed)}</span>
-          </div>
-          <div className="dot-leader">
-            <span>Total Repaid</span>
-            <span className="dot-leader-value amount--positive">KES {fmt(totalRepaid)}</span>
-          </div>
-          <div className="dot-leader loan-summary-total">
-            <span>Outstanding Balance</span>
-            <span className="dot-leader-value">KES {fmt(totalOutstanding)}</span>
-          </div>
-        </div>
+        <StatCardGrid
+          items={[
+            { label: 'Total Disbursed (Active)', value: `KES ${fmt(totalDisbursed)}` },
+            { label: 'Total Repaid', value: `KES ${fmt(totalRepaid)}`, valueClassName: 'amount--positive' },
+            { label: 'Outstanding Balance', value: `KES ${fmt(totalOutstanding)}` },
+          ]}
+          columns={3}
+        />
         <hr className="rule rule--strong" />
       </section>
-
-      {feedback && (
-        <div className={`ops-feedback ops-feedback--${feedback.type}`} role="status">
-          {feedback.text}
-        </div>
-      )}
 
       {error && (
         <div className="ops-feedback ops-feedback--error" role="status">
@@ -395,6 +377,7 @@ export function Loans() {
             type="text"
             className="filter-search"
             placeholder="Search loans..."
+            aria-label="Search loans"
             value={search}
             onChange={event => setSearch(event.target.value)}
           />
@@ -411,7 +394,14 @@ export function Loans() {
           data={filtered}
           getRowKey={row => row.id}
           loading={loading}
-          emptyMessage="No loans match your search."
+          emptyMessage={
+            loans.length === 0
+              ? <div className="empty-state empty-state--illustrated">
+                  <h3 className="empty-state-heading">No loan applications</h3>
+                  <p className="empty-state-text">Submit a new loan application to get started.</p>
+                </div>
+              : 'No loans match your search.'
+          }
         />
 
         {hasMore && (
@@ -447,6 +437,25 @@ export function Loans() {
         onOverride={handleLoanOverride}
         submitting={actionLoading !== null}
         action={overrideTarget?.action ?? 'approve'}
+      />
+
+      <ConfirmDialog
+        open={confirmTarget !== null}
+        onClose={() => setConfirmTarget(null)}
+        onConfirm={() => {
+          if (!confirmTarget) return
+          setConfirmTarget(null)
+          void handleLoanAction(confirmTarget.id, confirmTarget.action)
+        }}
+        title={confirmTarget?.action === 'reject' ? 'Reject Loan' : 'Approve Loan'}
+        description={
+          confirmTarget?.action === 'reject'
+            ? 'Are you sure you want to reject this loan application? This action cannot be undone.'
+            : 'Approve this loan application? The loan will proceed to disbursement once approved.'
+        }
+        confirmLabel={confirmTarget?.action === 'reject' ? 'Reject Loan' : 'Approve Loan'}
+        variant={confirmTarget?.action === 'reject' ? 'danger' : 'info'}
+        loading={actionLoading !== null}
       />
     </div>
   )

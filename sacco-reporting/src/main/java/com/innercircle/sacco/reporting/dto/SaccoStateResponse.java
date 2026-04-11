@@ -8,6 +8,12 @@ public record SaccoStateResponse(
         BigDecimal totalShareCapital,
         BigDecimal totalOutstandingLoans,
         BigDecimal totalContributions,
+        BigDecimal totalNetContributions,
+        BigDecimal totalWelfareContributions,
+        BigDecimal totalMeetingFines,
+        BigDecimal totalWelfareBenefitsPaid,
+        BigDecimal totalExitSettlements,
+        BigDecimal totalExitFees,
         BigDecimal totalPayouts,
         BigDecimal loanRecoveryRate,
         BigDecimal memberGrowthRate

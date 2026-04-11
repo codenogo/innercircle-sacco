@@ -2,6 +2,7 @@ package com.innercircle.sacco.contribution.service;
 
 import com.innercircle.sacco.contribution.entity.ContributionPenalty;
 
+import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,7 +19,7 @@ public interface ContributionPenaltyService {
     /**
      * Waive a penalty (requires TREASURER/ADMIN authorization).
      */
-    ContributionPenalty waivePenalty(UUID penaltyId, String actor);
+    ContributionPenalty waivePenalty(UUID penaltyId, String reason, String actor);
 
     /**
      * Get all penalties for a member.
@@ -29,6 +30,11 @@ public interface ContributionPenaltyService {
      * Get unwaived penalties for a member.
      */
     List<ContributionPenalty> getUnwaivedPenalties(UUID memberId);
+
+    /**
+     * Get penalties with optional month filter.
+     */
+    List<ContributionPenalty> getPenalties(UUID memberId, YearMonth month);
 
     /**
      * Get a penalty by ID.

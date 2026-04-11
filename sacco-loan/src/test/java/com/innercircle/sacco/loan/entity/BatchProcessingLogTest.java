@@ -13,7 +13,7 @@ class BatchProcessingLogTest {
     @Test
     @DisplayName("builder should create entity with all fields set correctly")
     void builderShouldCreateEntityWithAllFields() {
-        String processingMonth = "2026-02";
+        String processingDate = "2026-02-15";
         BatchProcessingStatus status = BatchProcessingStatus.COMPLETED;
         Integer loansProcessed = 150;
         BigDecimal interestAccrued = new BigDecimal("5000.50");
@@ -25,7 +25,7 @@ class BatchProcessingLogTest {
         String triggeredBy = "admin@sacco.com";
 
         BatchProcessingLog log = BatchProcessingLog.builder()
-                .processingMonth(processingMonth)
+                .processingDate(processingDate)
                 .status(status)
                 .loansProcessed(loansProcessed)
                 .interestAccrued(interestAccrued)
@@ -38,7 +38,7 @@ class BatchProcessingLogTest {
                 .build();
 
         assertThat(log).isNotNull();
-        assertThat(log.getProcessingMonth()).isEqualTo(processingMonth);
+        assertThat(log.getProcessingDate()).isEqualTo(processingDate);
         assertThat(log.getStatus()).isEqualTo(status);
         assertThat(log.getLoansProcessed()).isEqualTo(loansProcessed);
         assertThat(log.getInterestAccrued()).isEqualTo(interestAccrued);
@@ -53,18 +53,18 @@ class BatchProcessingLogTest {
     @Test
     @DisplayName("builder should create entity with partial fields")
     void builderShouldCreateEntityWithPartialFields() {
-        String processingMonth = "2026-02";
+        String processingDate = "2026-02-15";
         BatchProcessingStatus status = BatchProcessingStatus.STARTED;
         Instant startedAt = Instant.now();
 
         BatchProcessingLog log = BatchProcessingLog.builder()
-                .processingMonth(processingMonth)
+                .processingDate(processingDate)
                 .status(status)
                 .startedAt(startedAt)
                 .build();
 
         assertThat(log).isNotNull();
-        assertThat(log.getProcessingMonth()).isEqualTo(processingMonth);
+        assertThat(log.getProcessingDate()).isEqualTo(processingDate);
         assertThat(log.getStatus()).isEqualTo(status);
         assertThat(log.getStartedAt()).isEqualTo(startedAt);
         assertThat(log.getLoansProcessed()).isNull();
@@ -82,7 +82,7 @@ class BatchProcessingLogTest {
         BatchProcessingLog log = new BatchProcessingLog();
 
         assertThat(log).isNotNull();
-        assertThat(log.getProcessingMonth()).isNull();
+        assertThat(log.getProcessingDate()).isNull();
         assertThat(log.getStatus()).isNull();
         assertThat(log.getLoansProcessed()).isNull();
         assertThat(log.getInterestAccrued()).isNull();
@@ -99,7 +99,7 @@ class BatchProcessingLogTest {
     void settersShouldWork() {
         BatchProcessingLog log = new BatchProcessingLog();
 
-        String processingMonth = "2026-03";
+        String processingDate = "2026-03-01";
         BatchProcessingStatus status = BatchProcessingStatus.FAILED;
         Integer loansProcessed = 75;
         BigDecimal interestAccrued = new BigDecimal("2500.00");
@@ -110,7 +110,7 @@ class BatchProcessingLogTest {
         Instant completedAt = Instant.parse("2026-03-01T10:15:00Z");
         String triggeredBy = "scheduler";
 
-        log.setProcessingMonth(processingMonth);
+        log.setProcessingDate(processingDate);
         log.setStatus(status);
         log.setLoansProcessed(loansProcessed);
         log.setInterestAccrued(interestAccrued);
@@ -121,7 +121,7 @@ class BatchProcessingLogTest {
         log.setCompletedAt(completedAt);
         log.setTriggeredBy(triggeredBy);
 
-        assertThat(log.getProcessingMonth()).isEqualTo(processingMonth);
+        assertThat(log.getProcessingDate()).isEqualTo(processingDate);
         assertThat(log.getStatus()).isEqualTo(status);
         assertThat(log.getLoansProcessed()).isEqualTo(loansProcessed);
         assertThat(log.getInterestAccrued()).isEqualTo(interestAccrued);
@@ -138,7 +138,7 @@ class BatchProcessingLogTest {
     void gettersShouldWork() {
         Instant now = Instant.now();
         BatchProcessingLog log = BatchProcessingLog.builder()
-                .processingMonth("2026-01")
+                .processingDate("2026-01-15")
                 .status(BatchProcessingStatus.STARTED)
                 .loansProcessed(100)
                 .interestAccrued(BigDecimal.TEN)
@@ -150,7 +150,7 @@ class BatchProcessingLogTest {
                 .triggeredBy("user")
                 .build();
 
-        assertThat(log.getProcessingMonth()).isEqualTo("2026-01");
+        assertThat(log.getProcessingDate()).isEqualTo("2026-01-15");
         assertThat(log.getStatus()).isEqualTo(BatchProcessingStatus.STARTED);
         assertThat(log.getLoansProcessed()).isEqualTo(100);
         assertThat(log.getInterestAccrued()).isEqualTo(BigDecimal.TEN);
@@ -174,7 +174,7 @@ class BatchProcessingLogTest {
     @DisplayName("builder should handle null values")
     void builderShouldHandleNullValues() {
         BatchProcessingLog log = BatchProcessingLog.builder()
-                .processingMonth("2026-02")
+                .processingDate("2026-02-15")
                 .status(BatchProcessingStatus.COMPLETED)
                 .startedAt(Instant.now())
                 .loansProcessed(null)
@@ -186,7 +186,7 @@ class BatchProcessingLogTest {
                 .triggeredBy(null)
                 .build();
 
-        assertThat(log.getProcessingMonth()).isEqualTo("2026-02");
+        assertThat(log.getProcessingDate()).isEqualTo("2026-02-15");
         assertThat(log.getStatus()).isEqualTo(BatchProcessingStatus.COMPLETED);
         assertThat(log.getLoansProcessed()).isNull();
         assertThat(log.getInterestAccrued()).isNull();

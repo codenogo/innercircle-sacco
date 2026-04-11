@@ -289,11 +289,118 @@ class AuthServiceTest {
         }
 
         @Test
+        @DisplayName("should resolve to latest active token across multiple rapid rotations within grace period")
+        void shouldResolveToLatestActiveTokenAcrossMultipleRapidRotationsWithinGracePeriod() {
+            RefreshTokenRequest request = new RefreshTokenRequest("ancestor-token");
+            UUID userId = UUID.randomUUID();
+            UUID replacementOneId = UUID.randomUUID();
+            UUID replacementTwoId = UUID.randomUUID();
+
+            RefreshToken ancestorToken = RefreshToken.builder()
+                    .userId(userId)
+                    .token("ancestor-token")
+                    .expiresAt(Instant.now().plusSeconds(86400))
+                    .revoked(true)
+                    .replacedByTokenId(replacementOneId)
+                    .revokedAt(Instant.now())
+                    .build();
+
+            RefreshToken replacementOne = RefreshToken.builder()
+                    .userId(userId)
+                    .token("replacement-one-token")
+                    .expiresAt(Instant.now().plusSeconds(86400))
+                    .revoked(true)
+                    .replacedByTokenId(replacementTwoId)
+                    .revokedAt(Instant.now())
+                    .build();
+            replacementOne.setId(replacementOneId);
+
+            RefreshToken replacementTwo = RefreshToken.builder()
+                    .userId(userId)
+                    .token("replacement-two-token")
+                    .expiresAt(Instant.now().plusSeconds(86400))
+                    .revoked(false)
+                    .build();
+            replacementTwo.setId(replacementTwoId);
+
+            UserAccount userAccount = createUserAccount(userId, "testuser", true, true, "MEMBER");
+
+            when(refreshTokenRepository.findByToken("ancestor-token")).thenReturn(Optional.of(ancestorToken));
+            when(refreshTokenRepository.findById(replacementOneId)).thenReturn(Optional.of(replacementOne));
+            when(refreshTokenRepository.findById(replacementTwoId)).thenReturn(Optional.of(replacementTwo));
+            when(userAccountRepository.findById(userId)).thenReturn(Optional.of(userAccount));
+            when(jwtService.generateAccessToken(userAccount)).thenReturn("new-access-token");
+
+            LoginResponse response = authService.refreshAccessToken(request);
+
+            assertThat(response.accessToken()).isEqualTo("new-access-token");
+            assertThat(response.refreshToken()).isEqualTo("replacement-two-token");
+            verify(refreshTokenRepository, never()).rotateIfActive(any(UUID.class), any(UUID.class), any(Instant.class), any(Instant.class));
+        }
+
+        @Test
         @DisplayName("should throw BadCredentialsException when refresh token is unknown")
         void shouldThrowWhenRefreshTokenUnknown() {
             RefreshTokenRequest request = new RefreshTokenRequest("unknown-token");
 
             when(refreshTokenRepository.findByToken("unknown-token")).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> authService.refreshAccessToken(request))
+                    .isInstanceOf(BadCredentialsException.class)
+                    .hasMessage("Invalid refresh token");
+        }
+
+        @Test
+        @DisplayName("should throw BadCredentialsException when intermediate revoked token is outside grace period")
+        void shouldThrowWhenIntermediateRevokedTokenOutsideGracePeriod() {
+            RefreshTokenRequest request = new RefreshTokenRequest("ancestor-token");
+            UUID replacementOneId = UUID.randomUUID();
+            UUID replacementTwoId = UUID.randomUUID();
+
+            RefreshToken ancestorToken = RefreshToken.builder()
+                    .userId(UUID.randomUUID())
+                    .token("ancestor-token")
+                    .expiresAt(Instant.now().plusSeconds(86400))
+                    .revoked(true)
+                    .replacedByTokenId(replacementOneId)
+                    .revokedAt(Instant.now())
+                    .build();
+
+            RefreshToken replacementOne = RefreshToken.builder()
+                    .userId(ancestorToken.getUserId())
+                    .token("replacement-one-token")
+                    .expiresAt(Instant.now().plusSeconds(86400))
+                    .revoked(true)
+                    .replacedByTokenId(replacementTwoId)
+                    .revokedAt(Instant.now().minusSeconds(120))
+                    .build();
+            replacementOne.setId(replacementOneId);
+
+            when(refreshTokenRepository.findByToken("ancestor-token")).thenReturn(Optional.of(ancestorToken));
+            when(refreshTokenRepository.findById(replacementOneId)).thenReturn(Optional.of(replacementOne));
+
+            assertThatThrownBy(() -> authService.refreshAccessToken(request))
+                    .isInstanceOf(BadCredentialsException.class)
+                    .hasMessage("Invalid refresh token");
+        }
+
+        @Test
+        @DisplayName("should throw BadCredentialsException when replacement chain is broken")
+        void shouldThrowWhenReplacementChainBroken() {
+            RefreshTokenRequest request = new RefreshTokenRequest("ancestor-token");
+            UUID missingReplacementId = UUID.randomUUID();
+
+            RefreshToken ancestorToken = RefreshToken.builder()
+                    .userId(UUID.randomUUID())
+                    .token("ancestor-token")
+                    .expiresAt(Instant.now().plusSeconds(86400))
+                    .revoked(true)
+                    .replacedByTokenId(missingReplacementId)
+                    .revokedAt(Instant.now())
+                    .build();
+
+            when(refreshTokenRepository.findByToken("ancestor-token")).thenReturn(Optional.of(ancestorToken));
+            when(refreshTokenRepository.findById(missingReplacementId)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> authService.refreshAccessToken(request))
                     .isInstanceOf(BadCredentialsException.class)

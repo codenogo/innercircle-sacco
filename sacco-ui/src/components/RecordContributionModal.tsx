@@ -3,9 +3,14 @@ import { Modal } from './Modal'
 import { DatePicker } from './DatePicker'
 import { Select } from './Select'
 import { localISODate } from '../utils/date'
-import { getCategories } from '../services/contributionService'
+import { getCategories, getWelfarePolicy } from '../services/contributionService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
-import type { RecordContributionRequest, ContributionCategoryResponse, PaymentMode } from '../types/contributions'
+import type {
+  RecordContributionRequest,
+  ContributionCategoryResponse,
+  ContributionWelfarePolicyResponse,
+  PaymentMode,
+} from '../types/contributions'
 
 interface RecordContributionModalProps {
   open: boolean
@@ -17,7 +22,7 @@ interface RecordContributionModalProps {
 
 const paymentModeOptions = [
   { value: 'MPESA', label: 'M-Pesa' },
-  { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+  { value: 'BANK', label: 'Bank Transfer' },
   { value: 'CASH', label: 'Cash' },
   { value: 'CHECK', label: 'Cheque' },
 ]
@@ -34,9 +39,12 @@ export function RecordContributionModal({ open, onClose, members, onSubmit, isSu
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
 
+  const [amountError, setAmountError] = useState('')
+
   const [categories, setCategories] = useState<ContributionCategoryResponse[]>([])
   const [categoriesLoading, setCategoriesLoading] = useState(false)
   const [categoriesError, setCategoriesError] = useState('')
+  const [welfarePolicy, setWelfarePolicy] = useState<ContributionWelfarePolicyResponse>({ enabled: false, fixedAmount: 0 })
 
   useEffect(() => {
     if (!open) return
@@ -46,10 +54,14 @@ export function RecordContributionModal({ open, onClose, members, onSubmit, isSu
       setCategoriesLoading(true)
       setCategoriesError('')
       try {
-        const data = await getCategories(true, request)
+        const [data, policy] = await Promise.all([
+          getCategories(true, request),
+          getWelfarePolicy(request).catch(() => ({ enabled: false, fixedAmount: 0 })),
+        ])
         if (cancelled) return
 
         setCategories(data)
+        setWelfarePolicy(policy)
         if (data.length === 0) {
           setCategoriesError('No active contribution categories are configured.')
           setCategoryId('')
@@ -74,6 +86,28 @@ export function RecordContributionModal({ open, onClose, members, onSubmit, isSu
 
   const memberOptions = members.map(m => ({ value: m.id, label: m.name }))
   const categoryOptions = categories.map(c => ({ value: c.id, label: c.name }))
+  const selectedCategory = categories.find(c => c.id === categoryId)
+  const welfareApplies = Boolean(selectedCategory?.welfareEligible) && welfarePolicy.enabled
+  const amountValue = Number(amount)
+  const welfareAmount = welfareApplies ? welfarePolicy.fixedAmount : 0
+  const netAmount = Number.isNaN(amountValue) ? 0 : amountValue - welfareAmount
+
+  function fmtAmount(value: number): string {
+    return value.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
+
+  function validateAmount(val: string): string {
+    const n = Number(val)
+    if (!val || Number.isNaN(n) || n <= 0) return 'Enter a positive amount.'
+    if (welfareApplies && n < welfarePolicy.fixedAmount) {
+      return `Amount must be at least KES ${fmtAmount(welfarePolicy.fixedAmount)} for welfare-eligible contributions.`
+    }
+    return ''
+  }
+
+  function blurAmount() {
+    setAmountError(validateAmount(amount))
+  }
 
   function reset() {
     setMemberId('')
@@ -84,11 +118,15 @@ export function RecordContributionModal({ open, onClose, members, onSubmit, isSu
     setReferenceNumber('')
     setNotes('')
     setError('')
+    setAmountError('')
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
+
+    const amtErr = validateAmount(amount)
+    if (amtErr) { setAmountError(amtErr); return }
 
     if (categories.length === 0 || !categoryId) {
       setError('No selectable contribution category is available.')
@@ -153,30 +191,52 @@ export function RecordContributionModal({ open, onClose, members, onSubmit, isSu
         )}
 
         <div className="field">
-          <label className="field-label">Member</label>
+          <label className="field-label field-label--required">Member</label>
           <Select options={memberOptions} value={memberId} onChange={setMemberId} placeholder="Select member" required searchable />
         </div>
 
         <div className="field-row">
           <div className="field">
-            <label className="field-label">Category</label>
+            <label className="field-label field-label--required">Category</label>
             <Select options={categoryOptions} value={categoryId} onChange={setCategoryId} required />
             {categoriesLoading && <span className="field-hint">Loading categories...</span>}
             {!categoriesLoading && categoriesError && <span className="field-hint">{categoriesError}</span>}
           </div>
           <div className="field">
-            <label className="field-label">Amount (KES)</label>
-            <input className="field-input" type="number" min={1} required value={amount} onChange={e => setAmount(e.target.value)} disabled={isSubmitting} />
+            <label className="field-label field-label--required">Amount (KES)</label>
+            <input
+              className={`field-input${amountError ? ' field-input--error' : ''}`}
+              type="number"
+              min={1}
+              required
+              value={amount}
+              onChange={e => { setAmount(e.target.value); if (amountError) setAmountError('') }}
+              onBlur={blurAmount}
+              disabled={isSubmitting}
+              aria-invalid={!!amountError}
+              aria-describedby={amountError ? 'contrib-amount-error' : undefined}
+            />
+            {amountError && <span id="contrib-amount-error" className="field-error">{amountError}</span>}
+            {welfareApplies && !amountError && (
+              <span className="field-hint">
+                Split preview: Gross KES {fmtAmount(amountValue || 0)} | Welfare KES {fmtAmount(welfareAmount)} | Net KES {fmtAmount(Math.max(netAmount, 0))}
+              </span>
+            )}
+            {!welfarePolicy.enabled && selectedCategory?.welfareEligible && (
+              <span className="field-hint">
+                Welfare split is currently disabled until a positive fixed amount is configured in Settings.
+              </span>
+            )}
           </div>
         </div>
 
         <div className="field-row">
           <div className="field">
-            <label className="field-label">Payment Mode</label>
+            <label className="field-label field-label--required">Payment Mode</label>
             <Select options={paymentModeOptions} value={paymentMode} onChange={v => setPaymentMode(v as PaymentMode)} />
           </div>
           <div className="field">
-            <label className="field-label">Date</label>
+            <label className="field-label field-label--required">Date</label>
             <DatePicker value={date} onChange={setDate} required />
           </div>
         </div>

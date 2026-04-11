@@ -1,0 +1,41 @@
+databaseChangeLog:
+  - changeSet:
+      id: 013-seed-exit-fee-income-account
+      author: codex
+      preConditions:
+        - onFail: MARK_RAN
+        - onError: MARK_RAN
+        - sqlCheck:
+            expectedResult: "0"
+            sql: "SELECT COUNT(*) FROM accounts WHERE account_code = '4005'"
+      changes:
+        - insert:
+            tableName: accounts
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: account_code
+                  value: "4005"
+              - column:
+                  name: account_name
+                  value: "Exit Fee Income"
+              - column:
+                  name: account_type
+                  value: "REVENUE"
+              - column:
+                  name: balance
+                  value: "0.00"
+              - column:
+                  name: description
+                  value: "Income recognized from member exit convenience fees"
+              - column:
+                  name: active
+                  valueBoolean: true
+              - column:
+                  name: created_at
+                  valueComputed: "CURRENT_TIMESTAMP"
+              - column:
+                  name: updated_at
+                  valueComputed: "CURRENT_TIMESTAMP"

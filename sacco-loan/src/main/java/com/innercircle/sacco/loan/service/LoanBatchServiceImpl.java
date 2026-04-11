@@ -7,6 +7,7 @@ import com.innercircle.sacco.config.entity.InterestMethod;
 import com.innercircle.sacco.config.entity.PenaltyRule;
 import com.innercircle.sacco.config.entity.SystemConfig;
 import com.innercircle.sacco.config.service.ConfigService;
+import com.innercircle.sacco.config.service.PolicyConfigResolver;
 import com.innercircle.sacco.loan.dto.BatchProcessingResult;
 import com.innercircle.sacco.loan.entity.BatchProcessingLog;
 import com.innercircle.sacco.loan.entity.BatchProcessingStatus;
@@ -25,13 +26,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.JobParametersBuilder;
+import org.springframework.batch.core.StepExecution;
+import org.springframework.batch.core.launch.JobLauncher;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.YearMonth;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -51,62 +55,51 @@ public class LoanBatchServiceImpl implements LoanBatchService {
     private final EventOutboxWriter outboxWriter;
     private final BatchProcessingLogRepository batchLogRepository;
     private final ConfigService configService;
+    private final PolicyConfigResolver policyConfigResolver;
     private final LoanPenaltyService loanPenaltyService;
     private final LoanPenaltyRepository loanPenaltyRepository;
+    private final JobLauncher jobLauncher;
+    private final Job loanProcessingJob;
 
     @Override
-    @Transactional
-    @Scheduled(cron = "${sacco.batch.loan-processing-cron:0 0 1 1 * *}")
+    @Scheduled(cron = "${sacco.batch.loan-processing-cron:0 0 1 * * *}")
     public BatchProcessingResult processOutstandingLoans() {
-        log.info("Scheduled batch processing triggered");
+        log.info("Scheduled daily batch processing triggered");
 
-        // 7.2: Check configurable day-of-month
-        int processingDay = getConfigInt("loan.batch.processing_day_of_month", 1);
-        int todayDay = LocalDate.now().getDayOfMonth();
-        if (todayDay < processingDay) {
-            log.info("Today ({}) is before configured processing day ({}), skipping", todayDay, processingDay);
-            return BatchProcessingResult.builder()
-                    .processedLoans(0)
-                    .processedAt(Instant.now())
-                    .message("Skipped: today is before configured processing day " + processingDay)
-                    .build();
+        // Auto-determine target date
+        LocalDate targetDate = determineNextDate();
+        if (targetDate == null) {
+            // First run ever - process today
+            targetDate = LocalDate.now();
         }
 
-        // Auto-determine target month
-        YearMonth targetMonth = determineNextMonth();
-        if (targetMonth == null) {
-            // First run ever - process current month
-            targetMonth = YearMonth.now();
-        }
-
-        return processMonthlyLoans(targetMonth, "SYSTEM");
+        return processDailyLoans(targetDate, "SYSTEM");
     }
 
     @Override
-    @Transactional
-    public BatchProcessingResult processMonthlyLoans(YearMonth targetMonth, String triggeredBy) {
-        log.info("Processing monthly loans for {} triggered by {}", targetMonth, triggeredBy);
-        String monthKey = targetMonth.toString();
+    public BatchProcessingResult processDailyLoans(LocalDate targetDate, String triggeredBy) {
+        log.info("Processing daily loans for {} triggered by {}", targetDate, triggeredBy);
+        String dateKey = targetDate.toString();
 
-        // 7.4: Idempotency - prevent same-month double-processing
-        if (batchLogRepository.existsByProcessingMonth(monthKey)) {
-            throw new IllegalStateException("Month already processed: " + targetMonth);
+        // Idempotency - prevent same-date double-processing
+        if (batchLogRepository.existsByProcessingDate(dateKey)) {
+            throw new IllegalStateException("Date already processed: " + targetDate);
         }
 
-        // 7.5: Sequential enforcement - must process months in order
-        String lastProcessedStr = getConfigValue("loan.batch.last_processed_month");
+        // Sequential enforcement - must process dates in order
+        String lastProcessedStr = getConfigValue("loan.batch.last_processed_date");
         if (lastProcessedStr != null && !lastProcessedStr.isBlank()) {
-            YearMonth lastProcessed = YearMonth.parse(lastProcessedStr);
-            YearMonth expectedNext = lastProcessed.plusMonths(1);
-            if (!targetMonth.equals(expectedNext)) {
+            LocalDate lastProcessed = LocalDate.parse(lastProcessedStr);
+            LocalDate expectedNext = lastProcessed.plusDays(1);
+            if (!targetDate.equals(expectedNext)) {
                 throw new IllegalStateException(
-                        "Must process " + expectedNext + " first. Cannot skip to " + targetMonth);
+                        "Must process " + expectedNext + " first. Cannot skip to " + targetDate);
             }
         }
 
-        // 7.8: Create batch log with STARTED status
+        // Create batch log with STARTED status
         BatchProcessingLog batchLog = BatchProcessingLog.builder()
-                .processingMonth(monthKey)
+                .processingDate(dateKey)
                 .status(BatchProcessingStatus.STARTED)
                 .startedAt(Instant.now())
                 .triggeredBy(triggeredBy)
@@ -114,7 +107,7 @@ public class LoanBatchServiceImpl implements LoanBatchService {
         batchLogRepository.save(batchLog);
 
         try {
-            BatchProcessingResult result = executeProcessing(targetMonth, batchLog);
+            BatchProcessingResult result = executeProcessing(targetDate, batchLog);
 
             // Update batch log to COMPLETED
             batchLog.setStatus(BatchProcessingStatus.COMPLETED);
@@ -125,8 +118,8 @@ public class LoanBatchServiceImpl implements LoanBatchService {
             batchLog.setCompletedAt(Instant.now());
             batchLogRepository.save(batchLog);
 
-            // 7.8: Update last processed month in config
-            configService.updateSystemConfig("loan.batch.last_processed_month", monthKey);
+            // Update last processed date in config
+            configService.updateSystemConfig("loan.batch.last_processed_date", dateKey);
 
             // Publish event
             outboxWriter.write(new LoanBatchProcessedEvent(
@@ -138,7 +131,7 @@ public class LoanBatchServiceImpl implements LoanBatchService {
                     triggeredBy
             ), "LoanApplication", batchLog.getId());
 
-            log.info("Batch processing completed for {}: {}", targetMonth, result.getMessage());
+            log.info("Batch processing completed for {}: {}", targetDate, result.getMessage());
             return result;
 
         } catch (Exception e) {
@@ -147,103 +140,53 @@ public class LoanBatchServiceImpl implements LoanBatchService {
             batchLog.setCompletedAt(Instant.now());
             batchLog.setWarningsSummary("Processing failed: " + e.getMessage());
             batchLogRepository.save(batchLog);
-            log.error("Batch processing failed for {}: {}", targetMonth, e.getMessage(), e);
+            log.error("Batch processing failed for {}: {}", targetDate, e.getMessage(), e);
             throw e;
         }
     }
 
-    private BatchProcessingResult executeProcessing(YearMonth targetMonth, BatchProcessingLog batchLog) {
+    private BatchProcessingResult executeProcessing(LocalDate targetDate, BatchProcessingLog batchLog) {
         List<String> warnings = new ArrayList<>();
 
-        // 7.7: Pre-processing warnings for unpaid loans
-        LocalDate targetDate = targetMonth.atDay(1);
+        // Pre-processing warnings for unpaid loans
         List<Map<String, Object>> unpaidLoans = detectUnpaidLoans(targetDate);
         if (!unpaidLoans.isEmpty()) {
             String warning = String.format("%d unpaid loan installment(s) detected for %s - penalties may apply",
-                    unpaidLoans.size(), targetMonth);
+                    unpaidLoans.size(), targetDate);
             warnings.add(warning);
             log.warn(warning);
         }
 
-        // Get all REPAYING loans
-        List<LoanApplication> repayingLoans = loanRepository.findByStatus(LoanStatus.REPAYING);
-
-        // 7.6: Filter out loans disbursed in the same month as the processing month
-        List<LoanApplication> eligibleLoans = new ArrayList<>();
-        for (LoanApplication loan : repayingLoans) {
-            if (loan.getDisbursedAt() == null) {
-                eligibleLoans.add(loan);
-                continue;
-            }
-            YearMonth disbursedMonth = YearMonth.from(loan.getDisbursedAt().atZone(ZoneId.of("UTC")));
-            if (disbursedMonth.equals(targetMonth)) {
-                log.info("Skipping loan {} - disbursed in target month {}", loan.getId(), targetMonth);
-                warnings.add("Loan " + loan.getId() + " skipped: disbursed in same month " + targetMonth);
-                continue;
-            }
-
-            // 7.3: New-loan threshold day - skip loans disbursed in the previous month after the threshold
-            int thresholdDay = getConfigInt("loan.batch.new_loan_threshold_day", 15);
-            YearMonth previousMonth = targetMonth.minusMonths(1);
-            if (disbursedMonth.equals(previousMonth)) {
-                int disbursedDay = loan.getDisbursedAt().atZone(ZoneId.of("UTC")).getDayOfMonth();
-                if (disbursedDay >= thresholdDay) {
-                    log.info("Skipping loan {} - disbursed on day {} of {}, after threshold day {}",
-                            loan.getId(), disbursedDay, previousMonth, thresholdDay);
-                    warnings.add("Loan " + loan.getId() + " skipped: disbursed after threshold day " + thresholdDay);
-                    continue;
-                }
-            }
-
-            eligibleLoans.add(loan);
-        }
-
-        // Accrue monthly interest on eligible loans
-        int interestAccruedCount = 0;
-        BigDecimal totalInterestAccrued = BigDecimal.ZERO;
-        LocalDate accrualDate = targetMonth.atDay(1);
-
-        for (LoanApplication loan : eligibleLoans) {
-            try {
-                BigDecimal accrued = accrueMonthlyInterest(loan, accrualDate);
-                if (accrued.compareTo(BigDecimal.ZERO) > 0) {
-                    interestAccruedCount++;
-                    totalInterestAccrued = totalInterestAccrued.add(accrued);
-                }
-            } catch (Exception e) {
-                log.error("Error accruing interest for loan {}: {}", loan.getId(), e.getMessage(), e);
-                warnings.add("Error accruing interest for loan " + loan.getId() + ": " + e.getMessage());
-            }
-        }
-
-        // Process overdue detection, penalty application, and status updates
         int processedCount = 0;
         int penalizedCount = 0;
         int closedCount = 0;
-        LocalDate today = LocalDate.now();
+        int interestAccruedCount = 0;
+        BigDecimal totalInterestAccrued = BigDecimal.ZERO;
 
-        int gracePeriodDays = getConfigInt("loan.penalty.grace_period_days", 30);
-        int defaultThresholdDays = getConfigInt("loan.penalty.default_threshold_days", 90);
-        Optional<PenaltyRule> penaltyRuleOpt = configService.getActivePenaltyRuleByType(
-                PenaltyRule.PenaltyType.LOAN_DEFAULT);
+        try {
+            JobExecution jobExecution = jobLauncher.run(loanProcessingJob,
+                    new JobParametersBuilder()
+                            .addString("targetDate", targetDate.toString())
+                            .addLong("time", System.currentTimeMillis())
+                            .toJobParameters());
 
-        for (LoanApplication loan : eligibleLoans) {
-            try {
-                PenaltyProcessingResult penaltyResult = processPenaltiesAndStatus(
-                        loan, today, gracePeriodDays, defaultThresholdDays, penaltyRuleOpt);
-
-                if (penaltyResult.penalized) {
-                    penalizedCount++;
+            for (StepExecution stepExecution : jobExecution.getStepExecutions()) {
+                processedCount += stepExecution.getWriteCount();
+                penalizedCount += stepExecution.getExecutionContext().getInt("penalizedCount", 0);
+                closedCount += stepExecution.getExecutionContext().getInt("closedCount", 0);
+                interestAccruedCount += stepExecution.getExecutionContext().getInt("interestAccruedCount", 0);
+                String interestStr = (String) stepExecution.getExecutionContext().get("totalInterestAccrued");
+                if (interestStr != null && !interestStr.isBlank()) {
+                    totalInterestAccrued = totalInterestAccrued.add(new BigDecimal(interestStr));
                 }
-                if (penaltyResult.closed) {
-                    closedCount++;
-                }
-
-                processedCount++;
-            } catch (Exception e) {
-                log.error("Error processing loan {}: {}", loan.getId(), e.getMessage(), e);
-                warnings.add("Error processing loan " + loan.getId() + ": " + e.getMessage());
             }
+
+            if (jobExecution.getStatus() == org.springframework.batch.core.BatchStatus.FAILED) {
+                warnings.add("Spring Batch Job recorded failure status.");
+            }
+        } catch (Exception e) {
+            log.error("Failed to launch or execute Spring Batch job", e);
+            throw new RuntimeException("Batch job execution failed", e);
         }
 
         // Store warnings summary in batch log
@@ -263,7 +206,7 @@ public class LoanBatchServiceImpl implements LoanBatchService {
                 .message(String.format("Processed %d loans, penalized %d, closed %d, interest accrued on %d loans (total: %s)",
                         processedCount, penalizedCount, closedCount, interestAccruedCount, totalInterestAccrued))
                 .warnings(warnings)
-                .processingMonth(targetMonth.toString())
+                .processingDate(targetDate.toString())
                 .build();
     }
 
@@ -322,8 +265,8 @@ public class LoanBatchServiceImpl implements LoanBatchService {
         }
 
         LocalDate today = LocalDate.now();
-        int gracePeriod = getConfigInt("loan.penalty.grace_period_days", 30);
-        int defaultThreshold = getConfigInt("loan.penalty.default_threshold_days", 90);
+        int gracePeriod = getConfigInt("loan.penalty.grace_period_days");
+        int defaultThreshold = getConfigInt("loan.penalty.default_threshold_days");
         Optional<PenaltyRule> ruleOpt = configService.getActivePenaltyRuleByType(
                 PenaltyRule.PenaltyType.LOAN_DEFAULT);
 
@@ -418,66 +361,14 @@ public class LoanBatchServiceImpl implements LoanBatchService {
         return new PenaltyProcessingResult(loanPenalized, closed);
     }
 
-    private BigDecimal accrueMonthlyInterest(LoanApplication loan, LocalDate accrualDate) {
-        BigDecimal outstandingBalance = loan.getOutstandingBalance();
-        if (outstandingBalance.compareTo(BigDecimal.ZERO) <= 0) {
-            return BigDecimal.ZERO;
-        }
 
-        BigDecimal annualRate = loan.getInterestRate();
-        BigDecimal monthlyRate = annualRate.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP)
-                .divide(BigDecimal.valueOf(12), 6, RoundingMode.HALF_UP);
 
-        BigDecimal monthlyInterest;
-        if (loan.getInterestMethod() == InterestMethod.REDUCING_BALANCE) {
-            monthlyInterest = outstandingBalance.multiply(monthlyRate).setScale(2, RoundingMode.HALF_UP);
-        } else {
-            monthlyInterest = loan.getPrincipalAmount().multiply(monthlyRate).setScale(2, RoundingMode.HALF_UP);
-        }
-
-        if (monthlyInterest.compareTo(BigDecimal.ZERO) <= 0) {
-            return BigDecimal.ZERO;
-        }
-
-        BigDecimal newTotalAccrued = loan.getTotalInterestAccrued().add(monthlyInterest);
-        loan.setTotalInterestAccrued(newTotalAccrued);
-        loanRepository.save(loan);
-
-        LoanInterestHistory history = new LoanInterestHistory();
-        history.setLoanId(loan.getId());
-        history.setMemberId(loan.getMemberId());
-        history.setAccrualDate(accrualDate);
-        history.setInterestAmount(monthlyInterest);
-        history.setOutstandingBalanceSnapshot(outstandingBalance);
-        history.setCumulativeInterestAccrued(newTotalAccrued);
-        history.setInterestRate(annualRate);
-        history.setEventType(InterestEventType.MONTHLY_ACCRUAL);
-        history.setDescription(String.format("Monthly interest accrual: %s on balance %s at %s%% p.a.",
-                monthlyInterest, outstandingBalance, annualRate));
-        interestHistoryRepository.save(history);
-
-        outboxWriter.write(new LoanInterestAccrualEvent(
-                loan.getId(),
-                loan.getMemberId(),
-                monthlyInterest,
-                outstandingBalance,
-                accrualDate,
-                UUID.randomUUID(),
-                "SYSTEM"
-        ), "LoanApplication", loan.getId());
-
-        log.info("Accrued interest {} for loan {} (balance: {}, method: {})",
-                monthlyInterest, loan.getId(), outstandingBalance, loan.getInterestMethod());
-
-        return monthlyInterest;
-    }
-
-    private YearMonth determineNextMonth() {
-        String lastProcessedStr = getConfigValue("loan.batch.last_processed_month");
+    private LocalDate determineNextDate() {
+        String lastProcessedStr = getConfigValue("loan.batch.last_processed_date");
         if (lastProcessedStr == null || lastProcessedStr.isBlank()) {
             return null;
         }
-        return YearMonth.parse(lastProcessedStr).plusMonths(1);
+        return LocalDate.parse(lastProcessedStr).plusDays(1);
     }
 
     private String getConfigValue(String key) {
@@ -490,16 +381,7 @@ public class LoanBatchServiceImpl implements LoanBatchService {
         }
     }
 
-    private int getConfigInt(String key, int defaultValue) {
-        String value = getConfigValue(key);
-        if (value == null || value.isBlank()) {
-            return defaultValue;
-        }
-        try {
-            return Integer.parseInt(value);
-        } catch (NumberFormatException e) {
-            log.warn("Invalid integer for config key '{}': {}, using default {}", key, value, defaultValue);
-            return defaultValue;
-        }
+    private int getConfigInt(String key) {
+        return policyConfigResolver.requireIntAtLeast(key, 0);
     }
 }

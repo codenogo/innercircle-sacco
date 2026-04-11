@@ -5,7 +5,15 @@ interface JwtClaims {
   authorities?: unknown
 }
 
-const KNOWN_ROLES: UserRole[] = ['ADMIN', 'TREASURER', 'SECRETARY', 'MEMBER']
+const KNOWN_ROLES: UserRole[] = [
+  'ADMIN',
+  'TREASURER',
+  'VICE_TREASURER',
+  'SECRETARY',
+  'CHAIRPERSON',
+  'VICE_CHAIRPERSON',
+  'MEMBER',
+]
 
 export function validatePasswordConfirmation(password: string, confirmPassword: string): string | null {
   if (!password || !confirmPassword) return null

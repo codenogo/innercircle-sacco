@@ -1,4 +1,6 @@
 import { DataTable, type ColumnDef } from '../components/DataTable'
+import { ActionMenu } from '../components/ActionMenu'
+import { Breadcrumb } from '../components/Breadcrumb'
 import './Operations.css'
 
 type OpsStatus = 'PENDING' | 'APPROVED' | 'PROCESSING' | 'RECONCILE' | 'SIGNED_OFF'
@@ -35,13 +37,20 @@ const columns: ColumnDef<PayoutOpsRow>[] = [
   { key: 'amount', header: 'Amount (KES)', headerClassName: 'ledger-table-amount', className: 'amount ledger-table-amount', render: row => fmt(row.amount) },
   { key: 'status', header: 'Status', render: row => <span className={`badge ${statusClass[row.status]}`}>{row.status}</span> },
   {
-    key: 'actions', header: 'Actions', render: () => (
-      <div className="ops-inline-actions">
-        <button type="button" className="btn btn--secondary btn--small" disabled>Approve</button>
-        <button type="button" className="btn btn--secondary btn--small" disabled>Process</button>
-        <button type="button" className="btn btn--secondary btn--small" disabled>Reconcile</button>
-        <button type="button" className="btn btn--secondary btn--small" disabled>Signoff</button>
-      </div>
+    key: 'actions',
+    header: '',
+    width: '52px',
+    headerClassName: 'datatable-col-actions',
+    className: 'datatable-col-actions',
+    render: () => (
+      <ActionMenu
+        actions={[
+          { label: 'Approve', onClick: () => {}, disabled: true },
+          { label: 'Process', onClick: () => {}, disabled: true },
+          { label: 'Reconcile', onClick: () => {}, disabled: true },
+          { label: 'Signoff', onClick: () => {}, disabled: true },
+        ]}
+      />
     ),
   },
 ]
@@ -49,6 +58,10 @@ const columns: ColumnDef<PayoutOpsRow>[] = [
 export function PayoutOperations() {
   return (
     <div className="ops-page">
+      <Breadcrumb items={[
+        { label: 'Operations', to: '/operations' },
+        { label: 'Payout Operations' },
+      ]} />
       <div className="page-header">
         <div>
           <h1 className="page-title">Payout Operations</h1>

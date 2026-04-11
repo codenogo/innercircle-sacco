@@ -10,7 +10,19 @@ import java.util.UUID;
 
 public interface PayoutService {
 
-    Payout createPayout(UUID memberId, BigDecimal amount, PayoutType type, String actor);
+    default Payout createPayout(UUID memberId, BigDecimal amount, PayoutType type, String actor) {
+        return createPayout(memberId, amount, type, null, null, null, actor);
+    }
+
+    Payout createPayout(
+            UUID memberId,
+            BigDecimal amount,
+            PayoutType type,
+            String sourceType,
+            UUID sourceId,
+            Integer installmentNumber,
+            String actor
+    );
 
     Payout approvePayout(UUID payoutId, String actor, String overrideReason, boolean isAdmin);
 

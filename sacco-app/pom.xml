@@ -41,6 +41,10 @@
         </dependency>
         <dependency>
             <groupId>com.innercircle</groupId>
+            <artifactId>sacco-investment</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.innercircle</groupId>
             <artifactId>sacco-ledger</artifactId>
         </dependency>
         <dependency>

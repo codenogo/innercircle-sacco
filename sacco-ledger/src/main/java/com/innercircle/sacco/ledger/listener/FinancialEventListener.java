@@ -3,6 +3,10 @@ package com.innercircle.sacco.ledger.listener;
 import com.innercircle.sacco.common.event.BenefitsDistributedEvent;
 import com.innercircle.sacco.common.event.ContributionReceivedEvent;
 import com.innercircle.sacco.common.event.ContributionReversedEvent;
+import com.innercircle.sacco.common.event.ExitFeeAppliedEvent;
+import com.innercircle.sacco.common.event.InvestmentActivatedEvent;
+import com.innercircle.sacco.common.event.InvestmentDisposedEvent;
+import com.innercircle.sacco.common.event.InvestmentIncomeRecordedEvent;
 import com.innercircle.sacco.common.event.LoanDisbursedEvent;
 import com.innercircle.sacco.common.event.LoanInterestAccrualEvent;
 import com.innercircle.sacco.common.event.LoanRepaymentEvent;
@@ -38,6 +42,7 @@ public class FinancialEventListener {
     // Standard account codes
     private static final String ACCOUNT_CASH = "1001";
     private static final String ACCOUNT_MEMBER_SHARES = "2001";
+    private static final String ACCOUNT_WELFARE_FUND_LIABILITY = "2003";
     private static final String ACCOUNT_LOAN_RECEIVABLE = "1002";
     private static final String ACCOUNT_INTEREST_INCOME = "4001";
     private static final String ACCOUNT_CONTRIBUTION_INCOME = "4002";
@@ -46,8 +51,11 @@ public class FinancialEventListener {
     private static final String ACCOUNT_MEMBER_ACCOUNT = "2002";
     private static final String ACCOUNT_BAD_DEBT_EXPENSE = "5003";
     private static final String ACCOUNT_PETTY_CASH_FLOAT = "1004";
+    private static final String ACCOUNT_INVESTMENTS = "1005";
     private static final String ACCOUNT_OPERATING_EXPENSE = "5001";
     private static final String ACCOUNT_ADMIN_EXPENSE = "5002";
+    private static final String ACCOUNT_INVESTMENT_INCOME = "4004";
+    private static final String ACCOUNT_EXIT_FEE_INCOME = "4005";
 
     @EventListener
     public void handleContributionReceived(ContributionReceivedEvent event) {
@@ -74,9 +82,21 @@ public class FinancialEventListener {
         JournalLine creditLine = new JournalLine();
         creditLine.setAccount(memberSharesAccount);
         creditLine.setDebitAmount(BigDecimal.ZERO);
-        creditLine.setCreditAmount(event.amount());
+        creditLine.setCreditAmount(event.contributionAmount());
         creditLine.setDescription("Member shares - " + event.referenceNumber());
         entry.addJournalLine(creditLine);
+
+        if (event.welfareAmount().compareTo(BigDecimal.ZERO) > 0) {
+            Account welfareFundLiability = getAccountByCode(ACCOUNT_WELFARE_FUND_LIABILITY);
+
+            // CR Welfare Fund Liability
+            JournalLine welfareCreditLine = new JournalLine();
+            welfareCreditLine.setAccount(welfareFundLiability);
+            welfareCreditLine.setDebitAmount(BigDecimal.ZERO);
+            welfareCreditLine.setCreditAmount(event.welfareAmount());
+            welfareCreditLine.setDescription("Welfare fund allocation - " + event.referenceNumber());
+            entry.addJournalLine(welfareCreditLine);
+        }
 
         JournalEntry created = ledgerService.createJournalEntry(entry);
         ledgerService.postEntry(created.getId());
@@ -174,8 +194,8 @@ public class FinancialEventListener {
     public void handlePayoutProcessed(PayoutProcessedEvent event) {
         log.info("Posting payout to ledger: {}", event.payoutId());
 
-        Account memberSharesAccount = getAccountByCode(ACCOUNT_MEMBER_SHARES);
         Account cashAccount = getAccountByCode(ACCOUNT_CASH);
+        Account debitAccount = resolvePayoutDebitAccount(event.payoutType());
 
         JournalEntry entry = new JournalEntry();
         entry.setTransactionDate(LocalDate.now());
@@ -183,9 +203,9 @@ public class FinancialEventListener {
         entry.setTransactionType(TransactionType.PAYOUT);
         entry.setReferenceId(event.payoutId());
 
-        // DR Member Shares
+        // DR payout source liability
         JournalLine debitLine = new JournalLine();
-        debitLine.setAccount(memberSharesAccount);
+        debitLine.setAccount(debitAccount);
         debitLine.setDebitAmount(event.amount());
         debitLine.setCreditAmount(BigDecimal.ZERO);
         debitLine.setDescription("Payout - " + event.payoutType() + " - ID: " + event.payoutId());
@@ -201,6 +221,140 @@ public class FinancialEventListener {
 
         JournalEntry created = ledgerService.createJournalEntry(entry);
         ledgerService.postEntry(created.getId());
+    }
+
+    private Account resolvePayoutDebitAccount(String payoutTypeRaw) {
+        String payoutType = payoutTypeRaw == null ? "" : payoutTypeRaw.trim().toUpperCase(Locale.ROOT);
+        return switch (payoutType) {
+            case "WELFARE_BENEFIT" -> getAccountByCode(ACCOUNT_WELFARE_FUND_LIABILITY);
+            case "EXIT_SETTLEMENT", "DIVIDEND", "MERRY_GO_ROUND", "AD_HOC", "" -> getAccountByCode(ACCOUNT_MEMBER_SHARES);
+            default -> getAccountByCode(ACCOUNT_MEMBER_SHARES);
+        };
+    }
+
+    @EventListener
+    public void handleInvestmentActivated(InvestmentActivatedEvent event) {
+        log.info("Posting investment activation to ledger: {}", event.investmentId());
+
+        Account investmentAccount = getAccountByCode(ACCOUNT_INVESTMENTS);
+        Account cashAccount = getAccountByCode(ACCOUNT_CASH);
+
+        JournalEntry entry = new JournalEntry();
+        entry.setTransactionDate(LocalDate.now());
+        entry.setDescription("Investment activated - " + event.referenceNumber());
+        entry.setTransactionType(TransactionType.INVESTMENT_PURCHASE);
+        entry.setReferenceId(event.investmentId());
+
+        // DR Investments
+        JournalLine debitInvestment = new JournalLine();
+        debitInvestment.setAccount(investmentAccount);
+        debitInvestment.setDebitAmount(event.amount());
+        debitInvestment.setCreditAmount(BigDecimal.ZERO);
+        debitInvestment.setDescription("Investment asset recorded - " + event.referenceNumber());
+        entry.addJournalLine(debitInvestment);
+
+        // CR Cash
+        JournalLine creditCash = new JournalLine();
+        creditCash.setAccount(cashAccount);
+        creditCash.setDebitAmount(BigDecimal.ZERO);
+        creditCash.setCreditAmount(event.amount());
+        creditCash.setDescription("Cash deployed to investment - " + event.referenceNumber());
+        entry.addJournalLine(creditCash);
+
+        JournalEntry created = ledgerService.createJournalEntry(entry);
+        ledgerService.postEntry(created.getId());
+    }
+
+    @EventListener
+    public void handleInvestmentIncomeRecorded(InvestmentIncomeRecordedEvent event) {
+        log.info("Posting investment income to ledger: {}", event.incomeId());
+
+        Account cashAccount = getAccountByCode(ACCOUNT_CASH);
+        Account investmentIncomeAccount = getAccountByCode(ACCOUNT_INVESTMENT_INCOME);
+
+        JournalEntry entry = new JournalEntry();
+        entry.setTransactionDate(LocalDate.now());
+        entry.setDescription("Investment income received - " + event.incomeType());
+        entry.setTransactionType(TransactionType.INVESTMENT_INCOME);
+        entry.setReferenceId(event.incomeId());
+
+        // DR Cash
+        JournalLine debitCash = new JournalLine();
+        debitCash.setAccount(cashAccount);
+        debitCash.setDebitAmount(event.amount());
+        debitCash.setCreditAmount(BigDecimal.ZERO);
+        debitCash.setDescription("Investment income received - " + event.referenceNumber());
+        entry.addJournalLine(debitCash);
+
+        // CR Investment Income
+        JournalLine creditIncome = new JournalLine();
+        creditIncome.setAccount(investmentIncomeAccount);
+        creditIncome.setDebitAmount(BigDecimal.ZERO);
+        creditIncome.setCreditAmount(event.amount());
+        creditIncome.setDescription("Investment income recognized - " + event.incomeType());
+        entry.addJournalLine(creditIncome);
+
+        JournalEntry created = ledgerService.createJournalEntry(entry);
+        ledgerService.postEntry(created.getId());
+    }
+
+    @EventListener
+    public void handleInvestmentDisposed(InvestmentDisposedEvent event) {
+        log.info("Posting investment disposal to ledger: {}", event.investmentId());
+
+        Account cashAccount = getAccountByCode(ACCOUNT_CASH);
+        Account investmentAccount = getAccountByCode(ACCOUNT_INVESTMENTS);
+        Account expenseAccount = getAccountByCode(ACCOUNT_OPERATING_EXPENSE);
+
+        BigDecimal proceeds = event.proceedsAmount();
+        BigDecimal fees = event.fees() != null ? event.fees() : BigDecimal.ZERO;
+
+        JournalEntry entry = new JournalEntry();
+        entry.setTransactionDate(LocalDate.now());
+        entry.setDescription("Investment disposed - " + event.disposalType());
+        entry.setTransactionType(TransactionType.INVESTMENT_DISPOSAL);
+        entry.setReferenceId(event.investmentId());
+
+        if (proceeds.compareTo(BigDecimal.ZERO) > 0) {
+            // DR Cash
+            JournalLine debitCash = new JournalLine();
+            debitCash.setAccount(cashAccount);
+            debitCash.setDebitAmount(proceeds);
+            debitCash.setCreditAmount(BigDecimal.ZERO);
+            debitCash.setDescription("Investment proceeds received - " + event.referenceNumber());
+            entry.addJournalLine(debitCash);
+
+            // CR Investments
+            JournalLine creditInvestment = new JournalLine();
+            creditInvestment.setAccount(investmentAccount);
+            creditInvestment.setDebitAmount(BigDecimal.ZERO);
+            creditInvestment.setCreditAmount(proceeds);
+            creditInvestment.setDescription("Investment asset derecognized - " + event.referenceNumber());
+            entry.addJournalLine(creditInvestment);
+        }
+
+        if (fees.compareTo(BigDecimal.ZERO) > 0) {
+            // DR Expense
+            JournalLine debitExpense = new JournalLine();
+            debitExpense.setAccount(expenseAccount);
+            debitExpense.setDebitAmount(fees);
+            debitExpense.setCreditAmount(BigDecimal.ZERO);
+            debitExpense.setDescription("Investment disposal fees - " + event.referenceNumber());
+            entry.addJournalLine(debitExpense);
+
+            // CR Cash
+            JournalLine creditCash = new JournalLine();
+            creditCash.setAccount(cashAccount);
+            creditCash.setDebitAmount(BigDecimal.ZERO);
+            creditCash.setCreditAmount(fees);
+            creditCash.setDescription("Cash paid for disposal fees - " + event.referenceNumber());
+            entry.addJournalLine(creditCash);
+        }
+
+        if (!entry.getJournalLines().isEmpty()) {
+            JournalEntry created = ledgerService.createJournalEntry(entry);
+            ledgerService.postEntry(created.getId());
+        }
     }
 
     @EventListener
@@ -340,10 +494,22 @@ public class FinancialEventListener {
         // DR Member Shares
         JournalLine debitLine = new JournalLine();
         debitLine.setAccount(memberSharesAccount);
-        debitLine.setDebitAmount(event.amount());
+        debitLine.setDebitAmount(event.contributionAmount());
         debitLine.setCreditAmount(BigDecimal.ZERO);
         debitLine.setDescription("Member shares reversed - " + event.referenceNumber());
         entry.addJournalLine(debitLine);
+
+        if (event.welfareAmount().compareTo(BigDecimal.ZERO) > 0) {
+            Account welfareFundLiability = getAccountByCode(ACCOUNT_WELFARE_FUND_LIABILITY);
+
+            // DR Welfare Fund Liability
+            JournalLine welfareDebitLine = new JournalLine();
+            welfareDebitLine.setAccount(welfareFundLiability);
+            welfareDebitLine.setDebitAmount(event.welfareAmount());
+            welfareDebitLine.setCreditAmount(BigDecimal.ZERO);
+            welfareDebitLine.setDescription("Welfare fund reversal - " + event.referenceNumber());
+            entry.addJournalLine(welfareDebitLine);
+        }
 
         // CR Cash
         JournalLine creditLine = new JournalLine();
@@ -489,6 +655,39 @@ public class FinancialEventListener {
             JournalEntry created = ledgerService.createJournalEntry(entry);
             ledgerService.postEntry(created.getId());
         }
+    }
+
+    @EventListener
+    public void handleExitFeeApplied(ExitFeeAppliedEvent event) {
+        log.info("Posting exit fee to ledger: {}", event.exitRequestId());
+
+        Account memberSharesAccount = getAccountByCode(ACCOUNT_MEMBER_SHARES);
+        Account exitFeeIncomeAccount = getAccountByCode(ACCOUNT_EXIT_FEE_INCOME);
+
+        JournalEntry entry = new JournalEntry();
+        entry.setTransactionDate(LocalDate.now());
+        entry.setDescription("Member exit fee applied");
+        entry.setTransactionType(TransactionType.EXIT_FEE);
+        entry.setReferenceId(event.exitRequestId());
+
+        // DR Member Shares liability
+        JournalLine debitLine = new JournalLine();
+        debitLine.setAccount(memberSharesAccount);
+        debitLine.setDebitAmount(event.amount());
+        debitLine.setCreditAmount(BigDecimal.ZERO);
+        debitLine.setDescription("Exit fee deduction from member shares");
+        entry.addJournalLine(debitLine);
+
+        // CR Exit Fee Income
+        JournalLine creditLine = new JournalLine();
+        creditLine.setAccount(exitFeeIncomeAccount);
+        creditLine.setDebitAmount(BigDecimal.ZERO);
+        creditLine.setCreditAmount(event.amount());
+        creditLine.setDescription("Exit fee income recognized");
+        entry.addJournalLine(creditLine);
+
+        JournalEntry created = ledgerService.createJournalEntry(entry);
+        ledgerService.postEntry(created.getId());
     }
 
     private Account getAccountByCode(String accountCode) {

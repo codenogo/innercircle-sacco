@@ -31,7 +31,7 @@ class BatchProcessingLogRepositoryTest {
     void setUp() {
         logId = UUID.randomUUID();
         sampleLog = BatchProcessingLog.builder()
-                .processingMonth("2026-02")
+                .processingDate("2026-02-15")
                 .status(BatchProcessingStatus.COMPLETED)
                 .loansProcessed(150)
                 .interestAccrued(new BigDecimal("5000.50"))
@@ -46,111 +46,111 @@ class BatchProcessingLogRepositoryTest {
     }
 
     @Nested
-    @DisplayName("findByProcessingMonth()")
-    class FindByProcessingMonth {
+    @DisplayName("findByProcessingDate()")
+    class FindByProcessingDate {
 
         @Test
-        @DisplayName("should return BatchProcessingLog when processing month exists")
-        void shouldReturnLogWhenProcessingMonthExists() {
-            String processingMonth = "2026-02";
-            when(repository.findByProcessingMonth(processingMonth))
+        @DisplayName("should return BatchProcessingLog when processing date exists")
+        void shouldReturnLogWhenProcessingDateExists() {
+            String processingDate = "2026-02-15";
+            when(repository.findByProcessingDate(processingDate))
                     .thenReturn(Optional.of(sampleLog));
 
-            Optional<BatchProcessingLog> result = repository.findByProcessingMonth(processingMonth);
+            Optional<BatchProcessingLog> result = repository.findByProcessingDate(processingDate);
 
             assertThat(result).isPresent();
             assertThat(result.get()).isEqualTo(sampleLog);
-            assertThat(result.get().getProcessingMonth()).isEqualTo(processingMonth);
+            assertThat(result.get().getProcessingDate()).isEqualTo(processingDate);
             assertThat(result.get().getStatus()).isEqualTo(BatchProcessingStatus.COMPLETED);
         }
 
         @Test
-        @DisplayName("should return empty Optional when processing month does not exist")
-        void shouldReturnEmptyWhenProcessingMonthDoesNotExist() {
-            String processingMonth = "2025-12";
-            when(repository.findByProcessingMonth(processingMonth))
+        @DisplayName("should return empty Optional when processing date does not exist")
+        void shouldReturnEmptyWhenProcessingDateDoesNotExist() {
+            String processingDate = "2025-12-01";
+            when(repository.findByProcessingDate(processingDate))
                     .thenReturn(Optional.empty());
 
-            Optional<BatchProcessingLog> result = repository.findByProcessingMonth(processingMonth);
+            Optional<BatchProcessingLog> result = repository.findByProcessingDate(processingDate);
 
             assertThat(result).isEmpty();
         }
 
         @Test
-        @DisplayName("should return correct log for different processing months")
+        @DisplayName("should return correct log for different dates")
         void shouldReturnCorrectLogForDifferentMonths() {
             BatchProcessingLog januaryLog = BatchProcessingLog.builder()
-                    .processingMonth("2026-01")
+                    .processingDate("2026-01-15")
                     .status(BatchProcessingStatus.COMPLETED)
                     .startedAt(Instant.now())
                     .build();
 
-            when(repository.findByProcessingMonth("2026-01"))
+            when(repository.findByProcessingDate("2026-01-15"))
                     .thenReturn(Optional.of(januaryLog));
-            when(repository.findByProcessingMonth("2026-02"))
+            when(repository.findByProcessingDate("2026-02-15"))
                     .thenReturn(Optional.of(sampleLog));
 
-            Optional<BatchProcessingLog> janResult = repository.findByProcessingMonth("2026-01");
-            Optional<BatchProcessingLog> febResult = repository.findByProcessingMonth("2026-02");
+            Optional<BatchProcessingLog> janResult = repository.findByProcessingDate("2026-01-15");
+            Optional<BatchProcessingLog> febResult = repository.findByProcessingDate("2026-02-15");
 
             assertThat(janResult).isPresent();
-            assertThat(janResult.get().getProcessingMonth()).isEqualTo("2026-01");
+            assertThat(janResult.get().getProcessingDate()).isEqualTo("2026-01-15");
             assertThat(febResult).isPresent();
-            assertThat(febResult.get().getProcessingMonth()).isEqualTo("2026-02");
+            assertThat(febResult.get().getProcessingDate()).isEqualTo("2026-02-15");
         }
     }
 
     @Nested
-    @DisplayName("existsByProcessingMonth()")
-    class ExistsByProcessingMonth {
+    @DisplayName("existsByProcessingDate()")
+    class ExistsByProcessingDate {
 
         @Test
-        @DisplayName("should return true when processing month exists")
-        void shouldReturnTrueWhenProcessingMonthExists() {
-            String processingMonth = "2026-02";
-            when(repository.existsByProcessingMonth(processingMonth))
+        @DisplayName("should return true when processing date exists")
+        void shouldReturnTrueWhenProcessingDateExists() {
+            String processingDate = "2026-02-15";
+            when(repository.existsByProcessingDate(processingDate))
                     .thenReturn(true);
 
-            boolean result = repository.existsByProcessingMonth(processingMonth);
+            boolean result = repository.existsByProcessingDate(processingDate);
 
             assertThat(result).isTrue();
         }
 
         @Test
-        @DisplayName("should return false when processing month does not exist")
-        void shouldReturnFalseWhenProcessingMonthDoesNotExist() {
-            String processingMonth = "2025-11";
-            when(repository.existsByProcessingMonth(processingMonth))
+        @DisplayName("should return false when processing date does not exist")
+        void shouldReturnFalseWhenProcessingDateDoesNotExist() {
+            String processingDate = "2025-11-01";
+            when(repository.existsByProcessingDate(processingDate))
                     .thenReturn(false);
 
-            boolean result = repository.existsByProcessingMonth(processingMonth);
+            boolean result = repository.existsByProcessingDate(processingDate);
 
             assertThat(result).isFalse();
         }
 
         @Test
-        @DisplayName("should handle different month formats correctly")
+        @DisplayName("should handle different date formats correctly")
         void shouldHandleDifferentMonthFormats() {
-            when(repository.existsByProcessingMonth("2026-01")).thenReturn(true);
-            when(repository.existsByProcessingMonth("2026-12")).thenReturn(false);
+            when(repository.existsByProcessingDate("2026-01-15")).thenReturn(true);
+            when(repository.existsByProcessingDate("2026-12-01")).thenReturn(false);
 
-            assertThat(repository.existsByProcessingMonth("2026-01")).isTrue();
-            assertThat(repository.existsByProcessingMonth("2026-12")).isFalse();
+            assertThat(repository.existsByProcessingDate("2026-01-15")).isTrue();
+            assertThat(repository.existsByProcessingDate("2026-12-01")).isFalse();
         }
     }
 
     @Nested
-    @DisplayName("findTopByStatusOrderByProcessingMonthDesc()")
-    class FindTopByStatusOrderByProcessingMonthDesc {
+    @DisplayName("findTopByStatusOrderByProcessingDateDesc()")
+    class FindTopByStatusOrderByProcessingDateDesc {
 
         @Test
         @DisplayName("should return latest completed batch processing log")
         void shouldReturnLatestCompletedLog() {
-            when(repository.findTopByStatusOrderByProcessingMonthDesc(BatchProcessingStatus.COMPLETED))
+            when(repository.findTopByStatusOrderByProcessingDateDesc(BatchProcessingStatus.COMPLETED))
                     .thenReturn(Optional.of(sampleLog));
 
             Optional<BatchProcessingLog> result = repository
-                    .findTopByStatusOrderByProcessingMonthDesc(BatchProcessingStatus.COMPLETED);
+                    .findTopByStatusOrderByProcessingDateDesc(BatchProcessingStatus.COMPLETED);
 
             assertThat(result).isPresent();
             assertThat(result.get()).isEqualTo(sampleLog);
@@ -161,36 +161,36 @@ class BatchProcessingLogRepositoryTest {
         @DisplayName("should return latest failed batch processing log")
         void shouldReturnLatestFailedLog() {
             BatchProcessingLog failedLog = BatchProcessingLog.builder()
-                    .processingMonth("2026-01")
+                    .processingDate("2026-01-15")
                     .status(BatchProcessingStatus.FAILED)
                     .startedAt(Instant.now())
                     .build();
 
-            when(repository.findTopByStatusOrderByProcessingMonthDesc(BatchProcessingStatus.FAILED))
+            when(repository.findTopByStatusOrderByProcessingDateDesc(BatchProcessingStatus.FAILED))
                     .thenReturn(Optional.of(failedLog));
 
             Optional<BatchProcessingLog> result = repository
-                    .findTopByStatusOrderByProcessingMonthDesc(BatchProcessingStatus.FAILED);
+                    .findTopByStatusOrderByProcessingDateDesc(BatchProcessingStatus.FAILED);
 
             assertThat(result).isPresent();
             assertThat(result.get().getStatus()).isEqualTo(BatchProcessingStatus.FAILED);
-            assertThat(result.get().getProcessingMonth()).isEqualTo("2026-01");
+            assertThat(result.get().getProcessingDate()).isEqualTo("2026-01-15");
         }
 
         @Test
         @DisplayName("should return latest started batch processing log")
         void shouldReturnLatestStartedLog() {
             BatchProcessingLog startedLog = BatchProcessingLog.builder()
-                    .processingMonth("2026-02")
+                    .processingDate("2026-02-15")
                     .status(BatchProcessingStatus.STARTED)
                     .startedAt(Instant.now())
                     .build();
 
-            when(repository.findTopByStatusOrderByProcessingMonthDesc(BatchProcessingStatus.STARTED))
+            when(repository.findTopByStatusOrderByProcessingDateDesc(BatchProcessingStatus.STARTED))
                     .thenReturn(Optional.of(startedLog));
 
             Optional<BatchProcessingLog> result = repository
-                    .findTopByStatusOrderByProcessingMonthDesc(BatchProcessingStatus.STARTED);
+                    .findTopByStatusOrderByProcessingDateDesc(BatchProcessingStatus.STARTED);
 
             assertThat(result).isPresent();
             assertThat(result.get().getStatus()).isEqualTo(BatchProcessingStatus.STARTED);
@@ -199,11 +199,11 @@ class BatchProcessingLogRepositoryTest {
         @Test
         @DisplayName("should return empty Optional when no logs with given status exist")
         void shouldReturnEmptyWhenNoLogsWithStatusExist() {
-            when(repository.findTopByStatusOrderByProcessingMonthDesc(BatchProcessingStatus.STARTED))
+            when(repository.findTopByStatusOrderByProcessingDateDesc(BatchProcessingStatus.STARTED))
                     .thenReturn(Optional.empty());
 
             Optional<BatchProcessingLog> result = repository
-                    .findTopByStatusOrderByProcessingMonthDesc(BatchProcessingStatus.STARTED);
+                    .findTopByStatusOrderByProcessingDateDesc(BatchProcessingStatus.STARTED);
 
             assertThat(result).isEmpty();
         }
@@ -212,19 +212,19 @@ class BatchProcessingLogRepositoryTest {
         @DisplayName("should return most recent log when multiple logs with same status exist")
         void shouldReturnMostRecentLogForStatus() {
             BatchProcessingLog recentLog = BatchProcessingLog.builder()
-                    .processingMonth("2026-03")
+                    .processingDate("2026-03-15")
                     .status(BatchProcessingStatus.COMPLETED)
                     .startedAt(Instant.parse("2026-03-15T08:00:00Z"))
                     .build();
 
-            when(repository.findTopByStatusOrderByProcessingMonthDesc(BatchProcessingStatus.COMPLETED))
+            when(repository.findTopByStatusOrderByProcessingDateDesc(BatchProcessingStatus.COMPLETED))
                     .thenReturn(Optional.of(recentLog));
 
             Optional<BatchProcessingLog> result = repository
-                    .findTopByStatusOrderByProcessingMonthDesc(BatchProcessingStatus.COMPLETED);
+                    .findTopByStatusOrderByProcessingDateDesc(BatchProcessingStatus.COMPLETED);
 
             assertThat(result).isPresent();
-            assertThat(result.get().getProcessingMonth()).isEqualTo("2026-03");
+            assertThat(result.get().getProcessingDate()).isEqualTo("2026-03-15");
         }
     }
 }

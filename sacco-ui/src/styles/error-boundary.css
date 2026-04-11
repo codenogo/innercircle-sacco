@@ -1,0 +1,55 @@
+/* ─── ErrorBoundary — graceful crash fallback ─── */
+
+.error-boundary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  padding: var(--space-6);
+}
+
+.error-boundary-card {
+  text-align: center;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.error-boundary-icon {
+  color: var(--deficit);
+}
+
+.error-boundary-title {
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0;
+}
+
+.error-boundary-message {
+  font-size: var(--text-sm);
+  color: var(--ink-secondary);
+  margin: 0;
+  line-height: var(--leading-normal);
+}
+
+.error-boundary-detail {
+  width: 100%;
+  padding: var(--space-3);
+  background: var(--paper-inset);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-data);
+  font-size: var(--text-xs);
+  color: var(--deficit);
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  max-height: 120px;
+  overflow-y: auto;
+}
+

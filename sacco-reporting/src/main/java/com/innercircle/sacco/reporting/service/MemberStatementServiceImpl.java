@@ -146,10 +146,10 @@ public class MemberStatementServiceImpl implements MemberStatementService {
 
     private List<MemberStatementEntry> fetchPenalties(UUID memberId, LocalDate from, LocalDate to) {
         return jdbc.query(
-                "SELECT id, amount, applied_date FROM contribution_penalties " +
-                        "WHERE member_id = ? AND applied_date BETWEEN ? AND ?",
+                "SELECT id, amount, created_at AS applied_date FROM contribution_penalties " +
+                        "WHERE member_id = ? AND created_at BETWEEN ? AND ?",
                 (rs, rowNum) -> {
-                    LocalDate appliedDate = rs.getObject("applied_date", LocalDate.class);
+                    LocalDate appliedDate = rs.getObject("applied_date", LocalDateTime.class).toLocalDate();
                     return new MemberStatementEntry(
                         appliedDate.atStartOfDay(),
                         "PENALTY",

@@ -1,11 +1,15 @@
 package com.innercircle.sacco.config.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.innercircle.sacco.common.model.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.CascadeType;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -15,6 +19,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "penalty_rules")
@@ -58,4 +64,9 @@ public class PenaltyRule extends BaseEntity {
 
     @Column(nullable = false)
     private boolean compounding = false;
+
+    @OneToMany(mappedBy = "rule", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @jakarta.persistence.OrderBy("sequence ASC")
+    @JsonManagedReference
+    private List<PenaltyRuleTier> tiers = new ArrayList<>();
 }

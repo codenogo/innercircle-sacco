@@ -37,7 +37,8 @@ public class ContributionCategoryController {
         ContributionCategory category = categoryService.createCategory(
                 request.getName(),
                 request.getDescription(),
-                request.isMandatory()
+                request.isMandatory(),
+                request.isWelfareEligible()
         );
         return ResponseEntity.created(URI.create("/api/v1/contribution-categories/" + category.getId()))
                 .body(ApiResponse.ok(ContributionCategoryResponse.fromEntity(category),
@@ -53,7 +54,8 @@ public class ContributionCategoryController {
                 request.getName(),
                 request.getDescription(),
                 request.isActive(),
-                request.isMandatory()
+                request.isMandatory(),
+                request.isWelfareEligible()
         );
         return ResponseEntity.ok(ApiResponse.ok(ContributionCategoryResponse.fromEntity(category),
                 "Category updated successfully"));

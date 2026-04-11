@@ -106,9 +106,117 @@
   letter-spacing: var(--tracking-wide);
 }
 
+/* ─── Fund Allocation Bar ─── */
+
+.fund-allocation-bar {
+  display: flex;
+  width: 100%;
+  height: 8px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: var(--space-2);
+}
+
+.fund-allocation-segment {
+  height: 100%;
+  min-width: 2px;
+}
+
+.fund-allocation-segment--savings { background: var(--mpesa); }
+.fund-allocation-segment--loans { background: var(--caution); }
+.fund-allocation-segment--investments { background: #5a6e96; }
+.fund-allocation-segment--balance { background: var(--paper-inset); border: 1px solid var(--rule); }
+.fund-allocation-segment--deficit { background: var(--deficit); }
+
+.fund-allocation-legend {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.fund-allocation-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+}
+
+.fund-allocation-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.fund-allocation-dot--savings { background: var(--mpesa); }
+.fund-allocation-dot--loans { background: var(--caution); }
+.fund-allocation-dot--investments { background: #5a6e96; }
+.fund-allocation-dot--balance { background: var(--paper-inset); border: 1px solid var(--rule); }
+.fund-allocation-dot--deficit { background: var(--deficit); }
+
+/* ─── Investment Allocation Bar ─── */
+
+.dashboard-investment-alloc-bar {
+  display: flex;
+  width: 100%;
+  height: 12px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  margin-top: var(--space-3);
+}
+
+.dashboard-investment-alloc-segment {
+  min-width: 2px;
+}
+
+.dashboard-investment-alloc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-2);
+}
+
+.dashboard-investment-alloc-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+}
+
+.dashboard-investment-alloc-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dashboard-investment-alloc-segment--TREASURY_BILL,
+.dashboard-investment-alloc-dot--TREASURY_BILL { background: #3a7d44; }
+.dashboard-investment-alloc-segment--TREASURY_BOND,
+.dashboard-investment-alloc-dot--TREASURY_BOND { background: #2d6435; }
+.dashboard-investment-alloc-segment--FIXED_DEPOSIT,
+.dashboard-investment-alloc-dot--FIXED_DEPOSIT { background: #5a6e96; }
+.dashboard-investment-alloc-segment--REAL_ESTATE,
+.dashboard-investment-alloc-dot--REAL_ESTATE { background: #8b7355; }
+.dashboard-investment-alloc-segment--UNIT_TRUST,
+.dashboard-investment-alloc-dot--UNIT_TRUST { background: #7a5fa0; }
+.dashboard-investment-alloc-segment--MONEY_MARKET,
+.dashboard-investment-alloc-dot--MONEY_MARKET { background: #4a8fa0; }
+.dashboard-investment-alloc-segment--CORPORATE_BOND,
+.dashboard-investment-alloc-dot--CORPORATE_BOND { background: #a07a4a; }
+.dashboard-investment-alloc-segment--EQUITY,
+.dashboard-investment-alloc-dot--EQUITY { background: #c08a15; }
+.dashboard-investment-alloc-segment--SACCO_PLACEMENT,
+.dashboard-investment-alloc-dot--SACCO_PLACEMENT { background: #b94a3d; }
+
+/* ─── Recovery Rate Bar ─── */
+
 .collection-bar {
   width: 100%;
-  height: 3px;
+  height: 4px;
   background: var(--paper-inset);
   border-radius: var(--radius-sm);
   margin-top: var(--space-1);
@@ -117,9 +225,59 @@
 
 .collection-bar-fill {
   height: 100%;
-  background: var(--mpesa);
   border-radius: var(--radius-sm);
-  transition: width 600ms ease-out;
+}
+
+.collection-bar-fill--good { background: var(--mpesa); }
+.collection-bar-fill--caution { background: var(--caution); }
+.collection-bar-fill--poor { background: var(--deficit); }
+
+/* ─── Comparison Bars (collected vs disbursed) ─── */
+
+.comparison-bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+}
+
+.comparison-bar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.comparison-bar-label {
+  width: 80px;
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.comparison-bar-track {
+  flex: 1;
+  height: 12px;
+  background: var(--paper-inset);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.comparison-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-sm);
+}
+
+.comparison-bar-fill--in { background: var(--mpesa); }
+.comparison-bar-fill--out { background: var(--deficit); }
+
+.comparison-bar-amount {
+  width: 100px;
+  font-family: var(--font-data);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-secondary);
+  flex-shrink: 0;
 }
 
 

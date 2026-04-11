@@ -1,0 +1,10 @@
+databaseChangeLog:
+  - changeSet:
+      id: 010-spring-batch-schema
+      author: system
+      changes:
+        - sqlFile:
+            path: org/springframework/batch/core/schema-postgresql.sql
+            relativeToChangelogFile: false
+            splitStatements: true
+            stripComments: true

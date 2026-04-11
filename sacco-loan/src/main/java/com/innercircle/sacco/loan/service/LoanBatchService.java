@@ -3,7 +3,6 @@ package com.innercircle.sacco.loan.service;
 import com.innercircle.sacco.loan.dto.BatchProcessingResult;
 
 import java.time.LocalDate;
-import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -19,15 +18,15 @@ public interface LoanBatchService {
     BatchProcessingResult processOutstandingLoans();
 
     /**
-     * Process monthly loans with full safeguards (7.2-7.8).
+     * Process daily loans with full safeguards.
      * Includes idempotency check, sequential enforcement, loan filtering,
      * and batch log tracking.
      *
-     * @param targetMonth the month to process
+     * @param targetDate the date to process
      * @param triggeredBy who triggered the processing (username or "SYSTEM")
      * @return BatchProcessingResult with processing statistics and warnings
      */
-    BatchProcessingResult processMonthlyLoans(YearMonth targetMonth, String triggeredBy);
+    BatchProcessingResult processDailyLoans(LocalDate targetDate, String triggeredBy);
 
     /**
      * Detect loans with unpaid installments for a given month.

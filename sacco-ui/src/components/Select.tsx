@@ -15,6 +15,7 @@ interface SelectProps {
   placeholder?: string
   required?: boolean
   searchable?: boolean
+  disabled?: boolean
 }
 
 const PANEL_GAP = 4
@@ -24,7 +25,7 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
 }
 
-export function Select({ value, onChange, options, placeholder = 'Select...', required, searchable }: SelectProps) {
+export function Select({ value, onChange, options, placeholder = 'Select...', required, searchable, disabled }: SelectProps) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [highlightIndex, setHighlightIndex] = useState(-1)
@@ -119,6 +120,12 @@ export function Select({ value, onChange, options, placeholder = 'Select...', re
   }, [search])
 
   useEffect(() => {
+    if (!disabled) return
+    setOpen(false)
+    setSearch('')
+  }, [disabled])
+
+  useEffect(() => {
     if (highlightIndex < 0 || !optionsRef.current) return
     const el = optionsRef.current.children[highlightIndex] as HTMLElement
     if (el) el.scrollIntoView({ block: 'nearest' })
@@ -153,6 +160,7 @@ export function Select({ value, onChange, options, placeholder = 'Select...', re
         onClick={() => setOpen(o => !o)}
         aria-haspopup="listbox"
         aria-expanded={open}
+        disabled={disabled}
       >
         <span className="select-trigger-text">
           {selected ? selected.label : placeholder}

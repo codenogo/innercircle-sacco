@@ -1,0 +1,91 @@
+databaseChangeLog:
+  - changeSet:
+      id: 007-add-contribution-penalty-policy-columns
+      author: codex
+      changes:
+        - addColumn:
+            tableName: contribution_penalties
+            columns:
+              - column:
+                  name: penalty_code
+                  type: varchar(120)
+              - column:
+                  name: penalty_date
+                  type: date
+              - column:
+                  name: rule_tier_id
+                  type: uuid
+              - column:
+                  name: obligation_id
+                  type: uuid
+              - column:
+                  name: settled
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: settled_at
+                  type: timestamp
+              - column:
+                  name: waived_reason
+                  type: varchar(500)
+
+  - changeSet:
+      id: 007-backfill-contribution-penalty-policy-columns
+      author: codex
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              UPDATE contribution_penalties
+              SET penalty_code = COALESCE(penalty_code, CONCAT('LEGACY-', id)),
+                  penalty_date = COALESCE(penalty_date, CAST(created_at AS DATE)),
+                  settled = COALESCE(settled, FALSE)
+              WHERE penalty_code IS NULL OR penalty_date IS NULL OR settled IS NULL;
+        - addNotNullConstraint:
+            tableName: contribution_penalties
+            columnName: penalty_code
+            columnDataType: varchar(120)
+        - addNotNullConstraint:
+            tableName: contribution_penalties
+            columnName: penalty_date
+            columnDataType: date
+        - addUniqueConstraint:
+            tableName: contribution_penalties
+            columnNames: penalty_code
+            constraintName: uk_contribution_penalties_penalty_code
+        - addForeignKeyConstraint:
+            baseTableName: contribution_penalties
+            baseColumnNames: rule_tier_id
+            referencedTableName: penalty_rule_tiers
+            referencedColumnNames: id
+            constraintName: fk_contribution_penalties_rule_tier
+            onDelete: SET NULL
+        - addForeignKeyConstraint:
+            baseTableName: contribution_penalties
+            baseColumnNames: obligation_id
+            referencedTableName: contribution_obligations
+            referencedColumnNames: id
+            constraintName: fk_contribution_penalties_obligation
+            onDelete: SET NULL
+        - createIndex:
+            tableName: contribution_penalties
+            indexName: idx_contribution_penalties_penalty_date
+            columns:
+              - column:
+                  name: penalty_date
+        - createIndex:
+            tableName: contribution_penalties
+            indexName: idx_contribution_penalties_member_settled
+            columns:
+              - column:
+                  name: member_id
+              - column:
+                  name: settled
+        - sql:
+            splitStatements: false
+            sql: |
+              CREATE UNIQUE INDEX IF NOT EXISTS uk_contribution_penalties_obligation_tier_date
+              ON contribution_penalties (obligation_id, rule_tier_id, penalty_date)
+              WHERE obligation_id IS NOT NULL AND rule_tier_id IS NOT NULL;

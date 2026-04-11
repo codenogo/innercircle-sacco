@@ -45,6 +45,15 @@ public class Payout extends BaseEntity {
     @Column(length = 100)
     private String referenceNumber;
 
+    @Column(length = 40)
+    private String sourceType;
+
+    @Column
+    private UUID sourceId;
+
+    @Column
+    private Integer installmentNumber;
+
     public Payout(UUID memberId, BigDecimal amount, PayoutType type) {
         this.memberId = memberId;
         this.amount = amount;

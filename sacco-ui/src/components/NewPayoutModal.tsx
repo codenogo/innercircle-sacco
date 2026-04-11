@@ -22,19 +22,34 @@ export function NewPayoutModal({ open, onClose, onSubmit, isSubmitting, members 
   const [payoutType, setPayoutType] = useState<PayoutType>('MERRY_GO_ROUND')
   const [amount, setAmount] = useState('')
   const [error, setError] = useState('')
+  const [amountError, setAmountError] = useState('')
 
   const memberOptions = members.map(m => ({ value: m.id, label: m.name }))
+
+  function validateAmount(val: string): string {
+    const n = Number(val)
+    if (!val || Number.isNaN(n) || n <= 0) return 'Enter a positive amount.'
+    return ''
+  }
+
+  function blurAmount() {
+    setAmountError(validateAmount(amount))
+  }
 
   function reset() {
     setMemberId('')
     setPayoutType('MERRY_GO_ROUND')
     setAmount('')
     setError('')
+    setAmountError('')
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
+
+    const amtErr = validateAmount(amount)
+    if (amtErr) { setAmountError(amtErr); return }
 
     try {
       await onSubmit({
@@ -84,19 +99,33 @@ export function NewPayoutModal({ open, onClose, onSubmit, isSubmitting, members 
         )}
 
         <div className="field">
-          <label className="field-label">Member</label>
+          <label className="field-label field-label--required">Member</label>
           <Select options={memberOptions} value={memberId} onChange={setMemberId} placeholder="Select member" required searchable />
         </div>
 
         <div className="field-row">
           <div className="field">
-            <label className="field-label">Payout Type</label>
+            <label className="field-label field-label--required">Payout Type</label>
             <Select options={PAYOUT_TYPES} value={payoutType} onChange={v => setPayoutType(v as PayoutType)} />
           </div>
           <div className="field">
-            <label className="field-label">Amount</label>
-            <input className="field-input" type="number" min={0} required disabled={isSubmitting} value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" />
-            <span className="field-hint">KES</span>
+            <label className="field-label field-label--required">Amount</label>
+            <input
+              className={`field-input${amountError ? ' field-input--error' : ''}`}
+              type="number"
+              min={0}
+              required
+              disabled={isSubmitting}
+              value={amount}
+              onChange={e => { setAmount(e.target.value); if (amountError) setAmountError('') }}
+              onBlur={blurAmount}
+              placeholder="0"
+              aria-invalid={!!amountError}
+              aria-describedby={amountError ? 'payout-amount-error' : undefined}
+            />
+            {amountError
+              ? <span id="payout-amount-error" className="field-error">{amountError}</span>
+              : <span className="field-hint">KES</span>}
           </div>
         </div>
 

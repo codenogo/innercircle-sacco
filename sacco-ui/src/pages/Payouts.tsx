@@ -1,15 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowLineDown, MagnifyingGlass } from '@phosphor-icons/react'
 import { Spinner } from '../components/Spinner'
+import { ActionMenu } from '../components/ActionMenu'
+import { StatCardGrid } from '../components/StatCard'
 import { DataTable, type ColumnDef } from '../components/DataTable'
 import { NewPayoutModal } from '../components/NewPayoutModal'
 import { MakerCheckerWarning } from '../components/MakerCheckerWarning'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { Select } from '../components/Select'
 import { ApiError } from '../services/apiClient'
 import { getAllMembers } from '../services/memberService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { useAuthorization } from '../hooks/useAuthorization'
 import { useCurrentUser } from '../hooks/useCurrentUser'
+import { useToast } from '../hooks/useToast'
 import { isMakerCheckerViolation } from '../types/makerChecker'
 import type { CursorPage } from '../types/users'
 import type { PayoutResponse, PayoutRequest, PayoutStatus, PayoutType } from '../types/payouts'
@@ -66,6 +70,7 @@ export function Payouts() {
   const { profile, loading: profileLoading } = useCurrentUser()
   const memberId = profile?.member?.id ?? null
   const canCreatePayout = canAccess(['ADMIN', 'TREASURER'])
+  const toast = useToast()
 
   const [payouts, setPayouts] = useState<PayoutResponse[]>([])
   const [memberMap, setMemberMap] = useState<Map<string, string>>(new Map())
@@ -80,6 +85,7 @@ export function Payouts() {
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [overrideTarget, setOverrideTarget] = useState<{ id: string; action: 'approve' } | null>(null)
+  const [confirmPayoutId, setConfirmPayoutId] = useState<string | null>(null)
 
   const loadPayouts = useCallback(async (opts?: { append?: boolean; cursor?: string | null }) => {
     if (isMemberOnly) {
@@ -178,7 +184,6 @@ export function Payouts() {
     }
 
     setCreatingPayout(true)
-    setFeedback(null)
     try {
       const created = await request<PayoutResponse>('/api/v1/payouts', {
         method: 'POST',
@@ -186,10 +191,10 @@ export function Payouts() {
       })
       setPayouts(prev => [created, ...prev])
       setShowModal(false)
-      setFeedback({ type: 'success', text: 'Payout request submitted successfully.' })
+      toast.success('Payout submitted', 'Payout request submitted successfully.')
     } catch (error) {
       const message = toErrorMessage(error, 'Unable to create payout.')
-      setFeedback({ type: 'error', text: message })
+      toast.error('Unable to create payout', message)
       throw error instanceof Error ? error : new Error(message)
     } finally {
       setCreatingPayout(false)
@@ -198,18 +203,17 @@ export function Payouts() {
 
   async function handleApprovePayout(payoutId: string) {
     setActionLoading(payoutId)
-    setFeedback(null)
     try {
       const updated = await request<PayoutResponse>(`/api/v1/payouts/${payoutId}/approve`, {
         method: 'PUT',
       })
       setPayouts(prev => prev.map(p => p.id === payoutId ? updated : p))
-      setFeedback({ type: 'success', text: 'Payout approved successfully.' })
+      toast.success('Payout approved', 'Payout approved successfully.')
     } catch (err) {
       if (isMakerCheckerViolation(err)) {
         setOverrideTarget({ id: payoutId, action: 'approve' })
       } else {
-        setFeedback({ type: 'error', text: toErrorMessage(err, 'Unable to approve payout.') })
+        toast.error('Unable to approve payout', toErrorMessage(err, 'Unable to approve payout.'))
       }
     } finally {
       setActionLoading(null)
@@ -227,9 +231,9 @@ export function Payouts() {
       })
       setPayouts(prev => prev.map(p => p.id === id ? updated : p))
       setOverrideTarget(null)
-      setFeedback({ type: 'success', text: 'Payout approved with admin override.' })
+      toast.success('Payout approved with admin override.')
     } catch (err) {
-      setFeedback({ type: 'error', text: toErrorMessage(err, 'Unable to approve payout with override.') })
+      toast.error('Unable to approve payout with override', toErrorMessage(err, ''))
     } finally {
       setActionLoading(null)
     }
@@ -305,17 +309,17 @@ export function Payouts() {
     if (canCreatePayout) {
       cols.push({
         key: 'actions',
-        header: 'Actions',
+        header: '',
+        width: '52px',
+        headerClassName: 'datatable-col-actions',
+        className: 'datatable-col-actions',
         render: p =>
           p.status === 'PENDING' ? (
-            <button
-              type="button"
-              className="btn btn--ghost btn--small"
-              disabled={actionLoading === p.id}
-              onClick={() => void handleApprovePayout(p.id)}
-            >
-              Approve
-            </button>
+            <ActionMenu
+              actions={[
+                { label: 'Approve', onClick: () => setConfirmPayoutId(p.id), disabled: actionLoading === p.id },
+              ]}
+            />
           ) : null,
       })
     }
@@ -348,16 +352,13 @@ export function Payouts() {
       <section className="page-section">
         <span className="page-section-title">Summary</span>
         <hr className="rule" />
-        <div className="payout-summary">
-          <div className="dot-leader">
-            <span>Total Paid Out ({completed.length} payouts)</span>
-            <span className="dot-leader-value">KES {fmtCurrency(totalPaid)}</span>
-          </div>
-          <div className="dot-leader">
-            <span>Pending / Processing ({pending.length})</span>
-            <span className="dot-leader-value amount--negative">KES {fmtCurrency(totalPending)}</span>
-          </div>
-        </div>
+        <StatCardGrid
+          items={[
+            { label: `Total Paid Out (${completed.length})`, value: `KES ${fmtCurrency(totalPaid)}` },
+            { label: `Pending / Processing (${pending.length})`, value: `KES ${fmtCurrency(totalPending)}`, valueClassName: 'amount--negative' },
+          ]}
+          columns={2}
+        />
         <hr className="rule" />
       </section>
 
@@ -378,6 +379,7 @@ export function Payouts() {
               type="text"
               className="filter-search"
               placeholder="Search payouts..."
+              aria-label="Search payouts"
               value={search}
               onChange={event => setSearch(event.target.value)}
             />
@@ -402,7 +404,14 @@ export function Payouts() {
           data={filtered}
           getRowKey={p => p.id}
           loading={loading}
-          emptyMessage="No payouts match your search."
+          emptyMessage={
+            payouts.length === 0
+              ? <div className="empty-state empty-state--illustrated">
+                  <h3 className="empty-state-heading">No payouts yet</h3>
+                  <p className="empty-state-text">Create a new payout when members are ready to receive disbursements.</p>
+                </div>
+              : 'No payouts match your search.'
+          }
           getRowClassName={(_, i) => i % 2 === 1 ? 'datatable-row--alt' : ''}
         />
 
@@ -439,6 +448,22 @@ export function Payouts() {
         onOverride={handlePayoutOverride}
         submitting={actionLoading !== null}
         action="approve"
+      />
+
+      <ConfirmDialog
+        open={confirmPayoutId !== null}
+        onClose={() => setConfirmPayoutId(null)}
+        onConfirm={() => {
+          if (!confirmPayoutId) return
+          const id = confirmPayoutId
+          setConfirmPayoutId(null)
+          void handleApprovePayout(id)
+        }}
+        title="Approve Payout"
+        description="Approve this payout for disbursement? Funds will be released to the member."
+        confirmLabel="Approve Payout"
+        variant="info"
+        loading={actionLoading !== null}
       />
     </div>
   )

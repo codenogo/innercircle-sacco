@@ -22,10 +22,11 @@ from typing import Any
 
 from . import storage as _st
 from .identity import content_hash as _content_hash
+from .reconcile import reconcile_session
 from .identity import generate_child_id as _child_id
 from .identity import generate_id as _gen_id
 from .graph import rebuild_blocked_cache as _rebuild_blocked_cache
-from .models import Dependency, Event, Issue
+from .models import ACTOR_ROLES, Dependency, Event, Issue
 from .storage import with_retry as _with_retry
 
 __all__ = [
@@ -33,6 +34,7 @@ __all__ = [
     "init", "is_initialized",
     # Issue CRUD
     "create", "show", "update", "claim", "close", "reopen", "release",
+    "report_done", "verify_and_close",
     # Query
     "ready", "list_issues", "stats", "get_phase", "set_phase",
     # Dependencies
@@ -41,12 +43,20 @@ __all__ = [
     "export_jsonl", "import_jsonl", "sync",
     # Context
     "prime", "checkpoint", "history", "show_graph",
-    # Bridge (Agent Teams integration)
-    "plan_to_task_descriptions", "generate_implement_prompt",
-    "detect_file_conflicts",
     # Worktree (parallel agent isolation)
-    "create_session", "merge_session", "cleanup_session",
-    "get_conflict_context", "load_session", "save_session",
+    "merge_session", "cleanup_session", "load_session",
+    "create_session", "save_session", "get_conflict_context",
+    # Bridge (plan → task descriptions)
+    "plan_to_task_descriptions", "generate_implement_prompt",
+    "detect_file_conflicts", "generate_run_id",
+    # Reconcile (compaction recovery)
+    "reconcile_session",
+    # Cost tracking
+    "record_cost_event", "get_cost_summary", "cost_summary", "parse_transcript",
+    # Health monitoring (watchdog)
+    "check_stale_issues",
+    # Leader reconciliation
+    "reconcile",
 ]
 
 # ---------------------------------------------------------------------------
@@ -130,6 +140,7 @@ def create(
     labels: list[str] | None = None,
     description: str | None = None,
     metadata: dict | None = None,
+    owner_actor: str = "",
     actor: str = "claude",
     root: Path | None = None,
 ) -> Issue:
@@ -179,8 +190,11 @@ def create(
                 content_hash=chash,
                 description=description or "",
                 status="open",
+                state="open",
                 issue_type=issue_type,
                 priority=priority,
+                assignee="",
+                owner_actor=owner_actor or "",
                 feature_slug=feature_slug or "",
                 plan_number=plan_number or "",
                 phase=_st.normalize_phase(phase or "discuss"),
@@ -340,6 +354,7 @@ def claim(
                     f"Issue {issue_id} already claimed by {existing.assignee!r}"
                 )
 
+            _st.update_issue_fields(conn, issue_id, state="in_progress")
             _emit(conn, issue_id, "claimed", actor)
             conn.commit()
             return _st.get_issue(conn, issue_id)  # type: ignore[return-value]
@@ -351,7 +366,91 @@ def claim(
     return result
 
 
-def close(
+# ---------------------------------------------------------------------------
+# Two-phase completion (Contract 02, 04, 05)
+# ---------------------------------------------------------------------------
+
+def _validate_transition(
+    issue: Issue,
+    from_state: str,
+    to_state: str,
+    actor_role: str,
+) -> None:
+    """Validate a state transition. Raises ValueError on violation."""
+    valid = issue.valid_states()
+    if to_state not in valid:
+        raise ValueError(
+            f"Invalid target state {to_state!r} for {issue.issue_type}. "
+            f"Valid: {valid}"
+        )
+    if from_state != issue.state:
+        raise ValueError(
+            f"State mismatch: expected {from_state!r}, got {issue.state!r}"
+        )
+    if actor_role not in ACTOR_ROLES:
+        raise ValueError(
+            f"Invalid actor_role {actor_role!r}. Valid: {sorted(ACTOR_ROLES)}"
+        )
+
+
+def report_done(
+    issue_id: str,
+    *,
+    outputs: dict | None = None,
+    actor: str,
+    actor_role: str = "worker",
+    root: Path | None = None,
+) -> Issue:
+    """Worker reports task completion. Sets state to 'done_by_worker'.
+
+    Only workers and hooks can call this. Only tasks can be reported done.
+    """
+    if actor_role not in ("worker", "hook"):
+        raise ValueError(
+            f"Only worker or hook can report_done, got {actor_role!r}"
+        )
+
+    r = root or _root or Path(".")
+
+    def _do_report() -> Issue:
+        conn = _conn(r)
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            existing = _st.get_issue(conn, issue_id)
+            if existing is None:
+                raise ValueError(f"Issue {issue_id} not found")
+            if existing.issue_type != "task":
+                raise ValueError(
+                    f"report_done only works on tasks, got {existing.issue_type!r}"
+                )
+            if actor_role == "hook":
+                if not existing.owner_actor or existing.owner_actor != actor:
+                    raise ValueError(
+                        "Hook can only report_done for owned tasks"
+                    )
+
+            _validate_transition(existing, existing.state, "done_by_worker", actor_role)
+            _st.update_issue_fields(conn, issue_id, state="done_by_worker")
+
+            if outputs:
+                merged_meta = {**existing.metadata, "outputs": outputs}
+                _st.update_issue_fields(conn, issue_id, metadata=merged_meta)
+
+            _emit(conn, issue_id, "report_done", actor, {
+                "actor_role": actor_role,
+                "outputs": outputs or {},
+            })
+            conn.commit()
+            return _st.get_issue(conn, issue_id)  # type: ignore[return-value]
+        finally:
+            conn.close()
+
+    result = _with_retry(_do_report)
+    _auto_export(r)
+    return result
+
+
+def verify_and_close(
     issue_id: str,
     *,
     reason: str = "completed",
@@ -359,8 +458,73 @@ def close(
     actor: str = "claude",
     root: Path | None = None,
 ) -> Issue:
-    """Close an issue. Rebuilds blocked cache, auto-closes parent epic if
-    all siblings are now closed, and auto-exports JSONL.
+    """Leader verifies and closes a task. Two-phase: done_by_worker -> verified -> closed.
+
+    This function is leader-only by design.
+    """
+    r = root or _root or Path(".")
+
+    def _do_verify() -> Issue:
+        conn = _conn(r)
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            existing = _st.get_issue(conn, issue_id)
+            if existing is None:
+                raise ValueError(f"Issue {issue_id} not found")
+            if existing.issue_type != "task":
+                raise ValueError(
+                    f"verify_and_close only works on tasks, got {existing.issue_type!r}"
+                )
+
+            if existing.state == "done_by_worker":
+                # Phase 1: done_by_worker -> verified
+                _st.update_issue_fields(conn, issue_id, state="verified")
+                _emit(conn, issue_id, "verified", actor)
+                # Phase 2: verified -> closed
+                _st.update_issue_fields(conn, issue_id, state="closed")
+                _st.close_issue(conn, issue_id, reason)
+                _emit(conn, issue_id, "closed", actor, {
+                    "reason": reason,
+                    "comment": comment or "",
+                })
+            elif existing.state == "verified":
+                # Already verified, just close
+                _st.update_issue_fields(conn, issue_id, state="closed")
+                _st.close_issue(conn, issue_id, reason)
+                _emit(conn, issue_id, "closed", actor, {
+                    "reason": reason,
+                    "comment": comment or "",
+                })
+            else:
+                raise ValueError(
+                    f"Cannot verify task in state {existing.state!r}"
+                )
+
+            _rebuild_blocked_cache(conn)
+            conn.commit()
+            return _st.get_issue(conn, issue_id)  # type: ignore[return-value]
+        finally:
+            conn.close()
+
+    result = _with_retry(_do_verify)
+    _auto_export(r)
+    return result
+
+
+def close(
+    issue_id: str,
+    *,
+    reason: str = "completed",
+    comment: str | None = None,
+    actor: str = "claude",
+    actor_role: str = "leader",
+    root: Path | None = None,
+) -> Issue:
+    """Close an issue. Rebuilds blocked cache and auto-exports JSONL.
+
+    Role enforcement (Contract 04):
+    - Only leader can close plan/epic issues.
+    - Workers should use report_done() for task completion.
 
     Retries on SQLITE_BUSY with exponential backoff for multi-agent
     robustness.
@@ -374,17 +538,25 @@ def close(
             if existing is None:
                 raise ValueError(f"Issue {issue_id} not found")
 
+            # Role enforcement (Contract 04)
+            if actor_role != "leader" and existing.issue_type in ("plan", "epic"):
+                raise ValueError(
+                    f"Only leader can close {existing.issue_type} issues"
+                )
+            if actor_role != "leader" and existing.issue_type == "task":
+                raise ValueError(
+                    "Use report_done() for worker task completion"
+                )
+
             ok = _st.close_issue(conn, issue_id, reason)
             if not ok:
                 raise ValueError(f"Issue {issue_id} is already closed")
 
+            _st.update_issue_fields(conn, issue_id, state="closed")
             _emit(conn, issue_id, "closed", actor, {
                 "reason": reason,
                 "comment": comment or "",
             })
-
-            # Auto-close parent epic if all children are now closed
-            _try_auto_close_parent(conn, issue_id, actor)
 
             _rebuild_blocked_cache(conn)
             conn.commit()
@@ -661,48 +833,8 @@ def blocks(
 
 
 # ---------------------------------------------------------------------------
-# Blocked Cache & Cycle Detection (inline — Phase 2 adds graph.py)
+# Blocked Cache & Cycle Detection
 # ---------------------------------------------------------------------------
-
-def _try_auto_close_parent(conn, issue_id: str, actor: str) -> None:
-    """Auto-close a parent epic when all its children are closed.
-
-    Finds the parent via parent-child dependency, checks if all siblings
-    are closed, and if so closes the parent with reason 'completed'.
-    """
-    # Find parent via parent-child dependency
-    rows = conn.execute(
-        """SELECT depends_on_id FROM dependencies
-           WHERE issue_id = ? AND dep_type = 'parent-child'""",
-        (issue_id,),
-    ).fetchall()
-    if not rows:
-        return
-
-    parent_id = rows[0]["depends_on_id"]
-    parent = _st.get_issue(conn, parent_id)
-    if parent is None or parent.status == "closed":
-        return
-
-    # Check if all children of this parent are now closed
-    children = conn.execute(
-        """SELECT i.status FROM issues i
-           JOIN dependencies d ON i.id = d.issue_id
-           WHERE d.depends_on_id = ? AND d.dep_type = 'parent-child'""",
-        (parent_id,),
-    ).fetchall()
-
-    if not children:
-        return
-
-    all_closed = all(c["status"] == "closed" for c in children)
-    if all_closed:
-        _st.close_issue(conn, parent_id, "completed")
-        _emit(conn, parent_id, "closed", actor, {
-            "reason": "completed",
-            "comment": "Auto-closed: all children completed",
-        })
-
 
 _CYCLE_MAX_ITERATIONS = 10_000
 
@@ -739,7 +871,7 @@ def _would_create_cycle(conn, issue_id: str, depends_on_id: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Sync (stubs — Phase 3 adds sync.py / context.py)
+# Sync & Context
 # ---------------------------------------------------------------------------
 
 def export_jsonl(root: Path) -> Path:
@@ -800,64 +932,8 @@ def show_graph(feature_slug: str, *, root: Path | None = None) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Bridge (Agent Teams integration)
-# ---------------------------------------------------------------------------
-
-def plan_to_task_descriptions(
-    plan_json_path: Path,
-    root: Path,
-) -> list[dict[str, Any]]:
-    """Read an NN-PLAN.json and generate task descriptions for agent teammates."""
-    from .bridge import plan_to_task_descriptions as _bridge
-    return _bridge(plan_json_path, root)
-
-
-def generate_implement_prompt(
-    *,
-    task_name: str,
-    action: str,
-    files: list[str],
-    verify: list[str],
-    memory_id: str = "",
-) -> str:
-    """Generate the full agent prompt for an implementer teammate."""
-    from .bridge import generate_implement_prompt as _gen
-    return _gen(
-        task_name=task_name,
-        action=action,
-        files=files,
-        verify=verify,
-        memory_id=memory_id,
-    )
-
-
-def detect_file_conflicts(
-    tasks: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    """Check for file overlaps that may produce merge conflicts (advisory).
-
-    Returns a list of conflict dicts: [{file, tasks, severity}].
-    Severity is always "advisory" — worktree isolation prevents runtime
-    interference, and the resolver agent handles merge conflicts at merge time.
-    Empty list = no overlaps detected.
-    """
-    from .bridge import detect_file_conflicts as _detect
-    return _detect(tasks)
-
-
-# ---------------------------------------------------------------------------
 # Worktree (parallel agent isolation)
 # ---------------------------------------------------------------------------
-
-def create_session(
-    plan_json_path: Path,
-    root: Path,
-    task_descriptions: list[dict[str, Any]],
-) -> Any:
-    """Create worktrees for parallel agent execution."""
-    from .worktree import create_session as _create
-    return _create(plan_json_path, root, task_descriptions)
-
 
 def merge_session(session: Any, root: Path) -> Any:
     """Merge agent branches sequentially in task order."""
@@ -871,6 +947,30 @@ def cleanup_session(session: Any, root: Path) -> None:
     _cleanup(session, root)
 
 
+def load_session(root: Path) -> Any:
+    """Read and deserialize worktree session state. Returns None if no file."""
+    from .worktree import load_session as _load
+    return _load(root)
+
+
+def create_session(
+    plan_json_path: Path,
+    root: Path,
+    task_descriptions: list[dict[str, Any]],
+    *,
+    run_id: str = "",
+) -> Any:
+    """Create worktrees for parallel agent execution. Requires TaskDesc V2."""
+    from .worktree import create_session as _create
+    return _create(plan_json_path, root, task_descriptions, run_id=run_id)
+
+
+def save_session(session: Any, root: Path) -> None:
+    """Serialize session to JSON, write atomically."""
+    from .worktree import save_session as _save
+    _save(session, root)
+
+
 def get_conflict_context(
     session: Any,
     task_index: int,
@@ -878,17 +978,142 @@ def get_conflict_context(
     root: Path,
 ) -> dict[str, Any]:
     """Build context dict for the resolver agent."""
-    from .worktree import get_conflict_context as _ctx
-    return _ctx(session, task_index, plan_json_path, root)
+    from .worktree import get_conflict_context as _get
+    return _get(session, task_index, plan_json_path, root)
 
 
-def load_session(root: Path) -> Any:
-    """Read and deserialize worktree session state. Returns None if no file."""
-    from .worktree import load_session as _load
-    return _load(root)
+# ---------------------------------------------------------------------------
+# Bridge (plan → task descriptions)
+# ---------------------------------------------------------------------------
 
 
-def save_session(session: Any, root: Path) -> None:
-    """Serialize worktree session to JSON, write atomically."""
-    from .worktree import save_session as _save
-    _save(session, root)
+def plan_to_task_descriptions(
+    plan_json_path: Path,
+    root: Path,
+) -> list[dict[str, Any]]:
+    """Read plan JSON and generate TaskDesc V2 objects."""
+    from .bridge import plan_to_task_descriptions as _ptd
+    return _ptd(plan_json_path, root)
+
+
+def generate_implement_prompt(taskdesc: dict[str, Any]) -> str:
+    """Render a TaskDesc V2 dict into a markdown agent prompt."""
+    from .bridge import generate_implement_prompt as _gip
+    return _gip(taskdesc)
+
+
+def detect_file_conflicts(
+    tasks: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Check for file overlaps across tasks (advisory)."""
+    from .bridge import detect_file_conflicts as _dfc
+    return _dfc(tasks)
+
+
+def generate_run_id(feature: str) -> str:
+    """Generate a unique run ID for a team execution session."""
+    from .bridge import generate_run_id as _gri
+    return _gri(feature)
+
+
+# ---------------------------------------------------------------------------
+# Cost tracking
+# ---------------------------------------------------------------------------
+
+def record_cost_event(
+    issue_id: str,
+    *,
+    input_tokens: int = 0,
+    output_tokens: int = 0,
+    cache_tokens: int = 0,
+    model: str = "",
+    cost_usd: float = 0.0,
+    actor: str = "claude",
+    root: Path | None = None,
+) -> None:
+    """Record a cost_report event for an issue."""
+    r = root or _root or Path(".")
+    conn = _conn(r)
+    try:
+        _emit(conn, issue_id, "cost_report", actor, {
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "cache_tokens": cache_tokens,
+            "model": model,
+            "cost_usd": cost_usd,
+        })
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_cost_summary(feature_slug: str, *, root: Path | None = None) -> dict:
+    """Aggregate cost_report events for all issues in a feature.
+
+    Returns total_tokens, total_cost_usd, and event_count.
+    """
+    conn = _conn(root)
+    try:
+        rows = conn.execute(
+            """SELECT e.data FROM events e
+               JOIN issues i ON i.id = e.issue_id
+               WHERE e.event_type = 'cost_report'
+               AND i.feature_slug = ?""",
+            (feature_slug,),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    total_tokens = 0
+    total_cost_usd = 0.0
+    for row in rows:
+        try:
+            data = json.loads(row["data"]) if isinstance(row["data"], str) else row["data"]
+        except (json.JSONDecodeError, TypeError):
+            data = {}
+        total_tokens += data.get("input_tokens", 0) + data.get("output_tokens", 0)
+        total_cost_usd += data.get("cost_usd", 0.0)
+
+    return {
+        "feature_slug": feature_slug,
+        "total_tokens": total_tokens,
+        "total_cost_usd": total_cost_usd,
+        "event_count": len(rows),
+    }
+
+
+def cost_summary(project_slug: str = "") -> dict:
+    """Summarize costs for a project from Claude Code transcripts."""
+    from .costs import summarize_project_costs as _summarize
+    return _summarize(project_slug)
+
+
+def parse_transcript(path: Path) -> Any:
+    """Parse a single Claude Code session transcript for usage data."""
+    from .costs import parse_transcript as _parse
+    return _parse(path)
+
+
+# ---------------------------------------------------------------------------
+# Health monitoring (watchdog)
+# ---------------------------------------------------------------------------
+
+def check_stale_issues(root: Path, stale_days: int = 30) -> list:
+    """Check for stale open issues with no assignee."""
+    from .watchdog import check_stale_issues as _check
+    return _check(root, stale_days)
+
+
+# ---------------------------------------------------------------------------
+# Leader reconciliation
+# ---------------------------------------------------------------------------
+
+def reconcile(
+    epic_id: str,
+    *,
+    actor: str = "leader",
+    root: Path | None = None,
+) -> dict[str, Any]:
+    """Run deterministic leader reconciliation for an epic."""
+    from .reconcile_leader import reconcile as _reconcile
+    return _reconcile(epic_id, actor=actor, root=root)

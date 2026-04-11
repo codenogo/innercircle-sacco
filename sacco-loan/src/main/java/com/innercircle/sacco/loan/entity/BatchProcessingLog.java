@@ -16,8 +16,8 @@ import java.time.Instant;
 @AllArgsConstructor
 public class BatchProcessingLog extends BaseEntity {
 
-    @Column(name = "processing_month", unique = true, nullable = false, length = 7)
-    private String processingMonth;
+    @Column(name = "processing_date", unique = true, nullable = false, length = 10)
+    private String processingDate;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)

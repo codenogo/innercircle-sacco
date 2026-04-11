@@ -8,6 +8,7 @@
 @import './toast.css';
 @import './alert.css';
 @import './tooltip.css';
+@import './error-boundary.css';
 
 body {
   font-family: var(--font-body);

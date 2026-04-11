@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,6 +31,12 @@ public class ContributionPenaltyServiceImpl implements ContributionPenaltyServic
     @Transactional
     public ContributionPenalty applyPenalty(ContributionPenalty penalty, String actor) {
         penalty.setWaived(false);
+        if (penalty.getPenaltyDate() == null) {
+            penalty.setPenaltyDate(LocalDate.now());
+        }
+        if (penalty.getPenaltyCode() == null || penalty.getPenaltyCode().isBlank()) {
+            penalty.setPenaltyCode("PEN-" + UUID.randomUUID());
+        }
         ContributionPenalty savedPenalty = penaltyRepository.save(penalty);
 
         outboxWriter.write(new PenaltyAppliedEvent(
@@ -45,14 +53,16 @@ public class ContributionPenaltyServiceImpl implements ContributionPenaltyServic
 
     @Override
     @Transactional
-    public ContributionPenalty waivePenalty(UUID penaltyId, String actor) {
+    public ContributionPenalty waivePenalty(UUID penaltyId, String reason, String actor) {
         ContributionPenalty penalty = findById(penaltyId);
+        String waiverReason = (reason == null || reason.isBlank()) ? "Manual waiver" : reason.trim();
 
         if (penalty.isWaived()) {
             throw new BusinessException("Penalty is already waived");
         }
 
         penalty.setWaived(true);
+        penalty.setWaivedReason(waiverReason);
         penalty.setWaivedBy(actor);
         penalty.setWaivedAt(Instant.now());
 
@@ -62,7 +72,7 @@ public class ContributionPenaltyServiceImpl implements ContributionPenaltyServic
                 waivedPenalty.getId(),
                 waivedPenalty.getMemberId(),
                 waivedPenalty.getAmount(),
-                "Manual waiver",
+                waiverReason,
                 UUID.randomUUID(),
                 actor
         ), "ContributionPenalty", waivedPenalty.getId());
@@ -80,6 +90,17 @@ public class ContributionPenaltyServiceImpl implements ContributionPenaltyServic
     @Transactional(readOnly = true)
     public List<ContributionPenalty> getUnwaivedPenalties(UUID memberId) {
         return penaltyRepository.findByMemberIdAndWaivedFalse(memberId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ContributionPenalty> getPenalties(UUID memberId, YearMonth month) {
+        if (month == null) {
+            return penaltyRepository.findByMemberId(memberId);
+        }
+        LocalDate start = month.atDay(1);
+        LocalDate end = month.atEndOfMonth();
+        return penaltyRepository.findByMemberIdAndPenaltyDateBetween(memberId, start, end);
     }
 
     @Override

@@ -1,0 +1,28 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-enable-monthly-savings-welfare-split
+      author: codex
+      preConditions:
+        - onFail: MARK_RAN
+        - onError: MARK_RAN
+        - tableExists:
+            tableName: contribution_categories
+        - columnExists:
+            tableName: contribution_categories
+            columnName: welfare_eligible
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              UPDATE contribution_categories
+              SET welfare_eligible = TRUE
+              WHERE LOWER(TRIM(name)) = 'monthly savings'
+                AND welfare_eligible = FALSE;
+
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              UPDATE contribution_categories
+              SET welfare_eligible = FALSE
+              WHERE LOWER(TRIM(name)) = 'monthly savings';

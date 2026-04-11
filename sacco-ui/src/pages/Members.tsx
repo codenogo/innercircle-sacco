@@ -4,11 +4,13 @@ import { Spinner } from '../components/Spinner'
 import { Link } from 'react-router-dom'
 import { AddMemberModal } from '../components/AddMemberModal'
 import { Select } from '../components/Select'
+import { StatCardGrid } from '../components/StatCard'
 import { DataTable } from '../components/DataTable'
 import type { ColumnDef } from '../components/DataTable'
 import { ApiError } from '../services/apiClient'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { useAuthorization } from '../hooks/useAuthorization'
+import { useToast } from '../hooks/useToast'
 import type { CursorPage } from '../types/users'
 import type { CreateMemberRequest, MemberResponse, MemberStatus } from '../types/members'
 import './Members.css'
@@ -59,6 +61,7 @@ export function Members() {
   const { request } = useAuthenticatedApi()
   const { canAccess } = useAuthorization()
   const canCreateMember = canAccess(['ADMIN'])
+  const toast = useToast()
 
   const [members, setMembers] = useState<MemberResponse[]>([])
   const [search, setSearch] = useState('')
@@ -113,7 +116,6 @@ export function Members() {
     }
 
     setCreatingMember(true)
-    setFeedback(null)
     try {
       const created = await request<MemberResponse>('/api/v1/members', {
         method: 'POST',
@@ -121,13 +123,10 @@ export function Members() {
       })
       setMembers(prev => [created, ...prev])
       setShowModal(false)
-      setFeedback({
-        type: 'success',
-        text: 'Member created. MEMBER user account provisioning has been triggered.',
-      })
+      toast.success('Member created', 'MEMBER user account provisioning has been triggered.')
     } catch (error) {
       const message = toErrorMessage(error, 'Unable to create member.')
-      setFeedback({ type: 'error', text: message })
+      toast.error('Unable to create member', message)
       throw error instanceof Error ? error : new Error(message)
     } finally {
       setCreatingMember(false)
@@ -216,15 +215,15 @@ export function Members() {
 
       <hr className="rule rule--strong" />
 
-      <div className="page-summary">
-        <span>Active: <strong>{active}</strong></span>
-        <span className="page-summary-divider">|</span>
-        <span>Suspended: <strong>{suspended}</strong></span>
-        <span className="page-summary-divider">|</span>
-        <span>Deactivated: <strong>{deactivated}</strong></span>
-        <span className="page-summary-divider">|</span>
-        <span>Total Shares: <strong>KES {fmtCurrency(totalShares)}</strong></span>
-      </div>
+      <StatCardGrid
+        items={[
+          { label: 'Active', value: String(active) },
+          { label: 'Suspended', value: String(suspended) },
+          { label: 'Deactivated', value: String(deactivated) },
+          { label: 'Total Shares', value: `KES ${fmtCurrency(totalShares)}` },
+        ]}
+        columns={4}
+      />
 
       <hr className="rule" />
 
@@ -241,6 +240,7 @@ export function Members() {
             type="text"
             className="filter-search"
             placeholder="Search members..."
+            aria-label="Search members"
             value={search}
             onChange={event => setSearch(event.target.value)}
           />
@@ -264,7 +264,14 @@ export function Members() {
         data={filtered}
         getRowKey={row => row.id}
         loading={loading}
-        emptyMessage="No members match your search."
+        emptyMessage={
+          members.length === 0
+            ? <div className="empty-state empty-state--illustrated">
+                <h3 className="empty-state-heading">No members yet</h3>
+                <p className="empty-state-text">Add your first member to start tracking contributions and loans.</p>
+              </div>
+            : 'No members match your search.'
+        }
       />
 
       {hasMore && (

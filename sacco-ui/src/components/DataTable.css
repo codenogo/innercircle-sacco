@@ -98,6 +98,14 @@
   min-height: 36px;
 }
 
+/* ─── Actions column — centered icon button ─── */
+
+.datatable-col-actions {
+  width: 48px;
+  text-align: center;
+  padding-inline: var(--space-1);
+}
+
 /* ─── Responsive — horizontal scroll at narrow widths ─── */
 
 @media (max-width: 768px) {

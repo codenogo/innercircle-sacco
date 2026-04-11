@@ -4,8 +4,12 @@ import com.innercircle.sacco.loan.entity.LoanApplication;
 import com.innercircle.sacco.loan.entity.LoanStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
+import java.util.Collection;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -31,4 +35,11 @@ public interface LoanApplicationRepository extends JpaRepository<LoanApplication
     List<LoanApplication> findByStatusAndDisbursedAtAfter(LoanStatus status, Instant instant);
 
     List<LoanApplication> findByStatusAndDisbursedAtBefore(LoanStatus status, Instant instant);
+
+    @Query("SELECT COALESCE(SUM(l.outstandingBalance), 0) FROM LoanApplication l " +
+            "WHERE l.loanProductId = :loanProductId AND l.status IN :statuses")
+    BigDecimal sumOutstandingBalanceByLoanProductIdAndStatusIn(
+            @Param("loanProductId") UUID loanProductId,
+            @Param("statuses") Collection<LoanStatus> statuses
+    );
 }

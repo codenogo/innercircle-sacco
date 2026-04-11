@@ -1,0 +1,398 @@
+databaseChangeLog:
+  - changeSet:
+      id: 009-seed-policy-system-config-defaults
+      author: codex
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              -- Core contribution policy
+              UPDATE system_configs SET config_value = '11000.00', updated_at = CURRENT_TIMESTAMP
+              WHERE config_key = 'contribution.monthly.gross_amount';
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'contribution.monthly.gross_amount', '11000.00',
+                     'Gross monthly contribution obligation amount', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'contribution.monthly.gross_amount');
+
+              UPDATE system_configs SET config_value = '1000.00', updated_at = CURRENT_TIMESTAMP
+              WHERE config_key = 'contribution.welfare.fixed_amount';
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'contribution.welfare.fixed_amount', '1000.00',
+                     'Fixed welfare amount deducted from eligible contributions', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'contribution.welfare.fixed_amount');
+
+              UPDATE system_configs SET config_value = '10', updated_at = CURRENT_TIMESTAMP
+              WHERE config_key = 'contribution.due_day_of_month';
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'contribution.due_day_of_month', '10',
+                     'Monthly contribution due day of month', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'contribution.due_day_of_month');
+
+              UPDATE system_configs SET config_value = '100.00', updated_at = CURRENT_TIMESTAMP
+              WHERE config_key = 'contribution.late_penalty.daily_flat';
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'contribution.late_penalty.daily_flat', '100.00',
+                     'Flat daily contribution late penalty amount', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'contribution.late_penalty.daily_flat');
+
+              UPDATE system_configs SET config_value = '3', updated_at = CURRENT_TIMESTAMP
+              WHERE config_key = 'member.arrears.cessation.consecutive_months';
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'member.arrears.cessation.consecutive_months', '3',
+                     'Consecutive unpaid months before automatic member suspension', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'member.arrears.cessation.consecutive_months');
+
+              -- Loan policy defaults
+              UPDATE system_configs SET config_value = '300000.00', updated_at = CURRENT_TIMESTAMP
+              WHERE config_key = 'loan.short.pool_cap';
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'loan.short.pool_cap', '300000.00',
+                     'Total cap for concurrently active short loans', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'loan.short.pool_cap');
+
+              UPDATE system_configs SET config_value = '10000.00', updated_at = CURRENT_TIMESTAMP
+              WHERE config_key = 'loan.short.min_amount';
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'loan.short.min_amount', '10000.00',
+                     'Minimum short-loan amount', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'loan.short.min_amount');
+
+              UPDATE system_configs SET config_value = '100000.00', updated_at = CURRENT_TIMESTAMP
+              WHERE config_key = 'loan.short.max_amount';
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'loan.short.max_amount', '100000.00',
+                     'Maximum short-loan amount', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'loan.short.max_amount');
+
+              UPDATE system_configs SET config_value = '3', updated_at = CURRENT_TIMESTAMP
+              WHERE config_key = 'loan.short.term_months';
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'loan.short.term_months', '3',
+                     'Standard short-loan term in months', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'loan.short.term_months');
+
+              UPDATE system_configs SET config_value = '10.00', updated_at = CURRENT_TIMESTAMP
+              WHERE config_key = 'loan.short.interest_rate';
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'loan.short.interest_rate', '10.00',
+                     'Short-loan fixed annual interest rate', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'loan.short.interest_rate');
+
+              UPDATE system_configs SET config_value = '2', updated_at = CURRENT_TIMESTAMP
+              WHERE config_key = 'loan.short.rollover.max_months';
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'loan.short.rollover.max_months', '2',
+                     'Maximum short-loan rollover duration in months', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'loan.short.rollover.max_months');
+
+              UPDATE system_configs SET config_value = '10.00', updated_at = CURRENT_TIMESTAMP
+              WHERE config_key = 'loan.short.rollover.surcharge_rate';
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'loan.short.rollover.surcharge_rate', '10.00',
+                     'Short-loan rollover surcharge rate', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'loan.short.rollover.surcharge_rate');
+
+              UPDATE system_configs SET config_value = '60000.00', updated_at = CURRENT_TIMESTAMP
+              WHERE config_key = 'loan.medium.min_amount';
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'loan.medium.min_amount', '60000.00',
+                     'Minimum medium-loan amount', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'loan.medium.min_amount');
+
+              UPDATE system_configs SET config_value = '300000.00', updated_at = CURRENT_TIMESTAMP
+              WHERE config_key = 'loan.medium.max_amount';
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'loan.medium.max_amount', '300000.00',
+                     'Maximum medium-loan amount', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'loan.medium.max_amount');
+
+              UPDATE system_configs SET config_value = '6', updated_at = CURRENT_TIMESTAMP
+              WHERE config_key = 'loan.medium.min_term_months';
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'loan.medium.min_term_months', '6',
+                     'Minimum medium-loan term in months', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'loan.medium.min_term_months');
+
+              UPDATE system_configs SET config_value = '12', updated_at = CURRENT_TIMESTAMP
+              WHERE config_key = 'loan.medium.max_term_months';
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'loan.medium.max_term_months', '12',
+                     'Maximum medium-loan term in months', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'loan.medium.max_term_months');
+
+              UPDATE system_configs SET config_value = '12.00', updated_at = CURRENT_TIMESTAMP
+              WHERE config_key = 'loan.medium.interest_rate';
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'loan.medium.interest_rate', '12.00',
+                     'Medium-loan fixed annual interest rate', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'loan.medium.interest_rate');
+
+              UPDATE system_configs SET config_value = '75.00', updated_at = CURRENT_TIMESTAMP
+              WHERE config_key = 'loan.medium.contribution_cap_percent';
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'loan.medium.contribution_cap_percent', '75.00',
+                     'Maximum medium-loan amount as percent of member contributions', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'loan.medium.contribution_cap_percent');
+
+              UPDATE system_configs SET config_value = '3', updated_at = CURRENT_TIMESTAMP
+              WHERE config_key = 'loan.penalty.grace_period_days';
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'loan.penalty.grace_period_days', '3',
+                     'Number of days after due date before loan penalties start', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'loan.penalty.grace_period_days');
+
+              UPDATE system_configs SET config_value = '120', updated_at = CURRENT_TIMESTAMP
+              WHERE config_key = 'loan.penalty.default_threshold_days';
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'loan.penalty.default_threshold_days', '120',
+                     'Overdue days threshold before default status', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'loan.penalty.default_threshold_days');
+
+              -- Meeting and welfare defaults
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'meeting.fines.absence_amount', '1000.00',
+                     'Fine amount for unexcused absence from meetings', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'meeting.fines.absence_amount');
+
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'meeting.fines.late_threshold_minutes', '30',
+                     'Late attendance threshold in minutes', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'meeting.fines.late_threshold_minutes');
+
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'meeting.fines.late_amount', '500.00',
+                     'Fine amount for late attendance', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'meeting.fines.late_amount');
+
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'meeting.fines.unpaid_daily_penalty', '100.00',
+                     'Daily penalty for unsettled meeting fines', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'meeting.fines.unpaid_daily_penalty');
+
+              UPDATE system_configs SET config_value = '12', updated_at = CURRENT_TIMESTAMP
+              WHERE config_key = 'welfare.cooling_off_months';
+              INSERT INTO system_configs (id, config_key, config_value, description, created_at, updated_at)
+              SELECT gen_random_uuid(), 'welfare.cooling_off_months', '12',
+                     'Minimum membership months before welfare claim eligibility', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+              WHERE NOT EXISTS (SELECT 1 FROM system_configs WHERE config_key = 'welfare.cooling_off_months');
+
+  - changeSet:
+      id: 009-seed-policy-loan-products-and-schedules
+      author: codex
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              -- Normalize monthly schedule for gross obligation model.
+              UPDATE contribution_schedule_configs
+              SET amount = 11000.00,
+                  expected_gross_amount = 11000.00,
+                  due_day_of_month = 10,
+                  grace_period_days = 0,
+                  mandatory = TRUE,
+                  active = TRUE,
+                  updated_at = CURRENT_TIMESTAMP
+              WHERE LOWER(TRIM(name)) = 'monthly contribution';
+
+              INSERT INTO contribution_schedule_configs (
+                id, name, frequency, amount, penalty_enabled, active,
+                due_day_of_month, grace_period_days, mandatory, expected_gross_amount,
+                created_at, updated_at, created_by, version
+              )
+              SELECT
+                gen_random_uuid(), 'Monthly Contribution', 'MONTHLY', 11000.00, TRUE, TRUE,
+                10, 0, TRUE, 11000.00,
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed', 0
+              WHERE NOT EXISTS (
+                SELECT 1 FROM contribution_schedule_configs WHERE LOWER(TRIM(name)) = 'monthly contribution'
+              );
+
+              -- Keep historical products but deactivate old defaults to favor policy products.
+              UPDATE loan_product_configs
+              SET active = FALSE, updated_at = CURRENT_TIMESTAMP
+              WHERE LOWER(TRIM(name)) IN ('personal loan', 'emergency loan');
+
+              UPDATE loan_product_configs
+              SET interest_method = 'FLAT_RATE',
+                  annual_interest_rate = 10.00,
+                  min_amount = 10000.00,
+                  max_amount = 100000.00,
+                  min_term_months = 3,
+                  max_term_months = 3,
+                  contribution_cap_percent = NULL,
+                  pool_cap_amount = 300000.00,
+                  rollover_enabled = TRUE,
+                  max_rollover_months = 2,
+                  rollover_surcharge_rate = 10.00,
+                  interest_accrual_enabled = FALSE,
+                  requires_guarantor = TRUE,
+                  active = TRUE,
+                  updated_at = CURRENT_TIMESTAMP
+              WHERE LOWER(TRIM(name)) = 'short term loan';
+
+              INSERT INTO loan_product_configs (
+                id, name, interest_method, annual_interest_rate,
+                min_term_months, max_term_months, min_amount, max_amount,
+                contribution_cap_percent, pool_cap_amount, rollover_enabled,
+                max_rollover_months, rollover_surcharge_rate, interest_accrual_enabled,
+                requires_guarantor, active, created_at, updated_at, created_by, version
+              )
+              SELECT
+                gen_random_uuid(), 'Short Term Loan', 'FLAT_RATE', 10.00,
+                3, 3, 10000.00, 100000.00,
+                NULL, 300000.00, TRUE,
+                2, 10.00, FALSE,
+                TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed', 0
+              WHERE NOT EXISTS (
+                SELECT 1 FROM loan_product_configs WHERE LOWER(TRIM(name)) = 'short term loan'
+              );
+
+              UPDATE loan_product_configs
+              SET interest_method = 'FLAT_RATE',
+                  annual_interest_rate = 12.00,
+                  min_amount = 60000.00,
+                  max_amount = 300000.00,
+                  min_term_months = 6,
+                  max_term_months = 12,
+                  contribution_cap_percent = 75.00,
+                  pool_cap_amount = NULL,
+                  rollover_enabled = FALSE,
+                  max_rollover_months = NULL,
+                  rollover_surcharge_rate = NULL,
+                  interest_accrual_enabled = FALSE,
+                  requires_guarantor = TRUE,
+                  active = TRUE,
+                  updated_at = CURRENT_TIMESTAMP
+              WHERE LOWER(TRIM(name)) = 'medium term loan';
+
+              INSERT INTO loan_product_configs (
+                id, name, interest_method, annual_interest_rate,
+                min_term_months, max_term_months, min_amount, max_amount,
+                contribution_cap_percent, pool_cap_amount, rollover_enabled,
+                max_rollover_months, rollover_surcharge_rate, interest_accrual_enabled,
+                requires_guarantor, active, created_at, updated_at, created_by, version
+              )
+              SELECT
+                gen_random_uuid(), 'Medium Term Loan', 'FLAT_RATE', 12.00,
+                6, 12, 60000.00, 300000.00,
+                75.00, NULL, FALSE,
+                NULL, NULL, FALSE,
+                TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed', 0
+              WHERE NOT EXISTS (
+                SELECT 1 FROM loan_product_configs WHERE LOWER(TRIM(name)) = 'medium term loan'
+              );
+
+  - changeSet:
+      id: 009-seed-tiered-penalty-rules
+      author: codex
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              -- Ensure loan default penalty rule exists and reflects policy defaults.
+              INSERT INTO penalty_rules (
+                id, name, penalty_type, rate, calculation_method, active, compounding, created_at, updated_at, created_by, version
+              )
+              SELECT
+                gen_random_uuid(), 'Loan Default Penalty', 'LOAN_DEFAULT', 10.00, 'PERCENTAGE', TRUE, FALSE,
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed', 0
+              WHERE NOT EXISTS (
+                SELECT 1 FROM penalty_rules WHERE LOWER(TRIM(name)) = 'loan default penalty'
+              );
+
+              UPDATE penalty_rules
+              SET rate = 10.00,
+                  calculation_method = 'PERCENTAGE',
+                  active = TRUE,
+                  compounding = FALSE,
+                  updated_at = CURRENT_TIMESTAMP
+              WHERE id = (
+                SELECT id FROM penalty_rules
+                WHERE LOWER(TRIM(name)) = 'loan default penalty'
+                ORDER BY created_at ASC
+                LIMIT 1
+              );
+
+              -- Ensure late contribution penalty rule exists.
+              INSERT INTO penalty_rules (
+                id, name, penalty_type, rate, calculation_method, active, compounding, created_at, updated_at, created_by, version
+              )
+              SELECT
+                gen_random_uuid(), 'Late Contribution Penalty', 'LATE_CONTRIBUTION', 100.00, 'FLAT', TRUE, FALSE,
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed', 0
+              WHERE NOT EXISTS (
+                SELECT 1 FROM penalty_rules WHERE LOWER(TRIM(name)) = 'late contribution penalty'
+              );
+
+              UPDATE penalty_rules
+              SET rate = 100.00,
+                  calculation_method = 'FLAT',
+                  active = TRUE,
+                  compounding = FALSE,
+                  updated_at = CURRENT_TIMESTAMP
+              WHERE id = (
+                SELECT id FROM penalty_rules
+                WHERE LOWER(TRIM(name)) = 'late contribution penalty'
+                ORDER BY created_at ASC
+                LIMIT 1
+              );
+
+              -- Refresh tiers for loan default rule (policy: 1-60 monthly 10%, 61-120 daily 100).
+              DELETE FROM penalty_rule_tiers
+              WHERE rule_id = (
+                SELECT id FROM penalty_rules
+                WHERE LOWER(TRIM(name)) = 'loan default penalty'
+                ORDER BY created_at ASC
+                LIMIT 1
+              );
+
+              INSERT INTO penalty_rule_tiers (
+                id, rule_id, sequence, start_overdue_day, end_overdue_day,
+                frequency, calculation_method, rate, max_applications, active,
+                created_at, updated_at, created_by, version
+              )
+              SELECT
+                gen_random_uuid(), pr.id, 1, 1, 60,
+                'MONTHLY', 'PERCENTAGE', 10.0000, NULL, TRUE,
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed', 0
+              FROM penalty_rules pr
+              WHERE LOWER(TRIM(pr.name)) = 'loan default penalty'
+              ORDER BY pr.created_at ASC
+              LIMIT 1;
+
+              INSERT INTO penalty_rule_tiers (
+                id, rule_id, sequence, start_overdue_day, end_overdue_day,
+                frequency, calculation_method, rate, max_applications, active,
+                created_at, updated_at, created_by, version
+              )
+              SELECT
+                gen_random_uuid(), pr.id, 2, 61, 120,
+                'DAILY', 'FLAT', 100.0000, NULL, TRUE,
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed', 0
+              FROM penalty_rules pr
+              WHERE LOWER(TRIM(pr.name)) = 'loan default penalty'
+              ORDER BY pr.created_at ASC
+              LIMIT 1;
+
+              -- Late contribution: single tier daily flat KES 100.
+              DELETE FROM penalty_rule_tiers
+              WHERE rule_id = (
+                SELECT id FROM penalty_rules
+                WHERE LOWER(TRIM(name)) = 'late contribution penalty'
+                ORDER BY created_at ASC
+                LIMIT 1
+              );
+
+              INSERT INTO penalty_rule_tiers (
+                id, rule_id, sequence, start_overdue_day, end_overdue_day,
+                frequency, calculation_method, rate, max_applications, active,
+                created_at, updated_at, created_by, version
+              )
+              SELECT
+                gen_random_uuid(), pr.id, 1, 1, NULL,
+                'DAILY', 'FLAT', 100.0000, NULL, TRUE,
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'policy-seed', 0
+              FROM penalty_rules pr
+              WHERE LOWER(TRIM(pr.name)) = 'late contribution penalty'
+              ORDER BY pr.created_at ASC
+              LIMIT 1;

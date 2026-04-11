@@ -1,0 +1,104 @@
+databaseChangeLog:
+  - changeSet:
+      id: 007-add-loan-policy-columns
+      author: codex
+      changes:
+        - addColumn:
+            tableName: loan_product_configs
+            columns:
+              - column:
+                  name: min_amount
+                  type: decimal(15,2)
+              - column:
+                  name: min_term_months
+                  type: integer
+              - column:
+                  name: contribution_cap_percent
+                  type: decimal(5,2)
+              - column:
+                  name: pool_cap_amount
+                  type: decimal(15,2)
+              - column:
+                  name: rollover_enabled
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: max_rollover_months
+                  type: integer
+              - column:
+                  name: rollover_surcharge_rate
+                  type: decimal(5,2)
+              - column:
+                  name: interest_accrual_enabled
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 007-backfill-loan-policy-columns
+      author: codex
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              UPDATE loan_product_configs
+              SET min_amount = COALESCE(min_amount, 0.01),
+                  min_term_months = COALESCE(min_term_months, 1)
+              WHERE min_amount IS NULL OR min_term_months IS NULL;
+        - addNotNullConstraint:
+            tableName: loan_product_configs
+            columnName: min_amount
+            columnDataType: decimal(15,2)
+        - addNotNullConstraint:
+            tableName: loan_product_configs
+            columnName: min_term_months
+            columnDataType: integer
+
+  - changeSet:
+      id: 007-add-contribution-schedule-policy-columns
+      author: codex
+      changes:
+        - addColumn:
+            tableName: contribution_schedule_configs
+            columns:
+              - column:
+                  name: due_day_of_month
+                  type: integer
+              - column:
+                  name: grace_period_days
+                  type: integer
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: mandatory
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expected_gross_amount
+                  type: decimal(15,2)
+
+  - changeSet:
+      id: 007-backfill-contribution-schedule-policy-columns
+      author: codex
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              UPDATE contribution_schedule_configs
+              SET due_day_of_month = COALESCE(due_day_of_month, 10),
+                  expected_gross_amount = COALESCE(expected_gross_amount, amount)
+              WHERE due_day_of_month IS NULL OR expected_gross_amount IS NULL;
+        - addNotNullConstraint:
+            tableName: contribution_schedule_configs
+            columnName: due_day_of_month
+            columnDataType: integer
+        - addNotNullConstraint:
+            tableName: contribution_schedule_configs
+            columnName: expected_gross_amount
+            columnDataType: decimal(15,2)

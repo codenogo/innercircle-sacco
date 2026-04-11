@@ -1,0 +1,94 @@
+databaseChangeLog:
+  - changeSet:
+      id: 008-create-penalty-rule-tiers-table
+      author: codex
+      changes:
+        - createTable:
+            tableName: penalty_rule_tiers
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: rule_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sequence
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: start_overdue_day
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: end_overdue_day
+                  type: integer
+              - column:
+                  name: frequency
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: calculation_method
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: rate
+                  type: decimal(19,4)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: max_applications
+                  type: integer
+              - column:
+                  name: active
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: varchar(255)
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: penalty_rule_tiers
+            baseColumnNames: rule_id
+            referencedTableName: penalty_rules
+            referencedColumnNames: id
+            constraintName: fk_penalty_rule_tiers_rule
+            onDelete: CASCADE
+        - createIndex:
+            tableName: penalty_rule_tiers
+            indexName: idx_penalty_rule_tiers_rule
+            columns:
+              - column:
+                  name: rule_id
+              - column:
+                  name: active
+        - addUniqueConstraint:
+            tableName: penalty_rule_tiers
+            columnNames: rule_id,sequence
+            constraintName: uk_penalty_rule_tiers_rule_sequence
