@@ -22,7 +22,7 @@
 
 .dashboard-period,
 .dashboard-date {
-  font-style: italic;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ─── Sections ─── */

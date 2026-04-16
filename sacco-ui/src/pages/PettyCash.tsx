@@ -398,7 +398,6 @@ export function PettyCash() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Petty Cash</h1>
-          <p className="page-subtitle">Voucher workflow: submit, approve, disburse, settle</p>
         </div>
         <button type="button" className="btn btn--primary" onClick={() => setShowCreateModal(true)}>
           <Plus size={14} weight="bold" />

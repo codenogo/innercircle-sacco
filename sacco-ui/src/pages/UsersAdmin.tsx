@@ -388,7 +388,6 @@ export function UsersAdmin() {
       <div className="page-header">
         <div>
           <h1 className="page-title">User Administration</h1>
-          <p className="page-subtitle">User lifecycle and role management</p>
         </div>
         <button type="button" className="btn btn--primary" onClick={() => setShowCreateModal(true)}>
           <UserPlus size={14} weight="bold" />

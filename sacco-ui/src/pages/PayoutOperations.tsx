@@ -65,7 +65,6 @@ export function PayoutOperations() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Payout Operations</h1>
-          <p className="page-subtitle">Approval and processing queues for payout channels</p>
         </div>
       </div>
 

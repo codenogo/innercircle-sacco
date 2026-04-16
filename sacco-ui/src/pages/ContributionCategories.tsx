@@ -60,7 +60,6 @@ export function ContributionCategories() {
         <div className="page-header">
           <div>
             <h1 className="page-title">Contribution Categories</h1>
-            <p className="page-subtitle">Manage contribution categories</p>
           </div>
         </div>
 
@@ -210,7 +209,6 @@ export function ContributionCategories() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Contribution Categories</h1>
-          <p className="page-subtitle">Manage contribution categories</p>
         </div>
         <button type="button" className="btn btn--primary" onClick={handleOpenAdd}>
           Add Category

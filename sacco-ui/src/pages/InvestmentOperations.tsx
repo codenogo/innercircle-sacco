@@ -263,7 +263,6 @@ export function InvestmentOperations() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Investment Operations</h1>
-          <p className="page-subtitle">Approve proposals, record income, and update valuations</p>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
           <button className="btn btn--primary" onClick={() => setShowIncomeModal(true)}>Record Income</button>

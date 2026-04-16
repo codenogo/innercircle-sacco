@@ -37,7 +37,6 @@ export function LoanBatch() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Loan Batch Processing</h1>
-          <p className="page-subtitle">Batch interest, unpaid queues, and reversal workflows</p>
         </div>
         <div className="ops-inline-actions">
           <button type="button" className="btn btn--primary" disabled>Run Monthly Batch</button>
@@ -71,10 +70,6 @@ export function LoanBatch() {
         getRowClassName={(_, i) => i % 2 === 1 ? 'datatable-row--alt' : ''}
       />
 
-      <p className="ops-note">
-        API map: POST /api/v1/loans/batch/process, GET /api/v1/loans/batch/unpaid,
-        POST /api/v1/loans/reversals/repayment/{'{repaymentId}'}, POST /api/v1/loans/reversals/penalty/{'{penaltyId}'}.
-      </p>
     </div>
   )
 }

@@ -19,7 +19,6 @@ export function ExportCenter() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Export Center</h1>
-          <p className="page-subtitle">PDF and CSV exports from reporting APIs</p>
         </div>
       </div>
 
@@ -44,7 +43,6 @@ export function ExportCenter() {
         ))}
       </div>
 
-      <p className="ops-note">Wire these buttons to signed download links when export services are ready.</p>
     </div>
   )
 }

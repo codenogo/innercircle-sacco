@@ -213,7 +213,6 @@ export function Reports() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Reports</h1>
-          <p className="page-subtitle">Financial reports and analytics</p>
         </div>
       </div>
 

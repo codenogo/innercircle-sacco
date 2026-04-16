@@ -28,7 +28,6 @@ export function SystemConfiguration() {
       <div className="page-header">
         <div>
           <h1 className="page-title">System Configuration</h1>
-          <p className="page-subtitle">Config module frontend for system and policy settings</p>
         </div>
       </div>
 
@@ -84,9 +83,6 @@ export function SystemConfiguration() {
         ))}
       </div>
 
-      <p className="ops-note">
-        API coverage: /api/v1/config/system, /loan-products, /contribution-schedules, /penalty-rules.
-      </p>
     </div>
   )
 }

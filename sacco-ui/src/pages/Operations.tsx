@@ -225,7 +225,6 @@ export function Operations() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Operations</h1>
-          <p className="page-subtitle">Frontend coverage for backend modules</p>
         </div>
       </div>
 

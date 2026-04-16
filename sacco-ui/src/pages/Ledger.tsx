@@ -447,7 +447,6 @@ export function Ledger() {
       <div className="page-header">
         <div>
           <h1 className="page-title">General Ledger</h1>
-          <p className="page-subtitle">Double-entry journal</p>
         </div>
         <button
           type="button"

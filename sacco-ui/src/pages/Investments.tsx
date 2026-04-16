@@ -311,7 +311,6 @@ export function Investments() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Investments</h1>
-          <p className="page-subtitle">Portfolio overview &amp; holdings</p>
         </div>
         {canManage && (
           <button className="btn btn--primary" onClick={() => setShowCreateModal(true)}>

@@ -131,7 +131,6 @@ export function MemberProfile() {
         <div className="page-header">
           <div>
             <h1 className="page-title">Member Profile</h1>
-            <p className="page-subtitle">Loading member details...</p>
           </div>
         </div>
         <hr className="rule rule--strong" />
@@ -148,7 +147,6 @@ export function MemberProfile() {
         <div className="page-header">
           <div>
             <h1 className="page-title">Member Profile</h1>
-            <p className="page-subtitle">Member detail and lifecycle actions</p>
           </div>
         </div>
         <hr className="rule rule--strong" />
@@ -173,7 +171,6 @@ export function MemberProfile() {
       <div className="page-header">
         <div>
           <h1 className="page-title">{member.firstName} {member.lastName}</h1>
-          <p className="page-subtitle">Member detail page ({member.memberNumber})</p>
         </div>
         <div className="ops-inline-actions">
           {canSuspend && (

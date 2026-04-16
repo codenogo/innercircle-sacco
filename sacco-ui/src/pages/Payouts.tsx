@@ -328,9 +328,6 @@ export function Payouts() {
       <div className="page-header">
         <div>
           <h1 className="page-title">{isMemberOnly ? 'My Payouts' : 'Payouts'}</h1>
-          <p className="page-subtitle">
-            {isMemberOnly ? 'Your disbursements and withdrawals' : 'Disbursements and withdrawals'}
-          </p>
         </div>
         {canCreatePayout && (
           <button className="btn btn--primary" onClick={() => setShowModal(true)}>

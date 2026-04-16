@@ -426,7 +426,6 @@ export function LoanWorkflow() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Loan Workflow</h1>
-          <p className="page-subtitle">Application, approval, disbursement, repayment, and schedules</p>
         </div>
         <button className="btn btn--primary" onClick={() => setShowApplyModal(true)}>
           <Bank size={14} weight="bold" />

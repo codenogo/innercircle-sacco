@@ -254,7 +254,6 @@ export function WelfareClaims() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Welfare Operations</h1>
-          <p className="page-subtitle">Manage beneficiaries, claims, reviews, and fund position.</p>
         </div>
       </div>
 

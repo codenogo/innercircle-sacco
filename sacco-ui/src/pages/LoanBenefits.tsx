@@ -35,7 +35,6 @@ export function LoanBenefits() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Loan Benefits</h1>
-          <p className="page-subtitle">Eligibility and benefit snapshots</p>
         </div>
       </div>
 
@@ -49,10 +48,6 @@ export function LoanBenefits() {
         getRowClassName={(_, i) => i % 2 === 1 ? 'datatable-row--alt' : ''}
       />
 
-      <p className="ops-note">
-        Endpoints: GET /api/v1/loan-benefits/member/{'{memberId}'}, GET /api/v1/loan-benefits/loan/{'{loanId}'},
-        GET /api/v1/loan-benefits, POST /api/v1/loan-benefits/refresh/{'{loanId}'}.
-      </p>
     </div>
   )
 }

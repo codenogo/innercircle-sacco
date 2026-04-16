@@ -165,7 +165,6 @@ export function AuditTrail() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Audit Trail</h1>
-          <p className="page-subtitle">Event search, entity history, and export</p>
         </div>
         <button
           type="button"

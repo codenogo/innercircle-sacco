@@ -267,9 +267,6 @@ export function Contributions() {
       <div className="page-header">
         <div>
           <h1 className="page-title">{isMemberOnly ? 'My Contributions' : 'Contributions'}</h1>
-          <p className="page-subtitle">
-            {isMemberOnly ? 'Your monthly contribution history' : 'Monthly contribution tracking'}
-          </p>
         </div>
         <div className="contrib-actions">
           {canUseContributionOps && (

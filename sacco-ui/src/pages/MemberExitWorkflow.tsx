@@ -183,11 +183,6 @@ export function MemberExitWorkflow() {
       <div className="page-header">
         <div>
           <h1 className="page-title">{isMemberOnly ? 'Exit Workflow' : 'Member Exit Workflow'}</h1>
-          <p className="page-subtitle">
-            {isMemberOnly
-              ? 'Submit an exit notice and track settlement progress.'
-              : 'Handle notice, review, and installment processing for member exits.'}
-          </p>
         </div>
       </div>
 

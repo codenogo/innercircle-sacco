@@ -38,7 +38,6 @@ export function LedgerStatements() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Ledger Statements</h1>
-          <p className="page-subtitle">Accounts, trial balance, income statement, and balance sheet</p>
         </div>
       </div>
 
@@ -101,9 +100,6 @@ export function LedgerStatements() {
         </div>
       </section>
 
-      <p className="ops-note">
-        Backend endpoints: GET /api/v1/ledger/accounts, /journal-entries, /trial-balance, /income-statement, /balance-sheet.
-      </p>
     </div>
   )
 }

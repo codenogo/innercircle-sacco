@@ -234,7 +234,6 @@ export function MeetingsAndFines() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Meetings & Fines</h1>
-          <p className="page-subtitle">Capture meetings, attendance, and fine settlement workflows.</p>
         </div>
       </div>
 

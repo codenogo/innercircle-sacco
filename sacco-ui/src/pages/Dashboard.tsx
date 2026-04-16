@@ -58,17 +58,14 @@ export function Dashboard() {
     void loadDashboard()
   }, [loadDashboard])
 
-  const today = new Date()
-  const monthYear = today.toLocaleDateString('en-KE', { month: 'long', year: 'numeric' })
-  const dateStr = today.toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' })
+  const dateStr = new Date().toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' })
 
   if (loading) {
     return (
       <div className="dashboard">
         <header className="dashboard-header">
-          <h1 className="heading dashboard-title">Group Fund Overview</h1>
+          <h1 className="heading dashboard-title">Overview</h1>
           <div className="dashboard-meta">
-            <span className="dashboard-period">Period: {monthYear}</span>
             <span className="dashboard-date">As at {dateStr}</span>
           </div>
         </header>
@@ -88,9 +85,8 @@ export function Dashboard() {
     return (
       <div className="dashboard">
         <header className="dashboard-header">
-          <h1 className="heading dashboard-title">Group Fund Overview</h1>
+          <h1 className="heading dashboard-title">Overview</h1>
           <div className="dashboard-meta">
-            <span className="dashboard-period">Period: {monthYear}</span>
             <span className="dashboard-date">As at {dateStr}</span>
           </div>
         </header>
@@ -148,18 +144,15 @@ export function Dashboard() {
 
   return (
     <div className="dashboard">
-      {/* Page heading */}
       <header className="dashboard-header">
-        <h1 className="heading dashboard-title">Group Fund Overview</h1>
+        <h1 className="heading dashboard-title">Overview</h1>
         <div className="dashboard-meta">
-          <span className="dashboard-period">Period: {monthYear}</span>
           <span className="dashboard-date">As at {dateStr}</span>
         </div>
       </header>
 
       <hr className="rule rule--strong" />
 
-      {/* Fund Summary */}
       <section className="dashboard-section">
         <h2 className="label dashboard-section-title">Fund Summary</h2>
         <hr className="rule" />
@@ -196,15 +189,14 @@ export function Dashboard() {
         <hr className="rule rule--strong" />
       </section>
 
-      {/* Monthly Collection */}
       <section className="dashboard-section">
-        <h2 className="label dashboard-section-title">This Month's Collections</h2>
+        <h2 className="label dashboard-section-title">This Month</h2>
         <hr className="rule" />
         <StatCardGrid
           items={[
-            { label: 'Collected (Gross)', value: `KES ${formatAmount(collected)}`, valueClassName: 'amount--positive' },
+            { label: 'Gross Collections', value: `KES ${formatAmount(collected)}`, valueClassName: 'amount--positive' },
             { label: 'Net Contributions', value: `KES ${formatAmount(collectedNet)}`, valueClassName: 'amount--positive' },
-            { label: 'Welfare Portion', value: `KES ${formatAmount(welfareThisMonth)}` },
+            { label: 'Welfare', value: `KES ${formatAmount(welfareThisMonth)}` },
             { label: 'Meeting Fines', value: `KES ${formatAmount(meetingFinesThisMonth)}` },
             { label: 'Welfare Claims', value: `KES ${formatAmount(welfareClaimsThisMonth)}`, valueClassName: 'amount--negative' },
             { label: 'Exit Settlements', value: `KES ${formatAmount(exitSettlementsThisMonth)}`, valueClassName: 'amount--negative' },
@@ -214,14 +206,12 @@ export function Dashboard() {
           ]}
           columns={3}
         />
-        {/* Color-coded recovery rate bar */}
         <div className="collection-bar" style={{ marginTop: 'var(--space-1)' }}>
           <div
             className={`collection-bar-fill ${collectionRate >= 80 ? 'collection-bar-fill--good' : collectionRate >= 50 ? 'collection-bar-fill--caution' : 'collection-bar-fill--poor'}`}
             style={{ width: `${Math.min(collectionRate, 100)}%` }}
           />
         </div>
-        {/* Collected vs Disbursed comparison */}
         {(() => {
           const maxAmount = Math.max(collected, disbursed, 1)
           return (
@@ -246,7 +236,6 @@ export function Dashboard() {
         <hr className="rule" />
       </section>
 
-      {/* Key Metrics */}
       <section className="dashboard-section">
         <h2 className="label dashboard-section-title">Key Metrics</h2>
         <hr className="rule" />
@@ -258,7 +247,7 @@ export function Dashboard() {
               label: (
                 <span className="entry-type entry-type--in">
                   <ArrowDownRight size={12} weight="bold" />
-                  Total Contributions (Gross)
+                  Contributions (Gross)
                 </span>
               ),
               value: <>KES {formatAmount(saccoState?.totalContributions ?? 0)}</>,
@@ -268,7 +257,7 @@ export function Dashboard() {
               label: (
                 <span className="entry-type entry-type--in">
                   <ArrowDownRight size={12} weight="bold" />
-                  Total Contributions (Net)
+                  Contributions (Net)
                 </span>
               ),
               value: <>KES {formatAmount(saccoState?.totalNetContributions ?? 0)}</>,
@@ -288,7 +277,7 @@ export function Dashboard() {
               label: (
                 <span className="entry-type entry-type--in">
                   <ArrowDownRight size={12} weight="bold" />
-                  Meeting Fines (Total)
+                  Meeting Fines
                 </span>
               ),
               value: <>KES {formatAmount(saccoState?.totalMeetingFines ?? 0)}</>,
@@ -298,7 +287,7 @@ export function Dashboard() {
               label: (
                 <span className="entry-type entry-type--out">
                   <ArrowUpRight size={12} weight="bold" />
-                  Welfare Benefits Paid
+                  Welfare Benefits
                 </span>
               ),
               value: <>KES {formatAmount(saccoState?.totalWelfareBenefitsPaid ?? 0)}</>,
@@ -308,7 +297,7 @@ export function Dashboard() {
               label: (
                 <span className="entry-type entry-type--out">
                   <ArrowUpRight size={12} weight="bold" />
-                  Exit Settlements Paid
+                  Exit Settlements
                 </span>
               ),
               value: <>KES {formatAmount(saccoState?.totalExitSettlements ?? 0)}</>,
@@ -318,7 +307,7 @@ export function Dashboard() {
               label: (
                 <span className="entry-type entry-type--in">
                   <ArrowDownRight size={12} weight="bold" />
-                  Exit Fees Collected
+                  Exit Fees
                 </span>
               ),
               value: <>KES {formatAmount(saccoState?.totalExitFees ?? 0)}</>,
@@ -328,7 +317,7 @@ export function Dashboard() {
               label: (
                 <span className="entry-type entry-type--out">
                   <ArrowUpRight size={12} weight="bold" />
-                  Total Payouts
+                  Payouts
                 </span>
               ),
               value: <>KES {formatAmount(saccoState?.totalPayouts ?? 0)}</>,
@@ -342,7 +331,6 @@ export function Dashboard() {
         <hr className="rule rule--strong" />
       </section>
 
-      {/* Investment Portfolio */}
       {investmentSummary && (
         <section className="dashboard-section">
           <h2 className="label dashboard-section-title">Investment Portfolio</h2>
@@ -415,14 +403,13 @@ export function Dashboard() {
         </section>
       )}
 
-      {/* Members */}
       <section className="dashboard-section">
         <h2 className="label dashboard-section-title">Members</h2>
         <hr className="rule" />
         <StatCardGrid
           items={[
-            { label: 'Active Members', value: `${activeMembers} of ${totalMembers}` },
-            { label: 'Pending Approvals', value: String(pendingApprovals) },
+            { label: 'Active', value: `${activeMembers} of ${totalMembers}` },
+            { label: 'Growth Rate', value: `${(saccoState?.memberGrowthRate ?? 0).toFixed(1)}%` },
           ]}
           columns={2}
         />

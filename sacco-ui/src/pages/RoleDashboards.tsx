@@ -45,7 +45,6 @@ export function RoleDashboards() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Role Dashboards</h1>
-          <p className="page-subtitle">Role-specific dashboard and analytics endpoints</p>
         </div>
       </div>
 
@@ -81,10 +80,6 @@ export function RoleDashboards() {
         />
       </section>
 
-      <p className="ops-note">
-        API map: /api/v1/dashboard/member, /treasurer, /admin, /analytics, /analytics/loans, /analytics/repayments,
-        /analytics/interest, /analytics/contributions, /state.
-      </p>
     </div>
   )
 }

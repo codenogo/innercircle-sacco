@@ -106,7 +106,6 @@ export function MyProfile() {
         <div className="page-header">
           <div>
             <h1 className="page-title">My Profile</h1>
-            <p className="page-subtitle">Authenticated user details from /api/v1/me</p>
           </div>
         </div>
         <hr className="rule rule--strong" />
@@ -123,7 +122,6 @@ export function MyProfile() {
         <div className="page-header">
           <div>
             <h1 className="page-title">My Profile</h1>
-            <p className="page-subtitle">Authenticated user details from /api/v1/me</p>
           </div>
         </div>
         <hr className="rule rule--strong" />
@@ -148,7 +146,6 @@ export function MyProfile() {
       <div className="page-header">
         <div>
           <h1 className="page-title">My Profile</h1>
-          <p className="page-subtitle">Authenticated user details from /api/v1/me</p>
         </div>
         <button type="button" className="btn btn--secondary" onClick={handleLogout}>Sign Out</button>
       </div>

@@ -302,7 +302,6 @@ export function ContributionOperations() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Contribution Operations</h1>
-          <p className="page-subtitle">Confirm, reverse, and bulk-record contributions</p>
         </div>
       </div>
 
@@ -450,9 +449,6 @@ export function ContributionOperations() {
           </form>
         )}
 
-        <p className="ops-note">
-          Record multiple contributions at once via POST /api/v1/contributions/bulk.
-        </p>
       </section>
     </div>
   )
