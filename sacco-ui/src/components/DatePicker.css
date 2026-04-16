@@ -90,11 +90,34 @@
 }
 
 .datepicker-month-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1) var(--space-2);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   font-family: var(--font-heading);
   font-size: var(--text-base);
   font-weight: 600;
   color: var(--ink);
   letter-spacing: var(--tracking-tight);
+  cursor: pointer;
+  transition: background var(--ease), border-color var(--ease);
+}
+
+.datepicker-month-label:hover:not(:disabled) {
+  background: var(--rule-subtle);
+  border-color: var(--rule);
+}
+
+.datepicker-month-label:focus-visible {
+  outline: 2px solid var(--mpesa);
+  outline-offset: 2px;
+}
+
+.datepicker-month-label:disabled {
+  cursor: default;
 }
 
 .datepicker-nav {
@@ -227,6 +250,63 @@
 .datepicker-today-btn:focus-visible {
   outline: 2px solid var(--mpesa);
   outline-offset: 2px;
+}
+
+/* ─── Month / Year grids ─── */
+
+.datepicker-grid {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-1) 0;
+}
+
+.datepicker-grid--months,
+.datepicker-grid--years {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.datepicker-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background var(--ease), color var(--ease), border-color var(--ease);
+}
+
+.datepicker-cell:hover {
+  background: var(--rule-subtle);
+}
+
+.datepicker-cell--today {
+  font-weight: 600;
+  color: var(--mpesa-text);
+  background: var(--mpesa-soft);
+}
+
+.datepicker-cell--today:hover {
+  background: var(--mpesa-soft-hover);
+}
+
+.datepicker-cell--selected {
+  background: var(--mpesa);
+  color: var(--text-on-accent);
+  font-weight: 600;
+}
+
+.datepicker-cell--selected:hover {
+  background: var(--mpesa-hover);
+}
+
+.datepicker-cell:focus-visible {
+  outline: 2px solid var(--mpesa);
+  outline-offset: -2px;
 }
 
 /* ─── Responsive ─── */

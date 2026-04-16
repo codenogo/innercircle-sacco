@@ -99,7 +99,6 @@ export function Investments() {
   const [investments, setInvestments] = useState<InvestmentResponse[]>([])
   const [summary, setSummary] = useState<InvestmentSummary | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('ALL')
   const [statusFilter, setStatusFilter] = useState('ALL')
@@ -127,7 +126,6 @@ export function Investments() {
 
   const loadData = useCallback(async () => {
     setLoading(true)
-    setError(null)
     try {
       const [invData, sumData] = await Promise.all([
         getInvestments(request),
@@ -136,13 +134,13 @@ export function Investments() {
       setInvestments(invData)
       setSummary(sumData)
     } catch (err) {
-      setError(toErrorMessage(err, 'Unable to load investments.'))
+      toast.error('Unable to load investments', toErrorMessage(err, 'Unable to load investments.'))
       setInvestments([])
       setSummary(null)
     } finally {
       setLoading(false)
     }
-  }, [request])
+  }, [request, toast])
 
   useEffect(() => { void loadData() }, [loadData])
 
@@ -375,10 +373,6 @@ export function Investments() {
           )}
           <hr className="rule rule--strong" />
         </section>
-      )}
-
-      {error && (
-        <div className="ops-feedback ops-feedback--error" role="status">{error}</div>
       )}
 
       {/* Filters */}

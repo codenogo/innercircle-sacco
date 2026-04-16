@@ -10,13 +10,9 @@ import {
   waiveMeetingFine,
 } from '../services/policyWorkflowService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
+import { useToast } from '../hooks/useToast'
 import type { MeetingAttendanceStatus, MeetingFineResponse, MeetingResponse } from '../types/policyWorkflows'
 import './Operations.css'
-
-interface Feedback {
-  type: 'success' | 'error'
-  text: string
-}
 
 interface MeetingFormState {
   title: string
@@ -79,6 +75,7 @@ function formatDateTime(value: string | null) {
 
 export function MeetingsAndFines() {
   const { request } = useAuthenticatedApi()
+  const toast = useToast()
 
   const [meetingForm, setMeetingForm] = useState<MeetingFormState>(EMPTY_MEETING_FORM)
   const [attendanceForm, setAttendanceForm] = useState<AttendanceFormState>(EMPTY_ATTENDANCE_FORM)
@@ -88,7 +85,6 @@ export function MeetingsAndFines() {
   const [latestMeeting, setLatestMeeting] = useState<MeetingResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [feedback, setFeedback] = useState<Feedback | null>(null)
 
   const fineColumns: ColumnDef<MeetingFineResponse>[] = [
     { key: 'member', header: 'Member', render: row => row.memberId },
@@ -127,13 +123,12 @@ export function MeetingsAndFines() {
     try {
       const data = await getMeetingFines(memberId, request)
       setFines(data)
-      setFeedback(null)
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to load meeting fines.') })
+      toast.error('Unable to load meeting fines', toErrorMessage(error, 'Unable to load meeting fines.'))
     } finally {
       setLoading(false)
     }
-  }, [request])
+  }, [request, toast])
 
   useEffect(() => {
     void loadFines()
@@ -142,7 +137,6 @@ export function MeetingsAndFines() {
   async function handleCreateMeeting(event: FormEvent) {
     event.preventDefault()
     setSubmitting(true)
-    setFeedback(null)
     try {
       const created = await createMeeting({
         title: meetingForm.title.trim(),
@@ -157,9 +151,9 @@ export function MeetingsAndFines() {
       setFinalizeMeetingId(created.id)
       setAttendanceForm(prev => ({ ...prev, meetingId: created.id }))
       setMeetingForm(EMPTY_MEETING_FORM)
-      setFeedback({ type: 'success', text: `Meeting "${created.title}" created.` })
+      toast.success('Meeting created', `"${created.title}" created.`)
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to create meeting.') })
+      toast.error('Unable to create meeting', toErrorMessage(error, 'Unable to create meeting.'))
     } finally {
       setSubmitting(false)
     }
@@ -169,7 +163,6 @@ export function MeetingsAndFines() {
     event.preventDefault()
     if (!attendanceForm.meetingId || !attendanceForm.memberId) return
     setSubmitting(true)
-    setFeedback(null)
     try {
       await recordMeetingAttendance(attendanceForm.meetingId, {
         entries: [{
@@ -180,9 +173,9 @@ export function MeetingsAndFines() {
         }],
       }, request)
       setAttendanceForm(prev => ({ ...EMPTY_ATTENDANCE_FORM, meetingId: prev.meetingId }))
-      setFeedback({ type: 'success', text: 'Attendance recorded.' })
+      toast.success('Attendance recorded')
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to record attendance.') })
+      toast.error('Unable to record attendance', toErrorMessage(error, 'Unable to record attendance.'))
     } finally {
       setSubmitting(false)
     }
@@ -192,14 +185,13 @@ export function MeetingsAndFines() {
     event.preventDefault()
     if (!finalizeMeetingId.trim()) return
     setSubmitting(true)
-    setFeedback(null)
     try {
       const result = await finalizeMeeting(finalizeMeetingId.trim(), request)
       setLatestMeeting(result)
       await loadFines(finesMemberId.trim() || undefined)
-      setFeedback({ type: 'success', text: `Meeting ${result.id} finalized and fines generated.` })
+      toast.success('Meeting finalized', `Fines generated for meeting ${result.id}.`)
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to finalize meeting.') })
+      toast.error('Unable to finalize meeting', toErrorMessage(error, 'Unable to finalize meeting.'))
     } finally {
       setSubmitting(false)
     }
@@ -207,13 +199,12 @@ export function MeetingsAndFines() {
 
   async function handleSettleFine(fineId: string) {
     setSubmitting(true)
-    setFeedback(null)
     try {
       const updated = await settleMeetingFine(fineId, request)
       setFines(prev => prev.map(item => (item.id === updated.id ? updated : item)))
-      setFeedback({ type: 'success', text: 'Meeting fine settled.' })
+      toast.success('Meeting fine settled')
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to settle fine.') })
+      toast.error('Unable to settle fine', toErrorMessage(error, 'Unable to settle fine.'))
     } finally {
       setSubmitting(false)
     }
@@ -222,13 +213,12 @@ export function MeetingsAndFines() {
   async function handleWaiveFine(fineId: string) {
     const reason = window.prompt('Waiver reason (optional):') ?? ''
     setSubmitting(true)
-    setFeedback(null)
     try {
       const updated = await waiveMeetingFine(fineId, reason.trim() || undefined, request)
       setFines(prev => prev.map(item => (item.id === updated.id ? updated : item)))
-      setFeedback({ type: 'success', text: 'Meeting fine waived.' })
+      toast.success('Meeting fine waived')
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to waive fine.') })
+      toast.error('Unable to waive fine', toErrorMessage(error, 'Unable to waive fine.'))
     } finally {
       setSubmitting(false)
     }
@@ -249,10 +239,6 @@ export function MeetingsAndFines() {
       </div>
 
       <hr className="rule rule--strong" />
-
-      {feedback && (
-        <div className={`ops-feedback ops-feedback--${feedback.type}`} role="status">{feedback.text}</div>
-      )}
 
       <section className="page-section">
         <span className="page-section-title">Create Meeting</span>

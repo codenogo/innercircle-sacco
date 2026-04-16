@@ -16,6 +16,7 @@ import {
 } from '../services/contributionService'
 import { getAllMembers } from '../services/memberService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
+import { useToast } from '../hooks/useToast'
 import type { MemberResponse } from '../types/members'
 import type {
   ContributionResponse,
@@ -72,6 +73,7 @@ interface BulkRow {
 
 export function ContributionOperations() {
   const { request } = useAuthenticatedApi()
+  const toast = useToast()
 
   // --- Operations table state ---
   const [contributions, setContributions] = useState<ContributionResponse[]>([])
@@ -83,7 +85,6 @@ export function ContributionOperations() {
   const [members, setMembers] = useState<MemberResponse[]>([])
   const [month, setMonth] = useState(currentMonth)
   const [statusFilter, setStatusFilter] = useState('ALL')
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [actionInProgress, setActionInProgress] = useState<string | null>(null)
 
   // --- Bulk form state ---
@@ -132,12 +133,12 @@ export function ContributionOperations() {
       setNextCursor(page.nextCursor)
       setHasMore(page.hasMore)
     } catch (err) {
-      setFeedback({ type: 'error', message: toErrorMessage(err, 'Failed to load contributions') })
+      toast.error('Failed to load contributions', toErrorMessage(err, 'Failed to load contributions'))
     } finally {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [month, request])
+  }, [month, request, toast])
 
   // --- Fetch members ---
   const fetchMembers = useCallback(async () => {
@@ -175,33 +176,31 @@ export function ContributionOperations() {
   // --- Confirm action ---
   const handleConfirm = useCallback(async (id: string) => {
     setActionInProgress(id)
-    setFeedback(null)
     try {
       const updated = await confirmContribution(id, request)
       setContributions(prev => prev.map(c => (c.id === id ? updated : c)))
-      setFeedback({ type: 'success', message: 'Contribution confirmed successfully.' })
+      toast.success('Contribution confirmed')
     } catch (err) {
-      setFeedback({ type: 'error', message: toErrorMessage(err, 'Failed to confirm contribution') })
+      toast.error('Failed to confirm contribution', toErrorMessage(err, 'Failed to confirm contribution'))
     } finally {
       setActionInProgress(null)
     }
-  }, [request])
+  }, [request, toast])
 
   // --- Reverse action ---
   const handleReverse = useCallback(async (id: string) => {
     if (!window.confirm('Are you sure you want to reverse this contribution?')) return
     setActionInProgress(id)
-    setFeedback(null)
     try {
       const updated = await reverseContribution(id, request)
       setContributions(prev => prev.map(c => (c.id === id ? updated : c)))
-      setFeedback({ type: 'success', message: 'Contribution reversed successfully.' })
+      toast.success('Contribution reversed')
     } catch (err) {
-      setFeedback({ type: 'error', message: toErrorMessage(err, 'Failed to reverse contribution') })
+      toast.error('Failed to reverse contribution', toErrorMessage(err, 'Failed to reverse contribution'))
     } finally {
       setActionInProgress(null)
     }
-  }, [request])
+  }, [request, toast])
 
   // --- Columns ---
   const contribColumns = useMemo((): ColumnDef<ContributionResponse>[] => [
@@ -270,7 +269,6 @@ export function ContributionOperations() {
   async function handleBulkSubmit(e: FormEvent) {
     e.preventDefault()
     setSubmittingBulk(true)
-    setFeedback(null)
 
     const payload: BulkContributionRequest = {
       paymentMode: bulkPaymentMode,
@@ -284,15 +282,12 @@ export function ContributionOperations() {
 
     try {
       await recordBulkContributions(payload, request)
-      setFeedback({
-        type: 'success',
-        message: `Bulk entry submitted: ${payload.contributions.length} contribution(s) recorded.`,
-      })
+      toast.success('Bulk entry submitted', `${payload.contributions.length} contribution(s) recorded.`)
       setBulkRows([{ memberId: '', amount: '' }])
       setShowBulkForm(false)
       void fetchContributions()
     } catch (err) {
-      setFeedback({ type: 'error', message: toErrorMessage(err, 'Bulk submission failed') })
+      toast.error('Bulk submission failed', toErrorMessage(err, 'Bulk submission failed'))
     } finally {
       setSubmittingBulk(false)
     }
@@ -312,12 +307,6 @@ export function ContributionOperations() {
       </div>
 
       <hr className="rule rule--strong" />
-
-      {feedback && (
-        <div className={`ops-feedback ops-feedback--${feedback.type}`} role="status">
-          {feedback.message}
-        </div>
-      )}
 
       {/* --- Filters --- */}
       <div className="filter-bar">

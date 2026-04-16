@@ -62,13 +62,6 @@ function currentMonth(): string {
   return `${y}-${m}`
 }
 
-type FeedbackType = 'success' | 'error'
-
-interface Feedback {
-  type: FeedbackType
-  text: string
-}
-
 export function Contributions() {
   const { request } = useAuthenticatedApi()
   const { canAccess, isMemberOnly } = useAuthorization()
@@ -84,7 +77,6 @@ export function Contributions() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(false)
-  const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [month, setMonth] = useState(currentMonth)
   const [showModal, setShowModal] = useState(false)
   const [members, setMembers] = useState<MemberResponse[]>([])
@@ -104,7 +96,7 @@ export function Contributions() {
         setNextCursor(null)
         setHasMore(false)
         setMemberSummary(null)
-        setFeedback({ type: 'error', text: 'Your account is not linked to a member profile.' })
+        toast.error('Profile not linked', 'Your account is not linked to a member profile.')
         return
       }
 
@@ -122,14 +114,13 @@ export function Contributions() {
       })
       setNextCursor(page.nextCursor)
       setHasMore(page.hasMore)
-      setFeedback(null)
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to load contributions.') })
+      toast.error('Unable to load contributions', toErrorMessage(error, 'Unable to load contributions.'))
     } finally {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [isMemberOnly, memberId, month, request])
+  }, [isMemberOnly, memberId, month, request, toast])
 
   const loadMemberSummary = useCallback(async () => {
     if (!isMemberOnly || !memberId) {
@@ -275,8 +266,10 @@ export function Contributions() {
     <div className="contributions-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Contributions</h1>
-          <p className="page-subtitle">Monthly contribution tracking</p>
+          <h1 className="page-title">{isMemberOnly ? 'My Contributions' : 'Contributions'}</h1>
+          <p className="page-subtitle">
+            {isMemberOnly ? 'Your monthly contribution history' : 'Monthly contribution tracking'}
+          </p>
         </div>
         <div className="contrib-actions">
           {canUseContributionOps && (
@@ -303,7 +296,16 @@ export function Contributions() {
       <hr className="rule rule--strong" />
 
       <StatCardGrid
-        items={[
+        items={isMemberOnly ? [
+          { label: 'This Month (Gross)', value: `KES ${fmt(summary.grossCollected)}`, valueClassName: 'amount--positive' },
+          { label: 'This Month (Net)', value: `KES ${fmt(summary.netCollected)}` },
+          { label: 'Welfare Portion', value: `KES ${fmt(summary.welfareCollected)}` },
+          ...(memberSummary ? [
+            { label: 'Lifetime Contributed', value: `KES ${fmt(memberSummary.totalContributed)}`, valueClassName: 'amount--positive' },
+            { label: 'Pending Amount', value: `KES ${fmt(memberSummary.totalPending)}` },
+            { label: 'Penalties', value: `KES ${fmt(memberSummary.totalPenalties)}`, valueClassName: 'amount--negative' },
+          ] : []),
+        ] : [
           { label: 'Total', value: String(summary.total) },
           { label: 'Confirmed', value: String(summary.confirmed) },
           { label: 'Pending', value: String(summary.pending) },
@@ -311,21 +313,10 @@ export function Contributions() {
           { label: 'Collected (Gross)', value: `KES ${fmt(summary.grossCollected)}` },
           { label: 'Collected (Net)', value: `KES ${fmt(summary.netCollected)}` },
           { label: 'Welfare Portion', value: `KES ${fmt(summary.welfareCollected)}` },
-          ...(isMemberOnly && memberSummary ? [
-            { label: 'Lifetime', value: `KES ${fmt(memberSummary.totalContributed)}` },
-            { label: 'Pending Amount', value: `KES ${fmt(memberSummary.totalPending)}` },
-            { label: 'Penalties', value: `KES ${fmt(memberSummary.totalPenalties)}`, valueClassName: 'amount--negative' },
-          ] : []),
         ]}
       />
 
       <hr className="rule" />
-
-      {feedback && (
-        <div className={`ops-feedback ops-feedback--${feedback.type}`} role="status">
-          {feedback.text}
-        </div>
-      )}
 
       <section className="page-section">
         <div className="filter-bar">

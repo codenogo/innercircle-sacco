@@ -80,6 +80,6 @@ export function hasAnyRole(userRoles: UserRole[], allowedRoles: UserRole[]): boo
 }
 
 export function getDefaultAuthenticatedRoute(userRoles: UserRole[]): string {
-  if (hasAnyRole(userRoles, ['ADMIN', 'TREASURER'])) return '/'
-  return '/profile'
+  if (userRoles.length === 0) return '/profile'
+  return '/'
 }

@@ -4,6 +4,7 @@ import { ActionMenu } from '../components/ActionMenu'
 import { Modal } from '../components/Modal'
 import { Select } from '../components/Select'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
+import { useToast } from '../hooks/useToast'
 import { ApiError } from '../services/apiClient'
 import {
   createContributionSchedule,
@@ -38,13 +39,6 @@ import type {
   SystemConfigResponse,
 } from '../types/config'
 import './Settings.css'
-
-type FeedbackType = 'success' | 'error'
-
-interface Feedback {
-  type: FeedbackType
-  text: string
-}
 
 type SystemInputKind = 'text' | 'currency' | 'month' | 'decimal' | 'day' | 'integer'
 
@@ -383,6 +377,7 @@ function validateSystemValue(def: SystemSettingDefinition, rawValue: string): st
 
 export function Settings() {
   const { request } = useAuthenticatedApi()
+  const toast = useToast()
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -397,11 +392,6 @@ export function Settings() {
 
   const [systemValues, setSystemValues] = useState<Record<string, string>>({})
   const [systemSavingKey, setSystemSavingKey] = useState<string | null>(null)
-  const [systemFeedback, setSystemFeedback] = useState<Record<string, Feedback>>({})
-
-  const [loanFeedback, setLoanFeedback] = useState<Feedback | null>(null)
-  const [scheduleFeedback, setScheduleFeedback] = useState<Feedback | null>(null)
-  const [penaltyFeedback, setPenaltyFeedback] = useState<Feedback | null>(null)
 
   const [showLoanModal, setShowLoanModal] = useState(false)
   const [editingLoan, setEditingLoan] = useState<LoanProductConfigResponse | null>(null)
@@ -496,12 +486,6 @@ export function Settings() {
 
   function updateSystemValue(key: string, value: string) {
     setSystemValues(prev => ({ ...prev, [key]: value }))
-    setSystemFeedback(prev => {
-      if (!prev[key]) return prev
-      const next = { ...prev }
-      delete next[key]
-      return next
-    })
   }
 
   async function handleSaveSystemSetting(def: SystemSettingDefinition) {
@@ -509,17 +493,12 @@ export function Settings() {
     const rawValue = systemValues[def.key] ?? ''
     const validationError = validateSystemValue(def, rawValue)
     if (validationError) {
-      setSystemFeedback(prev => ({ ...prev, [def.key]: { type: 'error', text: validationError } }))
+      toast.error(`Invalid ${def.label}`, validationError)
       return
     }
 
     const normalizedValue = normalizeSystemValue(def, rawValue)
     setSystemSavingKey(def.key)
-    setSystemFeedback(prev => {
-      const next = { ...prev }
-      delete next[def.key]
-      return next
-    })
 
     try {
       let saved: SystemConfigResponse
@@ -538,12 +517,9 @@ export function Settings() {
         return prev.map(config => (config.configKey === def.key ? saved : config))
       })
       setSystemValues(prev => ({ ...prev, [def.key]: saved.configValue }))
-      setSystemFeedback(prev => ({ ...prev, [def.key]: { type: 'success', text: 'Saved.' } }))
+      toast.success('Setting saved', `${def.label} updated.`)
     } catch (saveError) {
-      setSystemFeedback(prev => ({
-        ...prev,
-        [def.key]: { type: 'error', text: toErrorMessage(saveError, 'Failed to save setting.') },
-      }))
+      toast.error('Unable to save setting', toErrorMessage(saveError, 'Failed to save setting.'))
     } finally {
       setSystemSavingKey(null)
     }
@@ -687,7 +663,6 @@ export function Settings() {
 
     setSubmittingLoan(true)
     setLoanFormError(null)
-    setLoanFeedback(null)
     try {
       const saved = editingLoan
         ? await updateLoanProduct(editingLoan.id, payload, request)
@@ -697,10 +672,10 @@ export function Settings() {
       ))
       setShowLoanModal(false)
       setEditingLoan(null)
-      setLoanFeedback({
-        type: 'success',
-        text: editingLoan ? `Loan product "${saved.name}" updated.` : `Loan product "${saved.name}" created.`,
-      })
+      toast.success(
+        editingLoan ? 'Loan product updated' : 'Loan product created',
+        `"${saved.name}" ${editingLoan ? 'updated' : 'created'}.`,
+      )
     } catch (submitError) {
       setLoanFormError(toErrorMessage(submitError, 'Unable to save loan product.'))
     } finally {
@@ -714,7 +689,6 @@ export function Settings() {
     if (!window.confirm(`${targetState ? 'Activate' : 'Deactivate'} "${product.name}"?`)) return
 
     setLoanActionId(product.id)
-    setLoanFeedback(null)
     const payload: LoanProductRequest = {
       name: product.name,
       interestMethod: product.interestMethod,
@@ -736,12 +710,12 @@ export function Settings() {
     try {
       const updated = await updateLoanProduct(product.id, payload, request)
       setLoanProducts(prev => prev.map(item => (item.id === updated.id ? updated : item)))
-      setLoanFeedback({
-        type: 'success',
-        text: `Loan product "${updated.name}" ${updated.active ? 'activated' : 'deactivated'}.`,
-      })
+      toast.success(
+        `Loan product ${updated.active ? 'activated' : 'deactivated'}`,
+        `"${updated.name}" ${updated.active ? 'activated' : 'deactivated'}.`,
+      )
     } catch (toggleError) {
-      setLoanFeedback({ type: 'error', text: toErrorMessage(toggleError, 'Failed to update loan product.') })
+      toast.error('Unable to update loan product', toErrorMessage(toggleError, 'Failed to update loan product.'))
     } finally {
       setLoanActionId(null)
     }
@@ -816,7 +790,6 @@ export function Settings() {
 
     setSubmittingSchedule(true)
     setScheduleFormError(null)
-    setScheduleFeedback(null)
     try {
       const saved = editingSchedule
         ? await updateContributionSchedule(editingSchedule.id, payload, request)
@@ -826,10 +799,10 @@ export function Settings() {
       ))
       setShowScheduleModal(false)
       setEditingSchedule(null)
-      setScheduleFeedback({
-        type: 'success',
-        text: editingSchedule ? `Schedule "${saved.name}" updated.` : `Schedule "${saved.name}" created.`,
-      })
+      toast.success(
+        editingSchedule ? 'Schedule updated' : 'Schedule created',
+        `"${saved.name}" ${editingSchedule ? 'updated' : 'created'}.`,
+      )
     } catch (submitError) {
       setScheduleFormError(toErrorMessage(submitError, 'Unable to save contribution schedule.'))
     } finally {
@@ -843,7 +816,6 @@ export function Settings() {
     if (!window.confirm(`${targetState ? 'Activate' : 'Deactivate'} "${schedule.name}"?`)) return
 
     setScheduleActionId(schedule.id)
-    setScheduleFeedback(null)
     const payload: ContributionScheduleRequest = {
       name: schedule.name,
       frequency: schedule.frequency,
@@ -859,12 +831,12 @@ export function Settings() {
     try {
       const updated = await updateContributionSchedule(schedule.id, payload, request)
       setSchedules(prev => prev.map(item => (item.id === updated.id ? updated : item)))
-      setScheduleFeedback({
-        type: 'success',
-        text: `Schedule "${updated.name}" ${updated.active ? 'activated' : 'deactivated'}.`,
-      })
+      toast.success(
+        `Schedule ${updated.active ? 'activated' : 'deactivated'}`,
+        `"${updated.name}" ${updated.active ? 'activated' : 'deactivated'}.`,
+      )
     } catch (toggleError) {
-      setScheduleFeedback({ type: 'error', text: toErrorMessage(toggleError, 'Failed to update schedule.') })
+      toast.error('Unable to update schedule', toErrorMessage(toggleError, 'Failed to update schedule.'))
     } finally {
       setScheduleActionId(null)
     }
@@ -949,7 +921,6 @@ export function Settings() {
 
     setSubmittingPenalty(true)
     setPenaltyFormError(null)
-    setPenaltyFeedback(null)
     try {
       const saved = editingPenalty
         ? await updatePenaltyRule(editingPenalty.id, payload, request)
@@ -959,10 +930,10 @@ export function Settings() {
       ))
       setShowPenaltyModal(false)
       setEditingPenalty(null)
-      setPenaltyFeedback({
-        type: 'success',
-        text: editingPenalty ? `Penalty rule "${saved.name}" updated.` : `Penalty rule "${saved.name}" created.`,
-      })
+      toast.success(
+        editingPenalty ? 'Penalty rule updated' : 'Penalty rule created',
+        `"${saved.name}" ${editingPenalty ? 'updated' : 'created'}.`,
+      )
     } catch (submitError) {
       setPenaltyFormError(toErrorMessage(submitError, 'Unable to save penalty rule.'))
     } finally {
@@ -976,7 +947,6 @@ export function Settings() {
     if (!window.confirm(`${targetState ? 'Activate' : 'Deactivate'} "${rule.name}"?`)) return
 
     setPenaltyActionId(rule.id)
-    setPenaltyFeedback(null)
     const payload: PenaltyRuleRequest = {
       name: rule.name,
       penaltyType: rule.penaltyType,
@@ -989,12 +959,12 @@ export function Settings() {
     try {
       const updated = await updatePenaltyRule(rule.id, payload, request)
       setPenaltyRules(prev => prev.map(item => (item.id === updated.id ? updated : item)))
-      setPenaltyFeedback({
-        type: 'success',
-        text: `Penalty rule "${updated.name}" ${updated.active ? 'activated' : 'deactivated'}.`,
-      })
+      toast.success(
+        `Penalty rule ${updated.active ? 'activated' : 'deactivated'}`,
+        `"${updated.name}" ${updated.active ? 'activated' : 'deactivated'}.`,
+      )
     } catch (toggleError) {
-      setPenaltyFeedback({ type: 'error', text: toErrorMessage(toggleError, 'Failed to update penalty rule.') })
+      toast.error('Unable to update penalty rule', toErrorMessage(toggleError, 'Failed to update penalty rule.'))
     } finally {
       setPenaltyActionId(null)
     }
@@ -1108,7 +1078,6 @@ export function Settings() {
             )}
             {SYSTEM_SETTING_DEFINITIONS.map(def => {
               const value = systemValues[def.key] ?? systemConfigMap.get(def.key)?.configValue ?? ''
-              const feedback = systemFeedback[def.key]
               return (
                 <div key={def.key} className="settings-row-block">
                   <div className="settings-row">
@@ -1135,9 +1104,6 @@ export function Settings() {
                       </div>
                     )}
                   </div>
-                  {feedback && (
-                    <div className={`ops-feedback ops-feedback--${feedback.type}`} role="status">{feedback.text}</div>
-                  )}
                 </div>
               )
             })}
@@ -1169,9 +1135,6 @@ export function Settings() {
               )}
             </div>
             <hr className="rule" />
-            {loanFeedback && (
-              <div className={`ops-feedback ops-feedback--${loanFeedback.type}`} role="status">{loanFeedback.text}</div>
-            )}
             {loanProducts.length === 0 ? (
               <div className="settings-row">
                 <span className="settings-row-label">No loan products configured</span>
@@ -1219,9 +1182,6 @@ export function Settings() {
               )}
             </div>
             <hr className="rule" />
-            {scheduleFeedback && (
-              <div className={`ops-feedback ops-feedback--${scheduleFeedback.type}`} role="status">{scheduleFeedback.text}</div>
-            )}
             {schedules.length === 0 ? (
               <div className="settings-row">
                 <span className="settings-row-label">No contribution schedules configured</span>
@@ -1267,9 +1227,6 @@ export function Settings() {
               )}
             </div>
             <hr className="rule" />
-            {penaltyFeedback && (
-              <div className={`ops-feedback ops-feedback--${penaltyFeedback.type}`} role="status">{penaltyFeedback.text}</div>
-            )}
             {penaltyRules.length === 0 ? (
               <div className="settings-row">
                 <span className="settings-row-label">No penalty rules configured</span>

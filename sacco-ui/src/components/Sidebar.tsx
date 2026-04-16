@@ -25,7 +25,7 @@ import type { UserRole } from '../types/roles'
 import './Sidebar.css'
 
 const navItems = [
-  { to: '/', icon: SquaresFour, label: 'Overview', allowed: ['ADMIN', 'TREASURER'] as UserRole[] },
+  { to: '/', icon: SquaresFour, label: 'Overview', allowed: ['ADMIN', 'TREASURER', 'MEMBER', 'SECRETARY', 'CHAIRPERSON', 'VICE_CHAIRPERSON', 'VICE_TREASURER'] as UserRole[] },
   { to: '/members', icon: Users, label: 'Members', allowed: ['ADMIN', 'TREASURER', 'MEMBER'] as UserRole[] },
   { to: '/contributions', icon: Wallet, label: 'Contributions', allowed: ['ADMIN', 'TREASURER', 'MEMBER'] as UserRole[] },
   { to: '/loans', icon: Bank, label: 'Loans', allowed: ['ADMIN', 'TREASURER', 'MEMBER'] as UserRole[] },
@@ -37,7 +37,7 @@ const navItems = [
   { to: '/member-exit', icon: SignOut, label: 'Member Exit', allowed: ['ADMIN', 'TREASURER', 'MEMBER', 'CHAIRPERSON', 'VICE_CHAIRPERSON', 'VICE_TREASURER'] as UserRole[] },
   { to: '/ledger', icon: BookOpen, label: 'Ledger', allowed: ['ADMIN', 'TREASURER'] as UserRole[] },
   { to: '/reports', icon: ChartBar, label: 'Reports', allowed: ['ADMIN', 'TREASURER'] as UserRole[] },
-  { to: '/operations', icon: Briefcase, label: 'Operations', allowed: ['ADMIN', 'TREASURER', 'MEMBER', 'SECRETARY', 'CHAIRPERSON', 'VICE_CHAIRPERSON', 'VICE_TREASURER'] as UserRole[] },
+  { to: '/operations', icon: Briefcase, label: 'Operations', allowed: ['ADMIN', 'TREASURER', 'SECRETARY', 'CHAIRPERSON', 'VICE_CHAIRPERSON', 'VICE_TREASURER'] as UserRole[] },
 ]
 
 interface SidebarProps {

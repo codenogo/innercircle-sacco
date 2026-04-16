@@ -11,6 +11,7 @@ import { ApiError } from '../services/apiClient'
 import { getAllMembers } from '../services/memberService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { useAuthorization } from '../hooks/useAuthorization'
+import { useToast } from '../hooks/useToast'
 import { isMakerCheckerViolation } from '../types/makerChecker'
 import type { CursorPage } from '../types/users'
 import type { LoanApplicationRequest, LoanResponse, LoanStatus, RepaymentScheduleResponse } from '../types/loans'
@@ -55,6 +56,7 @@ function toErrorMessage(error: unknown, fallback: string): string {
 export function LoanWorkflow() {
   const { request } = useAuthenticatedApi()
   const { canAccess } = useAuthorization()
+  const toast = useToast()
   const isAdmin = canAccess(['ADMIN'])
 
   const [loans, setLoans] = useState<LoanResponse[]>([])
@@ -65,7 +67,6 @@ export function LoanWorkflow() {
   const [hasMore, setHasMore] = useState(false)
 
   const [search, setSearch] = useState('')
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const [showApplyModal, setShowApplyModal] = useState(false)
   const [submittingApply, setSubmittingApply] = useState(false)
@@ -122,15 +123,12 @@ export function LoanWorkflow() {
       setNextCursor(page.nextCursor)
       setHasMore(page.hasMore)
     } catch (error) {
-      setFeedback({
-        type: 'error',
-        text: toErrorMessage(error, 'Unable to load loan applications.'),
-      })
+      toast.error('Unable to load loan applications', toErrorMessage(error, 'Unable to load loan applications.'))
     } finally {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [request])
+  }, [request, toast])
 
   useEffect(() => {
     void loadLoans({ append: false, cursor: null })
@@ -158,7 +156,6 @@ export function LoanWorkflow() {
 
   async function handleApplyLoan(payload: LoanApplicationRequest) {
     setSubmittingApply(true)
-    setFeedback(null)
     try {
       const created = await request<LoanResponse>('/api/v1/loans/apply', {
         method: 'POST',
@@ -166,10 +163,10 @@ export function LoanWorkflow() {
       })
       setLoans(prev => [created, ...prev])
       setShowApplyModal(false)
-      setFeedback({ type: 'success', text: 'Loan application submitted successfully.' })
+      toast.success('Loan application submitted')
     } catch (error) {
       const message = toErrorMessage(error, 'Unable to submit loan application.')
-      setFeedback({ type: 'error', text: message })
+      toast.error('Unable to submit loan application', message)
       throw error instanceof Error ? error : new Error(message)
     } finally {
       setSubmittingApply(false)
@@ -183,7 +180,6 @@ export function LoanWorkflow() {
   ) => {
     const loadingKey = `${action}:${loanId}`
     setActionLoading(loadingKey)
-    setFeedback(null)
 
     try {
       const body =
@@ -197,28 +193,23 @@ export function LoanWorkflow() {
       })
 
       setLoans(prev => prev.map(loan => (loan.id === loanId ? updated : loan)))
-      setFeedback({
-        type: 'success',
-        text:
-          action === 'approve'
-            ? 'Loan approved successfully.'
-            : action === 'reject'
-              ? 'Loan rejected successfully.'
-              : 'Loan disbursed successfully.',
-      })
+      toast.success(
+        action === 'approve'
+          ? 'Loan approved'
+          : action === 'reject'
+            ? 'Loan rejected'
+            : 'Loan disbursed',
+      )
     } catch (error) {
       if ((action === 'approve' || action === 'reject') && isMakerCheckerViolation(error)) {
         setOverrideTarget({ id: loanId, action })
       } else {
-        setFeedback({
-          type: 'error',
-          text: toErrorMessage(error, `Unable to ${action} loan.`),
-        })
+        toast.error(`Unable to ${action} loan`, toErrorMessage(error, `Unable to ${action} loan.`))
       }
     } finally {
       setActionLoading(null)
     }
-  }, [request])
+  }, [request, toast])
 
   async function handleOverride(reason: string) {
     if (!overrideTarget) return
@@ -241,12 +232,11 @@ export function LoanWorkflow() {
 
     const amount = Number(repayAmount)
     if (!Number.isFinite(amount) || amount <= 0) {
-      setFeedback({ type: 'error', text: 'Repayment amount must be greater than zero.' })
+      toast.error('Repayment amount must be greater than zero')
       return
     }
 
     setSubmittingRepay(true)
-    setFeedback(null)
     try {
       await request<void>(`/api/v1/loans/${repayTarget.id}/repay`, {
         method: 'POST',
@@ -255,14 +245,11 @@ export function LoanWorkflow() {
           referenceNumber: repayReference.trim() || undefined,
         }),
       })
-      setFeedback({ type: 'success', text: 'Repayment recorded successfully.' })
+      toast.success('Repayment recorded')
       setRepayTarget(null)
       await loadLoans({ append: false, cursor: null })
     } catch (error) {
-      setFeedback({
-        type: 'error',
-        text: toErrorMessage(error, 'Unable to record repayment.'),
-      })
+      toast.error('Unable to record repayment', toErrorMessage(error, 'Unable to record repayment.'))
     } finally {
       setSubmittingRepay(false)
     }
@@ -468,12 +455,6 @@ export function LoanWorkflow() {
         </div>
         <hr className="rule rule--strong" />
       </section>
-
-      {feedback && (
-        <div className={`ops-feedback ops-feedback--${feedback.type}`} role="status">
-          {feedback.text}
-        </div>
-      )}
 
       <div className="filter-bar">
         <div className="filter-search-wrap">

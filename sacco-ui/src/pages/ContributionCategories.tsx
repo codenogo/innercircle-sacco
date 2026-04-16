@@ -7,6 +7,7 @@ import { ApiError } from '../services/apiClient'
 import { getCategories as fetchAllCategories } from '../services/contributionService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { useAuthorization } from '../hooks/useAuthorization'
+import { useToast } from '../hooks/useToast'
 import type {
   ContributionCategoryResponse,
   ContributionCategoryRequest,
@@ -22,11 +23,11 @@ function toErrorMessage(error: unknown, fallback: string): string {
 export function ContributionCategories() {
   const { request } = useAuthenticatedApi()
   const { canAccess } = useAuthorization()
+  const toast = useToast()
   const canManageCategories = canAccess(['ADMIN', 'TREASURER'])
 
   const [categories, setCategories] = useState<ContributionCategoryResponse[]>([])
   const [loading, setLoading] = useState(true)
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [editingCategory, setEditingCategory] = useState<ContributionCategoryResponse | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -43,11 +44,11 @@ export function ContributionCategories() {
       const data = await fetchAllCategories(false, request)
       setCategories(data)
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to load categories.') })
+      toast.error('Unable to load categories', toErrorMessage(error, 'Unable to load categories.'))
     } finally {
       setLoading(false)
     }
-  }, [canManageCategories, request])
+  }, [canManageCategories, request, toast])
 
   useEffect(() => {
     void loadCategories()
@@ -100,7 +101,6 @@ export function ContributionCategories() {
     if (!name) return
 
     setSubmitting(true)
-    setFeedback(null)
 
     try {
       if (editingCategory) {
@@ -116,7 +116,7 @@ export function ContributionCategories() {
           { method: 'PUT', body: JSON.stringify(payload) },
         )
         setCategories(prev => prev.map(c => c.id === updated.id ? updated : c))
-        setFeedback({ type: 'success', text: `Category "${updated.name}" updated.` })
+        toast.success('Category updated', `"${updated.name}" updated.`)
       } else {
         const payload: ContributionCategoryRequest = { name, description, mandatory, welfareEligible }
         const created = await request<ContributionCategoryResponse>(
@@ -124,11 +124,11 @@ export function ContributionCategories() {
           { method: 'POST', body: JSON.stringify(payload) },
         )
         setCategories(prev => [created, ...prev])
-        setFeedback({ type: 'success', text: `Category "${created.name}" created.` })
+        toast.success('Category created', `"${created.name}" created.`)
       }
       handleCloseModal()
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to save category.') })
+      toast.error('Unable to save category', toErrorMessage(error, 'Unable to save category.'))
     } finally {
       setSubmitting(false)
     }
@@ -192,13 +192,12 @@ export function ContributionCategories() {
   async function handleDelete(category: ContributionCategoryResponse) {
     if (!window.confirm(`Delete category "${category.name}"? This action cannot be undone.`)) return
 
-    setFeedback(null)
     try {
       await request<void>(`/api/v1/contribution-categories/${category.id}`, { method: 'DELETE' })
       setCategories(prev => prev.filter(c => c.id !== category.id))
-      setFeedback({ type: 'success', text: `Category "${category.name}" deleted.` })
+      toast.success('Category deleted', `"${category.name}" deleted.`)
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to delete category.') })
+      toast.error('Unable to delete category', toErrorMessage(error, 'Unable to delete category.'))
     }
   }
 
@@ -219,12 +218,6 @@ export function ContributionCategories() {
       </div>
 
       <hr className="rule rule--strong" />
-
-      {feedback && (
-        <div className={`ops-feedback ops-feedback--${feedback.type}`} role="status">
-          {feedback.text}
-        </div>
-      )}
 
       <DataTable<ContributionCategoryResponse>
         columns={categoryColumns}

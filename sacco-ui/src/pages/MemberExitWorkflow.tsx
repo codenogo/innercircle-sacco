@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { DataTable, type ColumnDef } from '../components/DataTable'
 import { ApiError } from '../services/apiClient'
 import {
@@ -9,13 +9,10 @@ import {
 } from '../services/policyWorkflowService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { useAuthorization } from '../hooks/useAuthorization'
+import { useCurrentUser } from '../hooks/useCurrentUser'
+import { useToast } from '../hooks/useToast'
 import type { MemberExitInstallmentResponse, MemberExitRequestResponse, MemberExitRequestStatus } from '../types/policyWorkflows'
 import './Operations.css'
-
-interface Feedback {
-  type: 'success' | 'error'
-  text: string
-}
 
 interface CreateFormState {
   memberId: string
@@ -66,7 +63,10 @@ function formatMoney(value: number | null | undefined) {
 
 export function MemberExitWorkflow() {
   const { request } = useAuthenticatedApi()
-  const { canAccess } = useAuthorization()
+  const { canAccess, isMemberOnly } = useAuthorization()
+  const { profile } = useCurrentUser()
+  const toast = useToast()
+  const ownMemberId = profile?.member?.id ?? ''
 
   const [lookupMemberId, setLookupMemberId] = useState('')
   const [requests, setRequests] = useState<MemberExitRequestResponse[]>([])
@@ -78,10 +78,9 @@ export function MemberExitWorkflow() {
 
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [feedback, setFeedback] = useState<Feedback | null>(null)
 
-  const canReviewExitRequest = canAccess(['ADMIN', 'TREASURER', 'CHAIRPERSON', 'VICE_CHAIRPERSON', 'VICE_TREASURER'])
-  const canProcessInstallment = canAccess(['ADMIN', 'TREASURER'])
+  const canReviewExitRequest = !isMemberOnly && canAccess(['ADMIN', 'TREASURER', 'CHAIRPERSON', 'VICE_CHAIRPERSON', 'VICE_TREASURER'])
+  const canProcessInstallment = !isMemberOnly && canAccess(['ADMIN', 'TREASURER'])
 
   const columns = useMemo<ColumnDef<MemberExitRequestResponse>[]>(() => [
     { key: 'id', header: 'Request', render: row => row.id },
@@ -98,18 +97,24 @@ export function MemberExitWorkflow() {
     { key: 'next', header: 'Next Installment Due', render: row => row.nextInstallmentDueDate ?? '-' },
   ], [])
 
-  async function loadRequests(memberId: string) {
+  const loadRequests = useCallback(async (memberId: string) => {
     setLoading(true)
     try {
       const data = await getMemberExitRequests(memberId, request)
       setRequests(data)
-      setFeedback(null)
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to load exit requests.') })
+      toast.error('Unable to load exit requests', toErrorMessage(error, 'Unable to load exit requests.'))
     } finally {
       setLoading(false)
     }
-  }
+  }, [request, toast])
+
+  useEffect(() => {
+    if (!isMemberOnly || !ownMemberId) return
+    setLookupMemberId(ownMemberId)
+    setCreateForm(prev => ({ ...prev, memberId: ownMemberId }))
+    void loadRequests(ownMemberId)
+  }, [isMemberOnly, ownMemberId, loadRequests])
 
   async function handleLookup(event: FormEvent) {
     event.preventDefault()
@@ -120,7 +125,6 @@ export function MemberExitWorkflow() {
   async function handleCreate(event: FormEvent) {
     event.preventDefault()
     setSubmitting(true)
-    setFeedback(null)
     try {
       const created = await createMemberExitRequest(createForm.memberId.trim(), {
         noticeDate: createForm.noticeDate,
@@ -130,9 +134,9 @@ export function MemberExitWorkflow() {
         setRequests(prev => [created, ...prev])
       }
       setCreateForm(EMPTY_CREATE_FORM)
-      setFeedback({ type: 'success', text: 'Member exit request created.' })
+      toast.success('Member exit request created')
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to create exit request.') })
+      toast.error('Unable to create exit request', toErrorMessage(error, 'Unable to create exit request.'))
     } finally {
       setSubmitting(false)
     }
@@ -141,7 +145,6 @@ export function MemberExitWorkflow() {
   async function handleReview(event: FormEvent) {
     event.preventDefault()
     setSubmitting(true)
-    setFeedback(null)
     try {
       const updated = await reviewMemberExitRequest(reviewForm.memberId.trim(), reviewForm.requestId.trim(), {
         status: reviewForm.status,
@@ -150,9 +153,9 @@ export function MemberExitWorkflow() {
       if (lookupMemberId.trim() === updated.memberId) {
         setRequests(prev => prev.map(item => (item.id === updated.id ? updated : item)))
       }
-      setFeedback({ type: 'success', text: 'Exit request review updated.' })
+      toast.success('Exit request review updated')
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to review exit request.') })
+      toast.error('Unable to review exit request', toErrorMessage(error, 'Unable to review exit request.'))
     } finally {
       setSubmitting(false)
     }
@@ -161,16 +164,15 @@ export function MemberExitWorkflow() {
   async function handleProcessInstallment(event: FormEvent) {
     event.preventDefault()
     setSubmitting(true)
-    setFeedback(null)
     try {
       const processed = await processMemberExitInstallment(processForm.memberId.trim(), processForm.requestId.trim(), request)
       setLatestInstallment(processed)
       if (lookupMemberId.trim() === processForm.memberId.trim()) {
         await loadRequests(processForm.memberId.trim())
       }
-      setFeedback({ type: 'success', text: `Installment ${processed.installmentNumber} processed.` })
+      toast.success('Installment processed', `Installment ${processed.installmentNumber} processed.`)
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to process installment.') })
+      toast.error('Unable to process installment', toErrorMessage(error, 'Unable to process installment.'))
     } finally {
       setSubmitting(false)
     }
@@ -180,26 +182,28 @@ export function MemberExitWorkflow() {
     <div className="ops-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Member Exit Workflow</h1>
-          <p className="page-subtitle">Handle notice, review, and installment processing for member exits.</p>
+          <h1 className="page-title">{isMemberOnly ? 'Exit Workflow' : 'Member Exit Workflow'}</h1>
+          <p className="page-subtitle">
+            {isMemberOnly
+              ? 'Submit an exit notice and track settlement progress.'
+              : 'Handle notice, review, and installment processing for member exits.'}
+          </p>
         </div>
       </div>
 
       <hr className="rule rule--strong" />
 
-      {feedback && (
-        <div className={`ops-feedback ops-feedback--${feedback.type}`} role="status">{feedback.text}</div>
-      )}
-
       <section className="page-section">
-        <span className="page-section-title">Create Exit Request</span>
+        <span className="page-section-title">{isMemberOnly ? 'Submit Exit Notice' : 'Create Exit Request'}</span>
         <hr className="rule" />
         <form className="modal-form" onSubmit={event => void handleCreate(event)}>
           <div className="field-row">
-            <div className="field">
-              <label className="field-label field-label--required">Member ID</label>
-              <input className="field-input" value={createForm.memberId} onChange={event => setCreateForm(prev => ({ ...prev, memberId: event.target.value }))} required />
-            </div>
+            {!isMemberOnly && (
+              <div className="field">
+                <label className="field-label field-label--required">Member ID</label>
+                <input className="field-input" value={createForm.memberId} onChange={event => setCreateForm(prev => ({ ...prev, memberId: event.target.value }))} required />
+              </div>
+            )}
             <div className="field">
               <label className="field-label field-label--required">Notice Date</label>
               <input className="field-input" type="date" value={createForm.noticeDate} onChange={event => setCreateForm(prev => ({ ...prev, noticeDate: event.target.value }))} required />
@@ -209,7 +213,9 @@ export function MemberExitWorkflow() {
               <input className="field-input" type="date" value={createForm.effectiveDate} onChange={event => setCreateForm(prev => ({ ...prev, effectiveDate: event.target.value }))} required />
             </div>
           </div>
-          <button type="submit" className="btn btn--primary" disabled={submitting}>Create</button>
+          <button type="submit" className="btn btn--primary" disabled={submitting || (isMemberOnly && !ownMemberId)}>
+            {isMemberOnly ? 'Submit Notice' : 'Create'}
+          </button>
         </form>
       </section>
 
@@ -277,19 +283,21 @@ export function MemberExitWorkflow() {
       )}
 
       <section className="page-section">
-        <span className="page-section-title">Exit Requests</span>
+        <span className="page-section-title">{isMemberOnly ? 'My Exit Requests' : 'Exit Requests'}</span>
         <hr className="rule" />
-        <form className="modal-form" onSubmit={event => void handleLookup(event)}>
-          <div className="field-row">
-            <div className="field">
-              <label className="field-label field-label--required">Member ID</label>
-              <input className="field-input" value={lookupMemberId} onChange={event => setLookupMemberId(event.target.value)} required />
+        {!isMemberOnly && (
+          <form className="modal-form" onSubmit={event => void handleLookup(event)}>
+            <div className="field-row">
+              <div className="field">
+                <label className="field-label field-label--required">Member ID</label>
+                <input className="field-input" value={lookupMemberId} onChange={event => setLookupMemberId(event.target.value)} required />
+              </div>
+              <div className="field" style={{ alignSelf: 'end' }}>
+                <button type="submit" className="btn btn--secondary" disabled={loading || submitting}>Load Requests</button>
+              </div>
             </div>
-            <div className="field" style={{ alignSelf: 'end' }}>
-              <button type="submit" className="btn btn--secondary" disabled={loading || submitting}>Load Requests</button>
-            </div>
-          </div>
-        </form>
+          </form>
+        )}
         {loading ? (
           <div className="ops-feedback">Loading requests...</div>
         ) : (
@@ -297,7 +305,7 @@ export function MemberExitWorkflow() {
             columns={columns}
             data={requests}
             getRowKey={row => row.id}
-            emptyMessage="No exit requests found for this member."
+            emptyMessage={isMemberOnly ? 'No exit requests on file.' : 'No exit requests found for this member.'}
           />
         )}
       </section>

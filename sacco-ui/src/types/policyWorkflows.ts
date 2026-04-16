@@ -1,4 +1,4 @@
-export type MeetingAttendanceStatus = 'PRESENT' | 'LATE' | 'ABSENT' | 'EXCUSED'
+export type MeetingAttendanceStatus = 'EXPECTED' | 'PRESENT' | 'LATE' | 'ABSENT' | 'EXCUSED'
 export type MeetingFineType = 'ABSENCE' | 'LATE' | 'UNPAID_DAILY_PENALTY'
 export type WelfareClaimStatus = 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'PROCESSED'
 export type MemberExitRequestStatus = 'REQUESTED' | 'UNDER_REVIEW' | 'APPROVED' | 'IN_PROGRESS' | 'COMPLETED' | 'REJECTED'

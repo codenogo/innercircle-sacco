@@ -14,7 +14,7 @@
   padding: var(--space-4);
   border: 1px solid color-mix(in srgb, var(--rule-strong) 80%, var(--rule));
   border-radius: calc(var(--radius-lg) + 8px);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--paper-raised) 94%, white), var(--paper));
+  background: var(--paper-raised);
   box-shadow: var(--shadow-sm);
   min-height: 100%;
   transition: border-color var(--ease-fast), background var(--ease-fast), box-shadow var(--ease-fast);
@@ -61,7 +61,7 @@
 
 .workflow-step--complete {
   border-color: color-mix(in srgb, var(--mpesa) 28%, var(--rule));
-  background: linear-gradient(180deg, color-mix(in srgb, var(--mpesa-soft) 72%, white), color-mix(in srgb, var(--paper) 84%, var(--mpesa-soft)));
+  background: var(--mpesa-soft);
 }
 
 .workflow-step--complete .workflow-step__marker {
@@ -72,7 +72,7 @@
 
 .workflow-step--active {
   border-color: color-mix(in srgb, var(--mpesa) 32%, var(--rule));
-  background: linear-gradient(180deg, color-mix(in srgb, var(--paper-raised) 95%, white), color-mix(in srgb, var(--paper) 84%, var(--mpesa-soft)));
+  background: var(--paper-raised);
   box-shadow: var(--shadow-md);
 }
 
@@ -84,7 +84,7 @@
 
 .workflow-step--attention {
   border-color: color-mix(in srgb, var(--caution) 35%, var(--rule));
-  background: linear-gradient(180deg, color-mix(in srgb, var(--caution-soft) 86%, white), var(--caution-soft));
+  background: var(--caution-soft);
 }
 
 .workflow-step--attention .workflow-step__marker {
@@ -102,7 +102,7 @@
   padding: var(--space-1) var(--space-2);
   border: 1px solid color-mix(in srgb, var(--rule-strong) 80%, var(--rule));
   border-radius: calc(var(--radius-lg) + 10px);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--paper-alt) 78%, white), color-mix(in srgb, var(--paper) 92%, white));
+  background: var(--paper-alt);
   box-shadow: var(--shadow-sm);
 }
 

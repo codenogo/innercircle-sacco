@@ -16,12 +16,6 @@ import type { CreateMemberRequest, MemberResponse, MemberStatus } from '../types
 import './Members.css'
 
 type StatusFilter = 'all' | MemberStatus
-type FeedbackType = 'success' | 'error'
-
-interface Feedback {
-  type: FeedbackType
-  text: string
-}
 
 const PAGE_SIZE = 50
 
@@ -59,7 +53,7 @@ function fmtJoinDate(value: string): string {
 
 export function Members() {
   const { request } = useAuthenticatedApi()
-  const { canAccess } = useAuthorization()
+  const { canAccess, isMemberOnly } = useAuthorization()
   const canCreateMember = canAccess(['ADMIN'])
   const toast = useToast()
 
@@ -72,7 +66,6 @@ export function Members() {
   const [creatingMember, setCreatingMember] = useState(false)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(false)
-  const [feedback, setFeedback] = useState<Feedback | null>(null)
 
   const loadMembers = useCallback(async (opts?: { append?: boolean; cursor?: string | null }) => {
     const append = Boolean(opts?.append)
@@ -97,14 +90,13 @@ export function Members() {
       })
       setNextCursor(page.nextCursor)
       setHasMore(page.hasMore)
-      setFeedback(null)
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to load members.') })
+      toast.error('Unable to load members', toErrorMessage(error, 'Unable to load members.'))
     } finally {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [request])
+  }, [request, toast])
 
   useEffect(() => {
     void loadMembers({ append: false, cursor: null })
@@ -151,47 +143,54 @@ export function Members() {
     })
   }, [filter, members, search])
 
-  const memberColumns: ColumnDef<MemberResponse>[] = useMemo(() => [
-    {
-      key: 'name',
-      header: 'Name',
-      render: (member) => (
-        <>
-          <Link to={`/members/${member.id}`} className="member-link">
-            <span className="member-name">{fullName(member)}</span>
-          </Link>
-          <span className="member-sub">{member.memberNumber}</span>
-          <span className="member-email">{member.email}</span>
-        </>
-      ),
-    },
-    {
-      key: 'phone',
-      header: 'Phone',
-      className: 'data',
-      render: (member) => member.phone,
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      render: (member) => (
-        <span className={`badge ${statusClass[member.status]}`}>{member.status}</span>
-      ),
-    },
-    {
-      key: 'joined',
-      header: 'Joined',
-      className: 'ledger-date',
-      render: (member) => fmtJoinDate(member.joinDate),
-    },
-    {
-      key: 'shares',
-      header: 'Shares (KES)',
-      className: 'amount ledger-table-amount',
-      headerClassName: 'ledger-table-amount',
-      render: (member) => fmtCurrency(member.shareBalance),
-    },
-  ], [])
+  const memberColumns: ColumnDef<MemberResponse>[] = useMemo(() => {
+    const cols: ColumnDef<MemberResponse>[] = [
+      {
+        key: 'name',
+        header: 'Name',
+        render: (member) => (
+          <>
+            <Link to={`/members/${member.id}`} className="member-link">
+              <span className="member-name">{fullName(member)}</span>
+            </Link>
+            <span className="member-sub">{member.memberNumber}</span>
+            {!isMemberOnly && <span className="member-email">{member.email}</span>}
+          </>
+        ),
+      },
+      {
+        key: 'phone',
+        header: 'Phone',
+        className: 'data',
+        render: (member) => member.phone,
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        render: (member) => (
+          <span className={`badge ${statusClass[member.status]}`}>{member.status}</span>
+        ),
+      },
+      {
+        key: 'joined',
+        header: 'Joined',
+        className: 'ledger-date',
+        render: (member) => fmtJoinDate(member.joinDate),
+      },
+    ]
+
+    if (!isMemberOnly) {
+      cols.push({
+        key: 'shares',
+        header: 'Shares (KES)',
+        className: 'amount ledger-table-amount',
+        headerClassName: 'ledger-table-amount',
+        render: (member) => fmtCurrency(member.shareBalance),
+      })
+    }
+
+    return cols
+  }, [isMemberOnly])
 
   const active = members.filter(member => member.status === 'ACTIVE').length
   const suspended = members.filter(member => member.status === 'SUSPENDED').length
@@ -202,7 +201,7 @@ export function Members() {
     <div className="members-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Members</h1>
+          <h1 className="page-title">{isMemberOnly ? 'Member Directory' : 'Members'}</h1>
           <p className="page-subtitle">{members.length} registered members</p>
         </div>
         {canCreateMember && (
@@ -216,22 +215,19 @@ export function Members() {
       <hr className="rule rule--strong" />
 
       <StatCardGrid
-        items={[
+        items={isMemberOnly ? [
+          { label: 'Active Members', value: String(active) },
+          { label: 'Total Registered', value: String(members.length) },
+        ] : [
           { label: 'Active', value: String(active) },
           { label: 'Suspended', value: String(suspended) },
           { label: 'Deactivated', value: String(deactivated) },
           { label: 'Total Shares', value: `KES ${fmtCurrency(totalShares)}` },
         ]}
-        columns={4}
+        columns={isMemberOnly ? 2 : 4}
       />
 
       <hr className="rule" />
-
-      {feedback && (
-        <div className={`ops-feedback ops-feedback--${feedback.type}`} role="status">
-          {feedback.text}
-        </div>
-      )}
 
       <div className="filter-bar">
         <div className="filter-search-wrap">

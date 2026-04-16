@@ -71,7 +71,6 @@ export function Loans() {
   const [submittingLoan, setSubmittingLoan] = useState(false)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const toast = useToast()
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [overrideTarget, setOverrideTarget] = useState<{ id: string; action: 'approve' | 'reject' } | null>(null)
@@ -83,21 +82,20 @@ export function Loans() {
         setLoans([])
         setNextCursor(null)
         setHasMore(false)
-        setError('Your account is not linked to a member profile.')
+        toast.error('Profile not linked', 'Your account is not linked to a member profile.')
         setLoading(false)
         setLoadingMore(false)
         return
       }
 
       setLoading(true)
-      setError(null)
       try {
         const summary = await request<LoanSummaryResponse>(`/api/v1/loans/member/${memberId}/summary`)
         setLoans(summary.loans)
         setNextCursor(null)
         setHasMore(false)
       } catch (err) {
-        setError(toErrorMessage(err, 'Unable to load your loans.'))
+        toast.error('Unable to load your loans', toErrorMessage(err, 'Unable to load your loans.'))
       } finally {
         setLoading(false)
         setLoadingMore(false)
@@ -127,14 +125,13 @@ export function Loans() {
       })
       setNextCursor(page.nextCursor)
       setHasMore(page.hasMore)
-      setError(null)
     } catch (err) {
-      setError(toErrorMessage(err, 'Unable to load loans.'))
+      toast.error('Unable to load loans', toErrorMessage(err, 'Unable to load loans.'))
     } finally {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [isMemberOnly, memberId, request])
+  }, [isMemberOnly, memberId, request, toast])
 
   useEffect(() => {
     if (profileLoading) return
@@ -335,8 +332,12 @@ export function Loans() {
     <div className="loans-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Loans</h1>
-          <p className="page-subtitle">{activeLoans.length} active loans</p>
+          <h1 className="page-title">{isMemberOnly ? 'My Loans' : 'Loans'}</h1>
+          <p className="page-subtitle">
+            {isMemberOnly
+              ? `${activeLoans.length} active loan${activeLoans.length === 1 ? '' : 's'}`
+              : `${activeLoans.length} active loans`}
+          </p>
         </div>
         {canManageLoans && (
           <button className="btn btn--primary" onClick={() => setShowModal(true)}>
@@ -350,24 +351,18 @@ export function Loans() {
 
       {/* Loan portfolio summary */}
       <section className="page-section">
-        <span className="page-section-title">Loan Portfolio</span>
+        <span className="page-section-title">{isMemberOnly ? 'My Loan Summary' : 'Loan Portfolio'}</span>
         <hr className="rule" />
         <StatCardGrid
           items={[
-            { label: 'Total Disbursed (Active)', value: `KES ${fmt(totalDisbursed)}` },
+            { label: isMemberOnly ? 'Total Borrowed (Active)' : 'Total Disbursed (Active)', value: `KES ${fmt(totalDisbursed)}` },
             { label: 'Total Repaid', value: `KES ${fmt(totalRepaid)}`, valueClassName: 'amount--positive' },
-            { label: 'Outstanding Balance', value: `KES ${fmt(totalOutstanding)}` },
+            { label: 'Outstanding Balance', value: `KES ${fmt(totalOutstanding)}`, valueClassName: totalOutstanding > 0 ? 'amount--negative' : undefined },
           ]}
           columns={3}
         />
         <hr className="rule rule--strong" />
       </section>
-
-      {error && (
-        <div className="ops-feedback ops-feedback--error" role="status">
-          {error}
-        </div>
-      )}
 
       {/* Search bar */}
       <div className="filter-bar">
@@ -386,7 +381,7 @@ export function Loans() {
 
       {/* Loans table */}
       <section className="page-section">
-        <span className="page-section-title">All Loans</span>
+        <span className="page-section-title">{isMemberOnly ? 'Loan History' : 'All Loans'}</span>
         <hr className="rule" />
 
         <DataTable<LoanResponse>

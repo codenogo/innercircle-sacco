@@ -6,9 +6,11 @@ import { RequireAuth } from './components/RequireAuth'
 import { RequireRole } from './components/RequireRole'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { SkeletonRow, SkeletonStat } from './components/Skeleton'
+import { useAuthorization } from './hooks/useAuthorization'
 
 /* ─── Lazy-loaded pages — each becomes its own chunk ─── */
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })))
+const MemberDashboard = lazy(() => import('./pages/MemberDashboard').then(m => ({ default: m.MemberDashboard })))
 const Members = lazy(() => import('./pages/Members').then(m => ({ default: m.Members })))
 const MemberProfile = lazy(() => import('./pages/MemberProfile').then(m => ({ default: m.MemberProfile })))
 const Contributions = lazy(() => import('./pages/Contributions').then(m => ({ default: m.Contributions })))
@@ -53,6 +55,11 @@ function PageFallback() {
   )
 }
 
+function RootRoute() {
+  const { isMemberOnly } = useAuthorization()
+  return isMemberOnly ? <MemberDashboard /> : <Dashboard />
+}
+
 export function App() {
   return (
     <ErrorBoundary>
@@ -68,14 +75,7 @@ export function App() {
 
         {/* App pages — inside the shell with sidebar */}
         <Route element={<RequireAuth><AppShell /></RequireAuth>}>
-        <Route
-          index
-          element={(
-            <RequireRole allowed={['ADMIN', 'TREASURER']}>
-              <Dashboard />
-            </RequireRole>
-          )}
-        />
+        <Route index element={<RootRoute />} />
         <Route path="members" element={<Members />} />
         <Route path="members/:id" element={<MemberProfile />} />
         <Route path="contributions" element={<Contributions />} />
@@ -150,7 +150,7 @@ export function App() {
         <Route
           path="operations"
           element={(
-            <RequireRole allowed={['ADMIN', 'TREASURER', 'MEMBER', 'SECRETARY', 'CHAIRPERSON', 'VICE_CHAIRPERSON', 'VICE_TREASURER']}>
+            <RequireRole allowed={['ADMIN', 'TREASURER', 'SECRETARY', 'CHAIRPERSON', 'VICE_CHAIRPERSON', 'VICE_TREASURER']}>
               <Operations />
             </RequireRole>
           )}

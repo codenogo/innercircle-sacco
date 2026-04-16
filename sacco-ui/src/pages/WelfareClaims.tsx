@@ -10,6 +10,7 @@ import {
   reviewWelfareClaim,
 } from '../services/policyWorkflowService'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
+import { useToast } from '../hooks/useToast'
 import type {
   WelfareBeneficiaryResponse,
   WelfareClaimResponse,
@@ -17,11 +18,6 @@ import type {
   WelfareFundSummaryResponse,
 } from '../types/policyWorkflows'
 import './Operations.css'
-
-interface Feedback {
-  type: 'success' | 'error'
-  text: string
-}
 
 interface BeneficiaryFormState {
   memberId: string
@@ -89,6 +85,7 @@ function formatMoney(value: number) {
 
 export function WelfareClaims() {
   const { request } = useAuthenticatedApi()
+  const toast = useToast()
 
   const [beneficiaryLookupMemberId, setBeneficiaryLookupMemberId] = useState('')
   const [beneficiaries, setBeneficiaries] = useState<WelfareBeneficiaryResponse[]>([])
@@ -102,7 +99,6 @@ export function WelfareClaims() {
 
   const [loadingSummary, setLoadingSummary] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [feedback, setFeedback] = useState<Feedback | null>(null)
 
   const beneficiaryColumns = useMemo<ColumnDef<WelfareBeneficiaryResponse>[]>(() => [
     { key: 'name', header: 'Name', render: row => row.fullName },
@@ -126,24 +122,19 @@ export function WelfareClaims() {
       setLoadingSummary(true)
       try {
         const data = await getWelfareFundSummary(request)
-        if (!cancelled) {
-          setFundSummary(data)
-          setFeedback(null)
-        }
+        if (!cancelled) setFundSummary(data)
       } catch (error) {
         if (!cancelled) {
-          setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to load welfare fund summary.') })
+          toast.error('Unable to load welfare fund summary', toErrorMessage(error, 'Unable to load welfare fund summary.'))
         }
       } finally {
-        if (!cancelled) {
-          setLoadingSummary(false)
-        }
+        if (!cancelled) setLoadingSummary(false)
       }
     }
 
     void loadSummary()
     return () => { cancelled = true }
-  }, [request])
+  }, [request, toast])
 
   async function refreshSummary() {
     const data = await getWelfareFundSummary(request)
@@ -154,13 +145,12 @@ export function WelfareClaims() {
     event.preventDefault()
     if (!beneficiaryLookupMemberId.trim()) return
     setSubmitting(true)
-    setFeedback(null)
     try {
       const rows = await getWelfareBeneficiariesForMember(beneficiaryLookupMemberId.trim(), request)
       setBeneficiaries(rows)
-      setFeedback({ type: 'success', text: `Loaded ${rows.length} beneficiaries.` })
+      toast.success('Beneficiaries loaded', `${rows.length} found.`)
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to load beneficiaries.') })
+      toast.error('Unable to load beneficiaries', toErrorMessage(error, 'Unable to load beneficiaries.'))
     } finally {
       setSubmitting(false)
     }
@@ -169,7 +159,6 @@ export function WelfareClaims() {
   async function handleCreateBeneficiary(event: FormEvent) {
     event.preventDefault()
     setSubmitting(true)
-    setFeedback(null)
     try {
       const created = await createWelfareBeneficiary({
         memberId: beneficiaryForm.memberId.trim(),
@@ -184,9 +173,9 @@ export function WelfareClaims() {
         setBeneficiaries(prev => [created, ...prev])
       }
       setBeneficiaryForm(EMPTY_BENEFICIARY_FORM)
-      setFeedback({ type: 'success', text: 'Welfare beneficiary created.' })
+      toast.success('Welfare beneficiary created')
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to create beneficiary.') })
+      toast.error('Unable to create beneficiary', toErrorMessage(error, 'Unable to create beneficiary.'))
     } finally {
       setSubmitting(false)
     }
@@ -195,7 +184,6 @@ export function WelfareClaims() {
   async function handleCreateClaim(event: FormEvent) {
     event.preventDefault()
     setSubmitting(true)
-    setFeedback(null)
     try {
       const created = await createWelfareClaim({
         memberId: claimForm.memberId.trim(),
@@ -207,9 +195,9 @@ export function WelfareClaims() {
       setClaims(prev => [created, ...prev])
       setClaimForm(EMPTY_CLAIM_FORM)
       await refreshSummary()
-      setFeedback({ type: 'success', text: 'Welfare claim submitted.' })
+      toast.success('Welfare claim submitted')
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to submit claim.') })
+      toast.error('Unable to submit claim', toErrorMessage(error, 'Unable to submit claim.'))
     } finally {
       setSubmitting(false)
     }
@@ -219,7 +207,6 @@ export function WelfareClaims() {
     event.preventDefault()
     if (!reviewForm.claimId.trim()) return
     setSubmitting(true)
-    setFeedback(null)
     try {
       const updated = await reviewWelfareClaim(reviewForm.claimId.trim(), {
         status: reviewForm.status,
@@ -234,9 +221,9 @@ export function WelfareClaims() {
         if (existing) return prev.map(item => (item.id === updated.id ? updated : item))
         return [updated, ...prev]
       })
-      setFeedback({ type: 'success', text: 'Welfare claim review recorded.' })
+      toast.success('Welfare claim review recorded')
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to review claim.') })
+      toast.error('Unable to review claim', toErrorMessage(error, 'Unable to review claim.'))
     } finally {
       setSubmitting(false)
     }
@@ -246,7 +233,6 @@ export function WelfareClaims() {
     event.preventDefault()
     if (!processClaimId.trim()) return
     setSubmitting(true)
-    setFeedback(null)
     try {
       const processed = await processWelfareClaim(processClaimId.trim(), request)
       setClaims(prev => {
@@ -255,9 +241,9 @@ export function WelfareClaims() {
         return [processed, ...prev]
       })
       await refreshSummary()
-      setFeedback({ type: 'success', text: 'Welfare claim processed.' })
+      toast.success('Welfare claim processed')
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to process claim.') })
+      toast.error('Unable to process claim', toErrorMessage(error, 'Unable to process claim.'))
     } finally {
       setSubmitting(false)
     }
@@ -274,9 +260,6 @@ export function WelfareClaims() {
 
       <hr className="rule rule--strong" />
 
-      {feedback && (
-        <div className={`ops-feedback ops-feedback--${feedback.type}`} role="status">{feedback.text}</div>
-      )}
 
       <section className="page-section">
         <span className="page-section-title">Fund Summary</span>

@@ -42,6 +42,7 @@ describe('auth role helpers', () => {
   it('resolves default route by role', () => {
     expect(getDefaultAuthenticatedRoute(['ADMIN'])).toBe('/')
     expect(getDefaultAuthenticatedRoute(['TREASURER'])).toBe('/')
-    expect(getDefaultAuthenticatedRoute(['MEMBER'])).toBe('/profile')
+    expect(getDefaultAuthenticatedRoute(['MEMBER'])).toBe('/')
+    expect(getDefaultAuthenticatedRoute([])).toBe('/profile')
   })
 })

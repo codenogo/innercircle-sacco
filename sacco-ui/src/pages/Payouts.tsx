@@ -20,12 +20,6 @@ import type { PayoutResponse, PayoutRequest, PayoutStatus, PayoutType } from '..
 import './Payouts.css'
 
 type StatusFilter = 'all' | PayoutStatus
-type FeedbackType = 'success' | 'error'
-
-interface Feedback {
-  type: FeedbackType
-  text: string
-}
 
 const PAGE_SIZE = 50
 
@@ -82,7 +76,6 @@ export function Payouts() {
   const [creatingPayout, setCreatingPayout] = useState(false)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(false)
-  const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [overrideTarget, setOverrideTarget] = useState<{ id: string; action: 'approve' } | null>(null)
   const [confirmPayoutId, setConfirmPayoutId] = useState<string | null>(null)
@@ -93,14 +86,13 @@ export function Payouts() {
         setPayouts([])
         setNextCursor(null)
         setHasMore(false)
-        setFeedback({ type: 'error', text: 'Your account is not linked to a member profile.' })
+        toast.error('Profile not linked', 'Your account is not linked to a member profile.')
         setLoading(false)
         setLoadingMore(false)
         return
       }
 
       setLoading(true)
-      setFeedback(null)
       try {
         const path = opts?.cursor
           ? `/api/v1/payouts/member/${memberId}?limit=${PAGE_SIZE}&cursor=${encodeURIComponent(opts.cursor)}`
@@ -117,7 +109,7 @@ export function Payouts() {
         setNextCursor(page.nextCursor)
         setHasMore(page.hasMore)
       } catch (error) {
-        setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to load your payouts.') })
+        toast.error('Unable to load your payouts', toErrorMessage(error, 'Unable to load your payouts.'))
       } finally {
         setLoading(false)
         setLoadingMore(false)
@@ -147,14 +139,13 @@ export function Payouts() {
       })
       setNextCursor(page.nextCursor)
       setHasMore(page.hasMore)
-      setFeedback(null)
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to load payouts.') })
+      toast.error('Unable to load payouts', toErrorMessage(error, 'Unable to load payouts.'))
     } finally {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [isMemberOnly, memberId, request])
+  }, [isMemberOnly, memberId, request, toast])
 
   const loadMembers = useCallback(async () => {
     if (!canCreatePayout) {
@@ -336,8 +327,10 @@ export function Payouts() {
     <div className="payouts-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Payouts</h1>
-          <p className="page-subtitle">Disbursements and withdrawals</p>
+          <h1 className="page-title">{isMemberOnly ? 'My Payouts' : 'Payouts'}</h1>
+          <p className="page-subtitle">
+            {isMemberOnly ? 'Your disbursements and withdrawals' : 'Disbursements and withdrawals'}
+          </p>
         </div>
         {canCreatePayout && (
           <button className="btn btn--primary" onClick={() => setShowModal(true)}>
@@ -362,14 +355,8 @@ export function Payouts() {
         <hr className="rule" />
       </section>
 
-      {feedback && (
-        <div className={`ops-feedback ops-feedback--${feedback.type}`} role="status">
-          {feedback.text}
-        </div>
-      )}
-
       <section className="page-section">
-        <span className="page-section-title">All Payouts</span>
+        <span className="page-section-title">{isMemberOnly ? 'Payout History' : 'All Payouts'}</span>
         <hr className="rule" />
 
         <div className="filter-bar">

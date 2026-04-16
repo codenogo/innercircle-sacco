@@ -6,17 +6,12 @@ import { Spinner } from '../components/Spinner'
 import { Modal } from '../components/Modal'
 import { ApiError } from '../services/apiClient'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
+import { useToast } from '../hooks/useToast'
 import type { CursorPage, UserResponse } from '../types/users'
 import './Operations.css'
 
 type UserStatus = 'ACTIVE' | 'INACTIVE' | 'LOCKED'
 type StatusFilter = 'ALL' | UserStatus
-type FeedbackType = 'success' | 'error'
-
-interface Feedback {
-  type: FeedbackType
-  text: string
-}
 
 interface CreateUserState {
   username: string
@@ -91,6 +86,7 @@ function defaultCreateUserState(): CreateUserState {
 
 export function UsersAdmin() {
   const { request } = useAuthenticatedApi()
+  const toast = useToast()
 
   const [users, setUsers] = useState<UserResponse[]>([])
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
@@ -100,7 +96,6 @@ export function UsersAdmin() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(false)
-  const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [busyAction, setBusyAction] = useState<string | null>(null)
 
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -144,17 +139,16 @@ export function UsersAdmin() {
       })
       setNextCursor(page.nextCursor)
       setHasMore(page.hasMore)
-      setFeedback(null)
     } catch (error) {
       if (loadRequestId.current !== requestId) return
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to load users.') })
+      toast.error('Unable to load users', toErrorMessage(error, 'Unable to load users.'))
     } finally {
       if (loadRequestId.current === requestId) {
         setLoading(false)
         setLoadingMore(false)
       }
     }
-  }, [request, searchQuery])
+  }, [request, searchQuery, toast])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -186,31 +180,29 @@ export function UsersAdmin() {
 
   const updateUserInList = useCallback(async (path: string, method: 'PATCH' | 'PUT', successMessage: string) => {
     setBusyAction(path)
-    setFeedback(null)
     try {
       const updated = await request<UserResponse>(path, { method })
       setUsers(prev => prev.map(user => (user.id === updated.id ? updated : user)))
-      setFeedback({ type: 'success', text: successMessage })
+      toast.success(successMessage)
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Action failed.') })
+      toast.error('Action failed', toErrorMessage(error, 'Action failed.'))
     } finally {
       setBusyAction(null)
     }
-  }, [request])
+  }, [request, toast])
 
   const handlePasswordReset = useCallback(async (userId: string) => {
     const actionKey = `reset:${userId}`
     setBusyAction(actionKey)
-    setFeedback(null)
     try {
       await request<null>(`/api/v1/admin/users/${userId}/password-reset`, { method: 'POST' })
-      setFeedback({ type: 'success', text: 'Password reset email sent.' })
+      toast.success('Password reset email sent')
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to send password reset email.') })
+      toast.error('Unable to send password reset email', toErrorMessage(error, 'Unable to send password reset email.'))
     } finally {
       setBusyAction(null)
     }
-  }, [request])
+  }, [request, toast])
 
   const handleDeleteUser = useCallback(async (userId: string, username: string) => {
     const confirmed = window.confirm(`Deactivate user "${username}"?`)
@@ -218,27 +210,25 @@ export function UsersAdmin() {
 
     const actionKey = `delete:${userId}`
     setBusyAction(actionKey)
-    setFeedback(null)
     try {
       await request<null>(`/api/v1/users/${userId}`, { method: 'DELETE' })
       setUsers(prev => prev.filter(user => user.id !== userId))
-      setFeedback({ type: 'success', text: 'User deactivated successfully.' })
+      toast.success('User deactivated')
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to deactivate user.') })
+      toast.error('Unable to deactivate user', toErrorMessage(error, 'Unable to deactivate user.'))
     } finally {
       setBusyAction(null)
     }
-  }, [request])
+  }, [request, toast])
 
   async function handleCreateUser(e: FormEvent) {
     e.preventDefault()
     if (createUserState.roleNames.length === 0) {
-      setFeedback({ type: 'error', text: 'Select at least one role.' })
+      toast.error('Select at least one role')
       return
     }
 
     setBusyAction('create')
-    setFeedback(null)
     try {
       const created = await request<UserResponse>('/api/v1/admin/users', {
         method: 'POST',
@@ -254,9 +244,9 @@ export function UsersAdmin() {
       setUsers(prev => [created, ...prev])
       setShowCreateModal(false)
       setCreateUserState(defaultCreateUserState())
-      setFeedback({ type: 'success', text: 'User created successfully.' })
+      toast.success('User created successfully')
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to create user.') })
+      toast.error('Unable to create user', toErrorMessage(error, 'Unable to create user.'))
     } finally {
       setBusyAction(null)
     }
@@ -271,13 +261,12 @@ export function UsersAdmin() {
     e.preventDefault()
     if (!editingRolesUser) return
     if (editingRoleNames.length === 0) {
-      setFeedback({ type: 'error', text: 'At least one role is required.' })
+      toast.error('At least one role is required')
       return
     }
 
     const actionKey = `roles:${editingRolesUser.id}`
     setBusyAction(actionKey)
-    setFeedback(null)
     try {
       const updated = await request<UserResponse>(`/api/v1/users/${editingRolesUser.id}/roles`, {
         method: 'PUT',
@@ -286,9 +275,9 @@ export function UsersAdmin() {
       setUsers(prev => prev.map(user => (user.id === updated.id ? updated : user)))
       setEditingRolesUser(null)
       setEditingRoleNames([])
-      setFeedback({ type: 'success', text: 'Roles updated successfully.' })
+      toast.success('Roles updated successfully')
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Unable to update roles.') })
+      toast.error('Unable to update roles', toErrorMessage(error, 'Unable to update roles.'))
     } finally {
       setBusyAction(null)
     }
@@ -420,12 +409,6 @@ export function UsersAdmin() {
       </div>
 
       <hr className="rule" />
-
-      {feedback && (
-        <div className={`ops-feedback ops-feedback--${feedback.type}`} role="status">
-          {feedback.text}
-        </div>
-      )}
 
       <div className="filter-bar">
         <div className="filter-search-wrap">

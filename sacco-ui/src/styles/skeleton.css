@@ -1,19 +1,13 @@
-/* ─── Skeleton — warm shimmer loading, like light moving across paper ─── */
+/* ─── Skeleton — flat pulse loading placeholder ─── */
 
-@keyframes skeleton-shimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
 }
 
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--paper-inset) 25%,
-    var(--paper-alt) 50%,
-    var(--paper-inset) 75%
-  );
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.8s ease-in-out infinite;
+  background: var(--paper-inset);
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
   border-radius: var(--radius-sm);
 }
 
@@ -47,14 +41,8 @@
 .skeleton-row-cell {
   height: 14px;
   border-radius: var(--radius-sm);
-  background: linear-gradient(
-    90deg,
-    var(--paper-inset) 25%,
-    var(--paper-alt) 50%,
-    var(--paper-inset) 75%
-  );
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.8s ease-in-out infinite;
+  background: var(--paper-inset);
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
 }
 
 .skeleton-row-cell:nth-child(1) { flex: 2; }
@@ -88,9 +76,8 @@
   height: 10px;
   width: 50%;
   border-radius: var(--radius-sm);
-  background: linear-gradient(90deg, var(--paper-inset) 25%, var(--paper-alt) 50%, var(--paper-inset) 75%);
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.8s ease-in-out infinite;
+  background: var(--paper-inset);
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
 }
 
 .skeleton-stat::after {
@@ -99,9 +86,8 @@
   height: 20px;
   width: 70%;
   border-radius: var(--radius-sm);
-  background: linear-gradient(90deg, var(--paper-inset) 25%, var(--paper-alt) 50%, var(--paper-inset) 75%);
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.8s ease-in-out infinite;
+  background: var(--paper-inset);
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
 }
 
 /* ─── Header placeholder ─── */
@@ -110,7 +96,6 @@
   height: 24px;
   width: 40%;
   border-radius: var(--radius-sm);
-  background: linear-gradient(90deg, var(--paper-inset) 25%, var(--paper-alt) 50%, var(--paper-inset) 75%);
-  background-size: 200% 100%;
-  animation: skeleton-shimmer 1.8s ease-in-out infinite;
+  background: var(--paper-inset);
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
 }

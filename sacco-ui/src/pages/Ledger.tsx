@@ -7,6 +7,7 @@ import { DataTable, type ColumnDef } from '../components/DataTable'
 import { ApiError } from '../services/apiClient'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
 import { useDebounce } from '../hooks/useDebounce'
+import { useToast } from '../hooks/useToast'
 import { localISODate } from '../utils/date'
 import type {
   AccountResponse,
@@ -96,6 +97,7 @@ function splitLedgerSearch(query: string): Pick<JournalEntryFilters, 'entryNumbe
 
 export function Ledger() {
   const { request, requestBlob } = useAuthenticatedApi()
+  const toast = useToast()
 
   const [entries, setEntries] = useState<JournalEntryResponse[]>([])
   const [accounts, setAccounts] = useState<AccountResponse[]>([])
@@ -104,7 +106,6 @@ export function Ledger() {
   const [exporting, setExporting] = useState(false)
   const [hasMore, setHasMore] = useState(false)
   const [totalElements, setTotalElements] = useState(0)
-  const [error, setError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
   // Sort state
@@ -154,7 +155,6 @@ export function Ledger() {
       pageRef.current = 0
       setLoading(true)
     }
-    setError(null)
 
     try {
       const params = new URLSearchParams({
@@ -183,12 +183,12 @@ export function Ledger() {
       }
       setHasMore(!data.last)
     } catch (err) {
-      setError(toErrorMessage(err, 'Unable to load journal entries.'))
+      toast.error('Unable to load journal entries', toErrorMessage(err, 'Unable to load journal entries.'))
     } finally {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [request, filters, sortDir])
+  }, [request, filters, sortDir, toast])
 
   // Initial load + load accounts
   useEffect(() => {
@@ -220,7 +220,6 @@ export function Ledger() {
     if (totalElements === 0 || exporting) return
 
     setExporting(true)
-    setError(null)
     try {
       const params = new URLSearchParams({
         sort: `transactionDate,${sortDir}`,
@@ -242,11 +241,11 @@ export function Ledger() {
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
     } catch (err) {
-      setError(toErrorMessage(err, 'Unable to export journal entries.'))
+      toast.error('Unable to export journal entries', toErrorMessage(err, 'Unable to export journal entries.'))
     } finally {
       setExporting(false)
     }
-  }, [exporting, filters, requestBlob, sortDir, totalElements])
+  }, [exporting, filters, requestBlob, sortDir, totalElements, toast])
 
   // Infinite scroll: load more when near bottom
   const loadingMoreRef = useRef(false)
@@ -467,12 +466,6 @@ export function Ledger() {
         Showing <strong>{entries.length.toLocaleString()}</strong> of{' '}
         <strong>{totalElements.toLocaleString()}</strong> journal entries
       </div>
-
-      {error && (
-        <div className="ops-feedback ops-feedback--error" role="status">
-          {error}
-        </div>
-      )}
 
       {/* Filter bar */}
       <div className="filter-bar ledger-filter-bar">

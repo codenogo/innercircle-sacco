@@ -5,6 +5,7 @@ import { SkeletonStat } from '../components/Skeleton'
 import { Modal } from '../components/Modal'
 import { DatePicker } from '../components/DatePicker'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
+import { useToast } from '../hooks/useToast'
 import { ApiError } from '../services/apiClient'
 import { getAllMembers } from '../services/memberService'
 import { localISODate } from '../utils/date'
@@ -92,6 +93,7 @@ function isDownloadAvailable(reportId: string, format: string): boolean {
 
 export function Reports() {
   const { request, requestBlob } = useAuthenticatedApi()
+  const toast = useToast()
 
   const [stats, setStats] = useState<SaccoStateResponse | null>(null)
   const [statsLoading, setStatsLoading] = useState(true)
@@ -109,9 +111,6 @@ export function Reports() {
   const [memberQuery, setMemberQuery] = useState('')
   const [members, setMembers] = useState<MemberResponse[]>([])
   const [membersLoading, setMembersLoading] = useState(false)
-
-  // Feedback
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const loadStats = useCallback(async () => {
     setStatsLoading(true)
@@ -159,7 +158,6 @@ export function Reports() {
 
   async function triggerDownload(url: string, filename: string, downloadKey: string) {
     setDownloading(prev => ({ ...prev, [downloadKey]: true }))
-    setFeedback(null)
     try {
       const blob = await requestBlob(url)
       const objectUrl = URL.createObjectURL(blob)
@@ -169,7 +167,7 @@ export function Reports() {
       a.click()
       URL.revokeObjectURL(objectUrl)
     } catch (error) {
-      setFeedback({ type: 'error', text: toErrorMessage(error, 'Download failed.') })
+      toast.error('Download failed', toErrorMessage(error, 'Download failed.'))
     } finally {
       setDownloading(prev => ({ ...prev, [downloadKey]: false }))
     }
@@ -190,7 +188,7 @@ export function Reports() {
     }
 
     // Other reports not yet wired — show info
-    setFeedback({ type: 'error', text: `${format} export for this report is not yet available.` })
+    toast.info('Export not available', `${format} export for this report is not yet available.`)
   }
 
   function handleMemberSelect(member: MemberResponse) {
@@ -220,12 +218,6 @@ export function Reports() {
       </div>
 
       <hr className="rule rule--strong" />
-
-      {feedback && (
-        <div className={`ops-feedback ops-feedback--${feedback.type}`} role="status">
-          {feedback.text}
-        </div>
-      )}
 
       {/* Date range picker */}
       <section className="page-section">

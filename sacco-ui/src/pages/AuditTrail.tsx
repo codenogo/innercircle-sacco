@@ -4,6 +4,7 @@ import { Spinner } from '../components/Spinner'
 import { DataTable, type ColumnDef } from '../components/DataTable'
 import { ApiError } from '../services/apiClient'
 import { useAuthenticatedApi } from '../hooks/useAuthenticatedApi'
+import { useToast } from '../hooks/useToast'
 import { localISODate } from '../utils/date'
 import type { CursorPage } from '../types/users'
 import type { AuditEventResponse, AuditEntityType } from '../types/audit'
@@ -33,6 +34,7 @@ function fmtTimestamp(value: string): string {
 
 export function AuditTrail() {
   const { request, requestBlob } = useAuthenticatedApi()
+  const toast = useToast()
 
   const [events, setEvents] = useState<AuditEventResponse[]>([])
   const [typeFilter, setTypeFilter] = useState<EntityTypeFilter>('ALL')
@@ -43,7 +45,6 @@ export function AuditTrail() {
   const [exporting, setExporting] = useState(false)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const buildQueryString = useCallback((cursor?: string | null) => {
     const params = new URLSearchParams()
@@ -76,14 +77,13 @@ export function AuditTrail() {
       })
       setNextCursor(page.nextCursor)
       setHasMore(page.hasMore)
-      setError(null)
     } catch (err) {
-      setError(toErrorMessage(err, 'Unable to load audit events.'))
+      toast.error('Unable to load audit events', toErrorMessage(err, 'Unable to load audit events.'))
     } finally {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [request, buildQueryString])
+  }, [request, buildQueryString, toast])
 
   useEffect(() => {
     void loadEvents({ append: false, cursor: null })
@@ -110,11 +110,11 @@ export function AuditTrail() {
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
     } catch (err) {
-      setError(toErrorMessage(err, 'Unable to export audit events.'))
+      toast.error('Unable to export audit events', toErrorMessage(err, 'Unable to export audit events.'))
     } finally {
       setExporting(false)
     }
-  }, [typeFilter, startDate, endDate, requestBlob])
+  }, [typeFilter, startDate, endDate, requestBlob, toast])
 
   // Track whether it's the initial mount to avoid double-fetch
   const mountedRef = useRef(false)
@@ -179,12 +179,6 @@ export function AuditTrail() {
       </div>
 
       <hr className="rule rule--strong" />
-
-      {error && (
-        <div className="ops-feedback ops-feedback--error" role="status">
-          {error}
-        </div>
-      )}
 
       <div className="filter-bar">
         <span className="page-section-title page-section-title--inline">Entity Type</span>

@@ -10,10 +10,14 @@ interface DatePickerProps {
 }
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 const WEEKDAYS = ['Mo','Tu','We','Th','Fr','Sa','Su']
 const PANEL_GAP = 4
 const VIEWPORT_MARGIN = 8
 const PANEL_HEIGHT_ESTIMATE = 320
+const YEAR_GRID_SIZE = 12
+
+type ViewMode = 'days' | 'months' | 'years'
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
@@ -47,9 +51,20 @@ export function DatePicker({ value, onChange, required }: DatePickerProps) {
   const parsed = value ? value.split('-').map(Number) : [today.getFullYear(), today.getMonth() + 1, today.getDate()]
   const [viewYear, setViewYear] = useState(parsed[0])
   const [viewMonth, setViewMonth] = useState(parsed[1] - 1) // 0-indexed
+  const [viewMode, setViewMode] = useState<ViewMode>('days')
+  const [yearGridStart, setYearGridStart] = useState(parsed[0] - (parsed[0] % YEAR_GRID_SIZE))
   const [open, setOpen] = useState(false)
   const [panelStyle, setPanelStyle] = useState<CSSProperties>({})
   const [panelPlacement, setPanelPlacement] = useState<'top' | 'bottom'>('bottom')
+
+  // Reset to days view whenever the panel reopens
+  useEffect(() => {
+    if (open) {
+      setViewMode('days')
+      setYearGridStart(viewYear - (viewYear % YEAR_GRID_SIZE))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   const wrapRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -141,8 +156,53 @@ export function DatePicker({ value, onChange, required }: DatePickerProps) {
     onChange(todayISO)
     setViewYear(today.getFullYear())
     setViewMonth(today.getMonth())
+    setViewMode('days')
     setOpen(false)
   }
+
+  function handleHeaderClick() {
+    if (viewMode === 'days') {
+      setViewMode('months')
+    } else if (viewMode === 'months') {
+      setYearGridStart(viewYear - (viewYear % YEAR_GRID_SIZE))
+      setViewMode('years')
+    }
+  }
+
+  function selectMonth(month: number) {
+    setViewMonth(month)
+    setViewMode('days')
+  }
+
+  function selectYearFromGrid(year: number) {
+    setViewYear(year)
+    setViewMode('months')
+  }
+
+  function headerPrev() {
+    if (viewMode === 'days') prevMonth()
+    else if (viewMode === 'months') setViewYear(y => y - 1)
+    else setYearGridStart(s => s - YEAR_GRID_SIZE)
+  }
+
+  function headerNext() {
+    if (viewMode === 'days') nextMonth()
+    else if (viewMode === 'months') setViewYear(y => y + 1)
+    else setYearGridStart(s => s + YEAR_GRID_SIZE)
+  }
+
+  const headerLabel =
+    viewMode === 'days' ? `${MONTHS[viewMonth]} ${viewYear}` :
+    viewMode === 'months' ? `${viewYear}` :
+    `${yearGridStart} – ${yearGridStart + YEAR_GRID_SIZE - 1}`
+
+  const headerHint =
+    viewMode === 'days' ? 'Switch to month view' :
+    viewMode === 'months' ? 'Switch to year view' :
+    undefined
+
+  const selectedYear = value ? Number(value.split('-')[0]) : null
+  const selectedMonth = value ? Number(value.split('-')[1]) - 1 : null
 
   // Build the calendar grid
   const daysInMonth = getDaysInMonth(viewYear, viewMonth)
@@ -197,51 +257,121 @@ export function DatePicker({ value, onChange, required }: DatePickerProps) {
           aria-label="Choose date"
         >
           <div className="datepicker-header">
-            <button type="button" className="datepicker-nav" onClick={prevMonth} aria-label="Previous month">
+            <button
+              type="button"
+              className="datepicker-nav"
+              onClick={headerPrev}
+              aria-label={viewMode === 'days' ? 'Previous month' : viewMode === 'months' ? 'Previous year' : 'Previous decade'}
+            >
               <CaretLeft size={16} weight="bold" />
             </button>
-            <span className="datepicker-month-label">
-              {MONTHS[viewMonth]} {viewYear}
-            </span>
-            <button type="button" className="datepicker-nav" onClick={nextMonth} aria-label="Next month">
+            <button
+              type="button"
+              className="datepicker-month-label"
+              onClick={handleHeaderClick}
+              disabled={viewMode === 'years'}
+              aria-label={headerHint}
+            >
+              {headerLabel}
+            </button>
+            <button
+              type="button"
+              className="datepicker-nav"
+              onClick={headerNext}
+              aria-label={viewMode === 'days' ? 'Next month' : viewMode === 'months' ? 'Next year' : 'Next decade'}
+            >
               <CaretRight size={16} weight="bold" />
             </button>
           </div>
 
-          <div className="datepicker-weekdays">
-            {WEEKDAYS.map(d => <span key={d} className="datepicker-weekday">{d}</span>)}
-          </div>
+          {viewMode === 'days' && (
+            <>
+              <div className="datepicker-weekdays">
+                {WEEKDAYS.map(d => <span key={d} className="datepicker-weekday">{d}</span>)}
+              </div>
 
-          <div className="datepicker-days" role="grid">
-            {cells.map((cell, i) => {
-              const cellISO = toISO(
-                viewYear + (viewMonth + cell.offset < 0 ? -1 : viewMonth + cell.offset > 11 ? 1 : 0),
-                ((viewMonth + cell.offset) + 12) % 12,
-                cell.day
-              )
-              const isSelected = cellISO === value
-              const isToday = cellISO === todayISO
-              const isOutside = cell.offset !== 0
+              <div className="datepicker-days" role="grid">
+                {cells.map((cell, i) => {
+                  const cellISO = toISO(
+                    viewYear + (viewMonth + cell.offset < 0 ? -1 : viewMonth + cell.offset > 11 ? 1 : 0),
+                    ((viewMonth + cell.offset) + 12) % 12,
+                    cell.day
+                  )
+                  const isSelected = cellISO === value
+                  const isToday = cellISO === todayISO
+                  const isOutside = cell.offset !== 0
 
-              return (
-                <button
-                  key={i}
-                  type="button"
-                  className={[
-                    'datepicker-day',
-                    isOutside && 'datepicker-day--outside',
-                    isToday && !isSelected && 'datepicker-day--today',
-                    isSelected && 'datepicker-day--selected',
-                  ].filter(Boolean).join(' ')}
-                  onClick={() => selectDay(cell.day, cell.offset)}
-                  aria-label={`${cell.day} ${MONTHS[((viewMonth + cell.offset) + 12) % 12]}`}
-                  aria-pressed={isSelected}
-                >
-                  {cell.day}
-                </button>
-              )
-            })}
-          </div>
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      className={[
+                        'datepicker-day',
+                        isOutside && 'datepicker-day--outside',
+                        isToday && !isSelected && 'datepicker-day--today',
+                        isSelected && 'datepicker-day--selected',
+                      ].filter(Boolean).join(' ')}
+                      onClick={() => selectDay(cell.day, cell.offset)}
+                      aria-label={`${cell.day} ${MONTHS[((viewMonth + cell.offset) + 12) % 12]}`}
+                      aria-pressed={isSelected}
+                    >
+                      {cell.day}
+                    </button>
+                  )
+                })}
+              </div>
+            </>
+          )}
+
+          {viewMode === 'months' && (
+            <div className="datepicker-grid datepicker-grid--months" role="grid">
+              {MONTHS_SHORT.map((label, idx) => {
+                const isSelected = selectedYear === viewYear && selectedMonth === idx
+                const isCurrent = today.getFullYear() === viewYear && today.getMonth() === idx
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    className={[
+                      'datepicker-cell',
+                      isCurrent && !isSelected && 'datepicker-cell--today',
+                      isSelected && 'datepicker-cell--selected',
+                    ].filter(Boolean).join(' ')}
+                    onClick={() => selectMonth(idx)}
+                    aria-label={MONTHS[idx]}
+                    aria-pressed={isSelected}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {viewMode === 'years' && (
+            <div className="datepicker-grid datepicker-grid--years" role="grid">
+              {Array.from({ length: YEAR_GRID_SIZE }, (_, i) => yearGridStart + i).map(year => {
+                const isSelected = selectedYear === year
+                const isCurrent = today.getFullYear() === year
+                return (
+                  <button
+                    key={year}
+                    type="button"
+                    className={[
+                      'datepicker-cell',
+                      isCurrent && !isSelected && 'datepicker-cell--today',
+                      isSelected && 'datepicker-cell--selected',
+                    ].filter(Boolean).join(' ')}
+                    onClick={() => selectYearFromGrid(year)}
+                    aria-label={`${year}`}
+                    aria-pressed={isSelected}
+                  >
+                    {year}
+                  </button>
+                )
+              })}
+            </div>
+          )}
 
           <div className="datepicker-footer">
             <button type="button" className="datepicker-today-btn" onClick={goToday}>
