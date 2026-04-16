@@ -52,6 +52,21 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPO:$SHORT_SHA
           docker push $ECR_REGISTRY/$ECR_REPO:latest
 
+      - name: Build and push frontend image
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
+          FRONTEND_TAG=${SHORT_SHA}-frontend
+          docker build \
+            -f sacco-ui/Dockerfile \
+            --build-arg APP_COMMIT_SHA=${{ github.sha }} \
+            --build-arg APP_COMMIT_SHORT_SHA=$SHORT_SHA \
+            --build-arg APP_BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+            -t $ECR_REGISTRY/$ECR_REPO:$FRONTEND_TAG \
+            -t $ECR_REGISTRY/$ECR_REPO:frontend-latest \
+            sacco-ui
+          docker push $ECR_REGISTRY/$ECR_REPO:$FRONTEND_TAG
+          docker push $ECR_REGISTRY/$ECR_REPO:frontend-latest
+
   deploy:
     needs: build
     if: github.ref == 'refs/heads/main'
@@ -66,27 +81,67 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Deploy via SSM
+        env:
+          GIT_SHA: ${{ github.sha }}
         run: |
-          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
+          SHORT_SHA=$(echo "$GIT_SHA" | cut -c1-8)
+          FRONTEND_TAG="${SHORT_SHA}-frontend"
+          export SHORT_SHA FRONTEND_TAG GIT_SHA
+
+          python3 <<'PY' > ssm-params.json
+          import json
+          import os
+
+          short_sha = os.environ["SHORT_SHA"]
+          frontend_tag = os.environ["FRONTEND_TAG"]
+          git_sha = os.environ["GIT_SHA"]
+
+          commands = [
+              "set -e",
+              "ECR_REGISTRY=738754313966.dkr.ecr.eu-west-2.amazonaws.com",
+              "ECR_REPO=innercircle-sacco",
+              f"BACKEND_TAG={short_sha}",
+              f"FRONTEND_TAG={frontend_tag}",
+              f"GIT_SHA={git_sha}",
+              "APP_DIR=/home/ubuntu/apps/innercircle-sacco",
+              "FRONTEND_DIR=$APP_DIR/frontend",
+              "BACKEND_IMAGE=$ECR_REGISTRY/$ECR_REPO:$BACKEND_TAG",
+              "FRONTEND_IMAGE=$ECR_REGISTRY/$ECR_REPO:$FRONTEND_TAG",
+              "aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin $ECR_REGISTRY",
+              "docker pull $BACKEND_IMAGE",
+              "docker pull $FRONTEND_IMAGE",
+              "cd $APP_DIR",
+              "docker compose -f docker-compose.deploy.yml down --timeout 30 2>/dev/null || true",
+              "DOCKER_IMAGE=$BACKEND_IMAGE docker compose -f docker-compose.deploy.yml up -d",
+              "echo Waiting for app to start...",
+              "for i in $(seq 1 24); do if curl -sf http://localhost:8083/actuator/health > /dev/null 2>&1; then echo App is healthy!; break; fi; echo Attempt $i/24...; sleep 5; if [ \"$i\" = \"24\" ]; then echo ERROR: Health check failed; docker compose -f docker-compose.deploy.yml logs --tail=30; exit 1; fi; done",
+              "TEMP_FRONTEND_DIR=$APP_DIR/frontend.$FRONTEND_TAG",
+              "rm -rf $TEMP_FRONTEND_DIR",
+              "mkdir -p $TEMP_FRONTEND_DIR",
+              "FRONTEND_CONTAINER=$(docker create $FRONTEND_IMAGE)",
+              "docker cp $FRONTEND_CONTAINER:/usr/share/nginx/html/. $TEMP_FRONTEND_DIR/",
+              "docker rm $FRONTEND_CONTAINER",
+              "test -f $TEMP_FRONTEND_DIR/index.html",
+              "test -f $TEMP_FRONTEND_DIR/build-info.json",
+              "grep -q \"\\\"shortCommit\\\": \\\"$BACKEND_TAG\\\"\" $TEMP_FRONTEND_DIR/build-info.json",
+              "rm -rf $FRONTEND_DIR.prev",
+              "if [ -d \"$FRONTEND_DIR\" ]; then mv $FRONTEND_DIR $FRONTEND_DIR.prev; fi",
+              "mv $TEMP_FRONTEND_DIR $FRONTEND_DIR",
+              "chown -R www-data:www-data $FRONTEND_DIR",
+              "if ! curl -sk --resolve innercircle.footsapp.com:443:127.0.0.1 https://innercircle.footsapp.com/build-info.json -H 'CF-Connecting-IP: 127.0.0.1' > /tmp/innercircle-build-info.json || ! grep -q \"\\\"shortCommit\\\": \\\"$BACKEND_TAG\\\"\" /tmp/innercircle-build-info.json; then echo Frontend verification failed, rolling back; rm -rf $FRONTEND_DIR; if [ -d \"$FRONTEND_DIR.prev\" ]; then mv $FRONTEND_DIR.prev $FRONTEND_DIR; fi; exit 1; fi",
+              "rm -rf $FRONTEND_DIR.prev",
+              "echo Frontend build info:",
+              "cat /tmp/innercircle-build-info.json",
+          ]
+
+          with open("ssm-params.json", "w", encoding="utf-8") as handle:
+              json.dump({"commands": commands}, handle)
+          PY
+
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
-            --parameters "commands=[
-              'set -e',
-              'ECR_REGISTRY=738754313966.dkr.ecr.eu-west-2.amazonaws.com',
-              'ECR_REPO=innercircle-sacco',
-              'IMAGE_TAG=${SHORT_SHA}',
-              'aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin \$ECR_REGISTRY',
-              'docker pull \$ECR_REGISTRY/\$ECR_REPO:\$IMAGE_TAG',
-              'cd /home/ubuntu/apps/innercircle-sacco',
-              'docker compose -f docker-compose.deploy.yml down --timeout 30 2>/dev/null || true',
-              'DOCKER_IMAGE=\$ECR_REGISTRY/\$ECR_REPO:\$IMAGE_TAG docker compose -f docker-compose.deploy.yml up -d',
-              'echo Waiting for app to start...',
-              'for i in \$(seq 1 24); do if curl -sf http://localhost:8083/actuator/health > /dev/null 2>&1; then echo App is healthy! && exit 0; fi; echo Attempt \$i/24...; sleep 5; done',
-              'echo ERROR: Health check failed',
-              'docker compose -f docker-compose.deploy.yml logs --tail=30',
-              'exit 1'
-            ]" \
+            --parameters file://ssm-params.json \
             --timeout-seconds 300 \
             --query 'Command.CommandId' \
             --output text)
