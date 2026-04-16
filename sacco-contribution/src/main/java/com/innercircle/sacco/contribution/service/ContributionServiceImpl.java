@@ -20,6 +20,7 @@ import com.innercircle.sacco.contribution.repository.ContributionPenaltyReposito
 import com.innercircle.sacco.contribution.repository.ContributionRepository;
 import com.innercircle.sacco.config.service.PolicyConfigResolver;
 import com.innercircle.sacco.common.outbox.EventOutboxWriter;
+import com.innercircle.sacco.common.util.SecureIdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -43,6 +44,7 @@ import java.util.UUID;
 public class ContributionServiceImpl implements ContributionService {
 
     private static final String WELFARE_FIXED_AMOUNT_CONFIG_KEY = "contribution.welfare.fixed_amount";
+    private static final int MAX_REFERENCE_NUMBER_ATTEMPTS = 10;
 
     private final ContributionRepository contributionRepository;
     private final ContributionPenaltyRepository penaltyRepository;
@@ -56,11 +58,7 @@ public class ContributionServiceImpl implements ContributionService {
     @Override
     @Transactional
     public Contribution recordContribution(RecordContributionRequest request) {
-        // Validate reference number uniqueness if provided
-        if (request.getReferenceNumber() != null
-                && contributionRepository.existsByReferenceNumber(request.getReferenceNumber())) {
-            throw new BusinessException("Reference number already exists: " + request.getReferenceNumber());
-        }
+        String referenceNumber = resolveReferenceNumber(request.getReferenceNumber());
 
         // Resolve and validate category
         ContributionCategory category = resolveCategory(request.getCategoryId());
@@ -74,7 +72,7 @@ public class ContributionServiceImpl implements ContributionService {
                 request.getPaymentMode(),
                 request.getContributionMonth(),
                 request.getContributionDate(),
-                request.getReferenceNumber(),
+                referenceNumber,
                 request.getNotes()
         );
         contribution.setContributionAmount(split.contributionAmount());
@@ -108,10 +106,7 @@ public class ContributionServiceImpl implements ContributionService {
 
         List<Contribution> contributions = new ArrayList<>();
         for (BulkContributionItemRequest req : request.getContributions()) {
-            if (req.getReferenceNumber() != null &&
-                    contributionRepository.existsByReferenceNumber(req.getReferenceNumber())) {
-                throw new BusinessException("Reference number already exists: " + req.getReferenceNumber());
-            }
+            String referenceNumber = resolveReferenceNumber(req.getReferenceNumber());
 
             Contribution c = new Contribution(
                     req.getMemberId(),
@@ -120,7 +115,7 @@ public class ContributionServiceImpl implements ContributionService {
                     req.getPaymentMode() != null ? req.getPaymentMode() : request.getPaymentMode(),
                     req.getContributionMonth() != null ? req.getContributionMonth() : request.getContributionMonth(),
                     req.getContributionDate() != null ? req.getContributionDate() : request.getContributionDate(),
-                    req.getReferenceNumber(),
+                    referenceNumber,
                     req.getNotes() != null ? req.getNotes() : "Bulk entry: " + request.getBatchReference()
             );
             ContributionSplit split = calculateSplit(req.getAmount(), category, fixedWelfareAmount);
@@ -323,5 +318,24 @@ public class ContributionServiceImpl implements ContributionService {
     private BigDecimal getWelfareFixedAmount() {
         BigDecimal amount = policyConfigResolver.requireNonNegativeDecimal(WELFARE_FIXED_AMOUNT_CONFIG_KEY);
         return amount.compareTo(BigDecimal.ZERO) > 0 ? amount : BigDecimal.ZERO;
+    }
+
+    private String resolveReferenceNumber(String referenceNumber) {
+        if (referenceNumber != null && !referenceNumber.isBlank()) {
+            String normalizedReferenceNumber = referenceNumber.trim();
+            if (contributionRepository.existsByReferenceNumber(normalizedReferenceNumber)) {
+                throw new BusinessException("Reference number already exists: " + normalizedReferenceNumber);
+            }
+            return normalizedReferenceNumber;
+        }
+
+        for (int attempt = 0; attempt < MAX_REFERENCE_NUMBER_ATTEMPTS; attempt++) {
+            String candidate = SecureIdGenerator.generate("CN");
+            if (!contributionRepository.existsByReferenceNumber(candidate)) {
+                return candidate;
+            }
+        }
+
+        throw new BusinessException("Unable to generate unique reference number");
     }
 }

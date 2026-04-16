@@ -1,18 +1,5 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
-  SquaresFour,
-  Users,
-  Wallet,
-  HandCoins,
-  Bank,
-  ArrowLineDown,
-  TrendUp,
-  CalendarCheck,
-  Heartbeat,
-  SignOut,
-  BookOpen,
-  ChartBar,
-  Briefcase,
   Gear,
   UserGear,
   Power,
@@ -21,24 +8,8 @@ import {
 import { useAuth } from '../hooks/useAuth'
 import { useAuthorization } from '../hooks/useAuthorization'
 import { useCurrentUser } from '../hooks/useCurrentUser'
-import type { UserRole } from '../types/roles'
+import { findSubRoute, navItems } from './navItems'
 import './Sidebar.css'
-
-const navItems = [
-  { to: '/', icon: SquaresFour, label: 'Overview', allowed: ['ADMIN', 'TREASURER', 'MEMBER', 'SECRETARY', 'CHAIRPERSON', 'VICE_CHAIRPERSON', 'VICE_TREASURER'] as UserRole[] },
-  { to: '/members', icon: Users, label: 'Members', allowed: ['ADMIN', 'TREASURER', 'MEMBER'] as UserRole[] },
-  { to: '/contributions', icon: Wallet, label: 'Contributions', allowed: ['ADMIN', 'TREASURER', 'MEMBER'] as UserRole[] },
-  { to: '/loans', icon: Bank, label: 'Loans', allowed: ['ADMIN', 'TREASURER', 'MEMBER'] as UserRole[] },
-  { to: '/payouts', icon: ArrowLineDown, label: 'Payouts', allowed: ['ADMIN', 'TREASURER', 'MEMBER'] as UserRole[] },
-  { to: '/petty-cash', icon: HandCoins, label: 'Petty Cash', allowed: ['ADMIN', 'TREASURER'] as UserRole[] },
-  { to: '/investments', icon: TrendUp, label: 'Investments', allowed: ['ADMIN', 'TREASURER', 'MEMBER'] as UserRole[] },
-  { to: '/meetings-fines', icon: CalendarCheck, label: 'Meetings', allowed: ['ADMIN', 'TREASURER', 'SECRETARY', 'CHAIRPERSON', 'VICE_CHAIRPERSON', 'VICE_TREASURER'] as UserRole[] },
-  { to: '/welfare-claims', icon: Heartbeat, label: 'Welfare', allowed: ['ADMIN', 'TREASURER', 'CHAIRPERSON', 'VICE_CHAIRPERSON', 'VICE_TREASURER'] as UserRole[] },
-  { to: '/member-exit', icon: SignOut, label: 'Member Exit', allowed: ['ADMIN', 'TREASURER', 'MEMBER', 'CHAIRPERSON', 'VICE_CHAIRPERSON', 'VICE_TREASURER'] as UserRole[] },
-  { to: '/ledger', icon: BookOpen, label: 'Ledger', allowed: ['ADMIN', 'TREASURER'] as UserRole[] },
-  { to: '/reports', icon: ChartBar, label: 'Reports', allowed: ['ADMIN', 'TREASURER'] as UserRole[] },
-  { to: '/operations', icon: Briefcase, label: 'Operations', allowed: ['ADMIN', 'TREASURER', 'SECRETARY', 'CHAIRPERSON', 'VICE_CHAIRPERSON', 'VICE_TREASURER'] as UserRole[] },
-]
 
 interface SidebarProps {
   open: boolean
@@ -59,6 +30,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   }
 
   const visibleNavItems = navItems.filter(item => canAccess(item.allowed))
+  const activeParentTo = findSubRoute(location.pathname)?.parentTo ?? null
 
   const fullName = profile?.member
     ? `${profile.member.firstName} ${profile.member.lastName}`.trim()
@@ -94,15 +66,12 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               to={to}
               end={to === '/'}
               className={({ isActive }) =>
-                `sidebar-link ${isActive ? 'sidebar-link--active' : ''}`
+                `sidebar-link ${isActive || activeParentTo === to ? 'sidebar-link--active' : ''}`
               }
               onClick={onClose}
             >
               <Icon size={16} />
               <span>{label}</span>
-              {to === '/' && location.pathname === '/' && (
-                <span className="sidebar-indicator" />
-              )}
             </NavLink>
           ))}
         </nav>

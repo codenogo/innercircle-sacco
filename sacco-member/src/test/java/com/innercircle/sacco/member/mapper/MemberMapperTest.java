@@ -37,7 +37,6 @@ class MemberMapperTest {
         @DisplayName("should map all fields from CreateMemberRequest to Member entity")
         void shouldMapAllFields() {
             CreateMemberRequest request = CreateMemberRequest.builder()
-                    .memberNumber("MBR-001")
                     .firstName("John")
                     .lastName("Doe")
                     .email("john.doe@example.com")
@@ -50,7 +49,7 @@ class MemberMapperTest {
             Member result = memberMapper.toEntity(request);
 
             assertThat(result).isNotNull();
-            assertThat(result.getMemberNumber()).isEqualTo("MBR-001");
+            assertThat(result.getMemberNumber()).isNull();
             assertThat(result.getFirstName()).isEqualTo("John");
             assertThat(result.getLastName()).isEqualTo("Doe");
             assertThat(result.getEmail()).isEqualTo("john.doe@example.com");
@@ -67,7 +66,6 @@ class MemberMapperTest {
         @DisplayName("should set default status to ACTIVE")
         void shouldSetDefaultStatusToActive() {
             CreateMemberRequest request = CreateMemberRequest.builder()
-                    .memberNumber("MBR-002")
                     .firstName("Jane")
                     .lastName("Smith")
                     .email("jane@example.com")
@@ -86,7 +84,6 @@ class MemberMapperTest {
         @DisplayName("should set default share balance to zero")
         void shouldSetDefaultShareBalanceToZero() {
             CreateMemberRequest request = CreateMemberRequest.builder()
-                    .memberNumber("MBR-003")
                     .firstName("Bob")
                     .lastName("Jones")
                     .email("bob@example.com")

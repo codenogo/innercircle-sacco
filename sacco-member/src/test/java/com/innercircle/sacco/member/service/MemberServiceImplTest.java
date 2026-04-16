@@ -33,6 +33,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -83,17 +84,18 @@ class MemberServiceImplTest {
     class Create {
 
         @Test
-        @DisplayName("should create member successfully when all validations pass")
+        @DisplayName("should create member with an auto-generated member number")
         void shouldCreateMemberSuccessfully() {
-            when(memberRepository.existsByMemberNumber("MBR-001")).thenReturn(false);
             when(memberRepository.existsByEmail("john.doe@example.com")).thenReturn(false);
             when(memberRepository.existsByNationalId("ID12345")).thenReturn(false);
+            when(memberRepository.existsByMemberNumber(anyString())).thenReturn(false);
             when(memberRepository.save(sampleMember)).thenReturn(sampleMember);
 
             Member result = memberService.create(sampleMember);
 
             assertThat(result).isNotNull();
-            assertThat(result.getMemberNumber()).isEqualTo("MBR-001");
+            assertThat(result.getMemberNumber()).startsWith("IC-");
+            assertThat(result.getMemberNumber()).hasSize(11);
             assertThat(result.getFirstName()).isEqualTo("John");
             assertThat(result.getLastName()).isEqualTo("Doe");
             assertThat(result.getEmail()).isEqualTo("john.doe@example.com");
@@ -103,13 +105,15 @@ class MemberServiceImplTest {
         }
 
         @Test
-        @DisplayName("should throw BusinessException when member number already exists")
-        void shouldThrowWhenMemberNumberExists() {
-            when(memberRepository.existsByMemberNumber("MBR-001")).thenReturn(true);
+        @DisplayName("should throw BusinessException when member number generation is exhausted")
+        void shouldThrowWhenMemberNumberGenerationIsExhausted() {
+            when(memberRepository.existsByEmail("john.doe@example.com")).thenReturn(false);
+            when(memberRepository.existsByNationalId("ID12345")).thenReturn(false);
+            when(memberRepository.existsByMemberNumber(anyString())).thenReturn(true);
 
             assertThatThrownBy(() -> memberService.create(sampleMember))
                     .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("Member number already exists: MBR-001");
+                    .hasMessageContaining("Unable to generate unique member number");
 
             verify(memberRepository, never()).save(any());
         }
@@ -117,7 +121,6 @@ class MemberServiceImplTest {
         @Test
         @DisplayName("should throw BusinessException when email already exists")
         void shouldThrowWhenEmailExists() {
-            when(memberRepository.existsByMemberNumber("MBR-001")).thenReturn(false);
             when(memberRepository.existsByEmail("john.doe@example.com")).thenReturn(true);
 
             assertThatThrownBy(() -> memberService.create(sampleMember))
@@ -130,7 +133,6 @@ class MemberServiceImplTest {
         @Test
         @DisplayName("should throw BusinessException when national ID already exists")
         void shouldThrowWhenNationalIdExists() {
-            when(memberRepository.existsByMemberNumber("MBR-001")).thenReturn(false);
             when(memberRepository.existsByEmail("john.doe@example.com")).thenReturn(false);
             when(memberRepository.existsByNationalId("ID12345")).thenReturn(true);
 
@@ -147,9 +149,9 @@ class MemberServiceImplTest {
             SecurityContextHolder.getContext().setAuthentication(
                     new UsernamePasswordAuthenticationToken("admin@sacco.co.ke", null, List.of()));
 
-            when(memberRepository.existsByMemberNumber("MBR-001")).thenReturn(false);
             when(memberRepository.existsByEmail("john.doe@example.com")).thenReturn(false);
             when(memberRepository.existsByNationalId("ID12345")).thenReturn(false);
+            when(memberRepository.existsByMemberNumber(anyString())).thenReturn(false);
             when(memberRepository.save(sampleMember)).thenReturn(sampleMember);
 
             memberService.create(sampleMember);
@@ -159,7 +161,7 @@ class MemberServiceImplTest {
 
             MemberCreatedEvent event = eventCaptor.getValue();
             assertThat(event.memberId()).isEqualTo(memberId);
-            assertThat(event.memberNumber()).isEqualTo("MBR-001");
+            assertThat(event.memberNumber()).startsWith("IC-");
             assertThat(event.firstName()).isEqualTo("John");
             assertThat(event.lastName()).isEqualTo("Doe");
             assertThat(event.actor()).isEqualTo("admin@sacco.co.ke");
@@ -170,9 +172,9 @@ class MemberServiceImplTest {
         void shouldFallBackToSystemWhenNoAuth() {
             SecurityContextHolder.clearContext();
 
-            when(memberRepository.existsByMemberNumber("MBR-001")).thenReturn(false);
             when(memberRepository.existsByEmail("john.doe@example.com")).thenReturn(false);
             when(memberRepository.existsByNationalId("ID12345")).thenReturn(false);
+            when(memberRepository.existsByMemberNumber(anyString())).thenReturn(false);
             when(memberRepository.save(sampleMember)).thenReturn(sampleMember);
 
             memberService.create(sampleMember);

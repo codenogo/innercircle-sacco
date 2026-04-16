@@ -43,6 +43,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -222,6 +223,7 @@ class ContributionServiceImplTest {
             when(categoryRepository.findById(welfareCategory.getId())).thenReturn(Optional.of(welfareCategory));
             when(policyConfigResolver.requireNonNegativeDecimal("contribution.welfare.fixed_amount"))
                     .thenReturn(BigDecimal.ZERO);
+            when(contributionRepository.existsByReferenceNumber(anyString())).thenReturn(false);
             when(contributionRepository.save(any(Contribution.class))).thenAnswer(inv -> {
                 Contribution c = inv.getArgument(0);
                 c.setId(UUID.randomUUID());
@@ -231,8 +233,25 @@ class ContributionServiceImplTest {
             Contribution result = contributionService.recordContribution(request);
 
             assertThat(result).isNotNull();
-            assertThat(result.getReferenceNumber()).isNull();
+            assertThat(result.getReferenceNumber()).startsWith("CN-");
+            assertThat(result.getReferenceNumber()).hasSize(11);
             assertThat(result.getNotes()).isNull();
+        }
+
+        @Test
+        @DisplayName("should throw when reference number generation is exhausted")
+        void shouldThrowWhenReferenceNumberGenerationIsExhausted() {
+            RecordContributionRequest request = new RecordContributionRequest(
+                    memberId, new BigDecimal("500.00"), welfareCategory.getId(),
+                    PaymentMode.CASH, LocalDate.of(2024, 7, 1),
+                    LocalDate.of(2024, 7, 5), null, null
+            );
+
+            when(contributionRepository.existsByReferenceNumber(anyString())).thenReturn(true);
+
+            assertThatThrownBy(() -> contributionService.recordContribution(request))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Unable to generate unique reference number");
         }
 
         @Test
@@ -313,6 +332,35 @@ class ContributionServiceImplTest {
             assertThat(results.get(0).getMemberId()).isEqualTo(memberId);
             assertThat(results.get(1).getMemberId()).isEqualTo(member2);
             assertThat(results.get(0).getPaymentMode()).isEqualTo(PaymentMode.MPESA);
+        }
+
+        @Test
+        @DisplayName("should generate reference numbers for bulk entries without one")
+        void shouldGenerateReferenceNumbersForBulkEntriesWithoutOne() {
+            BulkContributionItemRequest req = new BulkContributionItemRequest(
+                    memberId, new BigDecimal("1000.00"),
+                    null, null, null, null, "Member 1"
+            );
+
+            BulkContributionRequest bulk = new BulkContributionRequest(
+                    PaymentMode.MPESA,
+                    LocalDate.of(2024, 6, 1),
+                    LocalDate.of(2024, 6, 5),
+                    sharesCategory.getId(),
+                    "BATCH-003",
+                    List.of(req)
+            );
+
+            when(categoryRepository.findById(sharesCategory.getId())).thenReturn(Optional.of(sharesCategory));
+            when(policyConfigResolver.requireNonNegativeDecimal("contribution.welfare.fixed_amount"))
+                    .thenReturn(BigDecimal.ZERO);
+            when(contributionRepository.existsByReferenceNumber(anyString())).thenReturn(false);
+            when(contributionRepository.saveAll(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            List<Contribution> results = contributionService.recordBulk(bulk);
+
+            assertThat(results).hasSize(1);
+            assertThat(results.getFirst().getReferenceNumber()).startsWith("CN-");
         }
 
         @Test

@@ -66,14 +66,6 @@ function toE164Phone(phone: string, regionCode: string): string | null {
   }
 }
 
-function generateMemberNumber(): string {
-  const now = new Date()
-  const yy = String(now.getFullYear()).slice(-2)
-  const mm = String(now.getMonth() + 1).padStart(2, '0')
-  const seq = String(Math.floor(Math.random() * 9000) + 1000)
-  return `MBR-${yy}${mm}${seq}`
-}
-
 function defaultFormState(): AddMemberFormState {
   return {
     firstName: '',
@@ -158,7 +150,6 @@ export function AddMemberModal({ open, onClose, onSubmit, isSubmitting }: AddMem
 
     try {
       await onSubmit({
-        memberNumber: generateMemberNumber(),
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         email: form.email.trim(),

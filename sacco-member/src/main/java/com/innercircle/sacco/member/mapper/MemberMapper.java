@@ -11,7 +11,7 @@ public class MemberMapper {
 
     public Member toEntity(CreateMemberRequest request) {
         return new Member(
-                request.getMemberNumber(),
+                null,
                 request.getFirstName(),
                 request.getLastName(),
                 request.getEmail(),

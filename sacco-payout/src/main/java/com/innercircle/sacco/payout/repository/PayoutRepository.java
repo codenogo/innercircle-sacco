@@ -66,4 +66,6 @@ public interface PayoutRepository extends JpaRepository<Payout, UUID> {
 
     @Query("SELECT p FROM Payout p ORDER BY p.id")
     List<Payout> findAllPaged(Pageable pageable);
+
+    boolean existsByReferenceNumber(String referenceNumber);
 }

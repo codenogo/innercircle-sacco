@@ -1,10 +1,10 @@
 package com.innercircle.sacco.member.dto;
 
+import com.innercircle.sacco.common.validation.ValidPhoneNumber;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,10 +21,6 @@ import java.time.LocalDate;
 @Builder
 public class CreateMemberRequest {
 
-    @NotBlank(message = "Member number is required")
-    @Size(max = 50, message = "Member number must not exceed 50 characters")
-    private String memberNumber;
-
     @NotBlank(message = "First name is required")
     @Size(max = 100, message = "First name must not exceed 100 characters")
     private String firstName;
@@ -39,7 +35,7 @@ public class CreateMemberRequest {
     private String email;
 
     @NotBlank(message = "Phone is required")
-    @Pattern(regexp = "^\\+?[0-9]{10,20}$", message = "Phone must be a valid phone number")
+    @ValidPhoneNumber
     private String phone;
 
     @NotBlank(message = "National ID is required")

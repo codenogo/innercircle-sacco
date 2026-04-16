@@ -10,6 +10,7 @@ import com.innercircle.sacco.member.entity.MemberStatus;
 import com.innercircle.sacco.member.guard.MemberTransitionGuards;
 import com.innercircle.sacco.member.repository.MemberRepository;
 import com.innercircle.sacco.common.outbox.EventOutboxWriter;
+import com.innercircle.sacco.common.util.SecureIdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.Authentication;
@@ -24,16 +25,14 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MemberServiceImpl implements MemberService {
 
+    private static final int MAX_MEMBER_NUMBER_ATTEMPTS = 10;
+
     private final MemberRepository memberRepository;
     private final EventOutboxWriter outboxWriter;
 
     @Override
     @Transactional
     public Member create(Member member) {
-        // Validate uniqueness
-        if (memberRepository.existsByMemberNumber(member.getMemberNumber())) {
-            throw new BusinessException("Member number already exists: " + member.getMemberNumber());
-        }
         if (memberRepository.existsByEmail(member.getEmail())) {
             throw new BusinessException("Email already exists: " + member.getEmail());
         }
@@ -41,6 +40,7 @@ public class MemberServiceImpl implements MemberService {
             throw new BusinessException("National ID already exists: " + member.getNationalId());
         }
 
+        member.setMemberNumber(generateUniqueMemberNumber());
         Member savedMember = memberRepository.save(member);
 
         outboxWriter.write(new MemberCreatedEvent(
@@ -179,5 +179,15 @@ public class MemberServiceImpl implements MemberService {
     private String getCurrentActor() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return auth != null ? auth.getName() : "system";
+    }
+
+    private String generateUniqueMemberNumber() {
+        for (int attempt = 0; attempt < MAX_MEMBER_NUMBER_ATTEMPTS; attempt++) {
+            String candidate = SecureIdGenerator.generate("IC");
+            if (!memberRepository.existsByMemberNumber(candidate)) {
+                return candidate;
+            }
+        }
+        throw new BusinessException("Unable to generate unique member number");
     }
 }

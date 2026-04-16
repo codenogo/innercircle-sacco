@@ -18,7 +18,6 @@ export interface MemberResponse {
 }
 
 export interface CreateMemberRequest {
-  memberNumber: string
   firstName: string
   lastName: string
   email: string

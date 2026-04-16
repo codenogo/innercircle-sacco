@@ -3,6 +3,7 @@ package com.innercircle.sacco.payout.service;
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.event.PayoutProcessedEvent;
 import com.innercircle.sacco.common.event.PayoutStatusChangeEvent;
+import com.innercircle.sacco.common.exception.BusinessException;
 import com.innercircle.sacco.common.guard.MakerCheckerGuard;
 import com.innercircle.sacco.payout.entity.Payout;
 import com.innercircle.sacco.payout.entity.PayoutStatus;
@@ -10,12 +11,11 @@ import com.innercircle.sacco.payout.entity.PayoutType;
 import com.innercircle.sacco.payout.guard.PayoutTransitionGuards;
 import com.innercircle.sacco.payout.repository.PayoutRepository;
 import com.innercircle.sacco.common.outbox.EventOutboxWriter;
+import com.innercircle.sacco.common.util.SecureIdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import com.innercircle.sacco.common.util.UuidGenerator;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -25,6 +25,8 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class PayoutServiceImpl implements PayoutService {
+
+    private static final int MAX_REFERENCE_NUMBER_ATTEMPTS = 10;
 
     private final PayoutRepository payoutRepository;
     private final EventOutboxWriter outboxWriter;
@@ -97,7 +99,7 @@ public class PayoutServiceImpl implements PayoutService {
 
         payout.setStatus(PayoutStatus.PROCESSED);
         payout.setProcessedAt(Instant.now());
-        payout.setReferenceNumber(generateReferenceNumber());
+        payout.setReferenceNumber(generateUniqueReferenceNumber());
 
         Payout savedPayout = payoutRepository.save(payout);
 
@@ -179,7 +181,13 @@ public class PayoutServiceImpl implements PayoutService {
         return CursorPage.of(items, nextCursor, hasMore);
     }
 
-    private String generateReferenceNumber() {
-        return "PAY-" + UuidGenerator.generateV7().toString().substring(0, 8).toUpperCase();
+    private String generateUniqueReferenceNumber() {
+        for (int attempt = 0; attempt < MAX_REFERENCE_NUMBER_ATTEMPTS; attempt++) {
+            String candidate = SecureIdGenerator.generate("PAY");
+            if (!payoutRepository.existsByReferenceNumber(candidate)) {
+                return candidate;
+            }
+        }
+        throw new BusinessException("Unable to generate unique reference number");
     }
 }

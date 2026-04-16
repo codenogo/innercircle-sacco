@@ -91,7 +91,6 @@ class MemberControllerTest {
         @DisplayName("should create member and return ApiResponse with created member")
         void shouldCreateMember() {
             CreateMemberRequest request = CreateMemberRequest.builder()
-                    .memberNumber("MBR-001")
                     .firstName("John")
                     .lastName("Doe")
                     .email("john.doe@example.com")

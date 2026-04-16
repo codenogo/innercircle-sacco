@@ -3,6 +3,7 @@ package com.innercircle.sacco.payout.service;
 import com.innercircle.sacco.common.dto.CursorPage;
 import com.innercircle.sacco.common.event.PayoutProcessedEvent;
 import com.innercircle.sacco.common.event.PayoutStatusChangeEvent;
+import com.innercircle.sacco.common.exception.BusinessException;
 import com.innercircle.sacco.common.exception.InvalidStateTransitionException;
 import com.innercircle.sacco.common.exception.MakerCheckerViolationException;
 import com.innercircle.sacco.payout.entity.Payout;
@@ -32,6 +33,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -313,6 +315,7 @@ class PayoutServiceImplTest {
         void shouldProcessApprovedPayout() {
             Payout approvedPayout = createTestPayout(PayoutStatus.APPROVED);
             when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(approvedPayout));
+            when(payoutRepository.existsByReferenceNumber(anyString())).thenReturn(false);
 
             Payout processedPayout = createTestPayout(PayoutStatus.PROCESSED);
             processedPayout.setProcessedAt(Instant.now());
@@ -334,6 +337,7 @@ class PayoutServiceImplTest {
         void shouldPublishPayoutProcessedEvent() {
             Payout approvedPayout = createTestPayout(PayoutStatus.APPROVED);
             when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(approvedPayout));
+            when(payoutRepository.existsByReferenceNumber(anyString())).thenReturn(false);
 
             Payout processedPayout = createTestPayout(PayoutStatus.PROCESSED);
             processedPayout.setProcessedAt(Instant.now());
@@ -399,12 +403,25 @@ class PayoutServiceImplTest {
         void shouldGenerateReferenceNumberWithPrefix() {
             Payout approvedPayout = createTestPayout(PayoutStatus.APPROVED);
             when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(approvedPayout));
+            when(payoutRepository.existsByReferenceNumber(anyString())).thenReturn(false);
             when(payoutRepository.save(any(Payout.class))).thenAnswer(inv -> inv.getArgument(0));
 
             Payout result = payoutService.processPayout(payoutId, "admin");
 
             assertThat(result.getReferenceNumber()).startsWith("PAY-");
             assertThat(result.getReferenceNumber()).hasSize(12); // "PAY-" + 8 chars
+        }
+
+        @Test
+        @DisplayName("should throw when reference number generation is exhausted")
+        void shouldThrowWhenReferenceNumberGenerationIsExhausted() {
+            Payout approvedPayout = createTestPayout(PayoutStatus.APPROVED);
+            when(payoutRepository.findById(payoutId)).thenReturn(Optional.of(approvedPayout));
+            when(payoutRepository.existsByReferenceNumber(anyString())).thenReturn(true);
+
+            assertThatThrownBy(() -> payoutService.processPayout(payoutId, "admin"))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Unable to generate unique reference number");
         }
     }
 
